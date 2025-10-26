@@ -1,0 +1,356 @@
+
+
+/* Header Styles */
+.page-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.page-header h1 {
+  font-size: 32px;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+  position: relative;
+  display: inline-block;
+}
+
+.page-header h1:after {
+  content: '';
+  position: absolute;
+  width: 60px;
+  height: 4px;
+  background: var(--secondary-color);
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+.page-header p {
+  color: var(--text-light);
+  font-size: 16px;
+}
+
+/* Filters Section */
+.filters-section {
+  background: var(--background-white);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.filters-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+
+
+
+
+
+
+.filter-actions {
+  display: flex;
+  align-items: flex-end;
+  min-width: 100px;
+}
+
+
+
+.date-range {
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  color: var(--text-light);
+}
+
+/* Reports Content */
+.reports-content {
+  background: var(--background-white);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  overflow: hidden;
+}
+
+.reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.reports-header h2 {
+  color: var(--primary-color);
+  font-size: 22px;
+}
+
+.export-options {
+  display: flex;
+  gap: 10px;
+}
+
+.export-btn {
+  padding: 8px 15px;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--transition-speed);
+}
+
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.excel-btn {
+  background-color: #1d6f42;
+  color: white;
+}
+
+.excel-btn:hover:not(:disabled) {
+  background-color: #155a35;
+}
+
+.pdf-btn {
+  background-color: #f40f02;
+  color: white;
+}
+
+.pdf-btn:hover:not(:disabled) {
+  background-color: #d10a01;
+}
+
+.icon {
+  font-size: 18px;
+}
+
+/* Table Styles */
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+}
+
+thead th {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 12px 15px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+tbody tr:nth-child(even) {
+  background-color: var(--background-light);
+}
+
+tbody tr:hover {
+  background-color: var(--secondary-light);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.status-badge.active,
+.status-badge.approved {
+  background-color: #e3f7e9;
+  color: #0d904f;
+}
+
+.status-badge.inactive,
+.status-badge.rejected {
+  background-color: #fce8e8;
+  color: #d83030;
+}
+
+.status-badge.pending {
+  background-color: #fff8e6;
+  color: #e29d2b;
+}
+
+.status-badge.upcoming {
+  background-color: #e6f3ff;
+  color: #0a77e8;
+}
+
+.status-badge.ongoing {
+  background-color: #e6f7ff;
+  color: #0a93e8;
+}
+
+.status-badge.completed {
+  background-color: #f0f0f0;
+  color: #555555;
+}
+
+.pagination-info {
+  margin-top: 20px;
+  text-align: left;
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+/* Loading, Error, No Data States */
+.loading,
+.error,
+.no-data {
+  padding: 40px;
+  text-align: center;
+  background-color: var(--background-light);
+  border-radius: var(--border-radius-md);
+  margin: 20px 0;
+}
+
+.loading {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.error {
+  color: #d83030;
+}
+
+.no-data {
+  color: var(--text-light);
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 768px) {
+
+  
+  .reports-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .export-options {
+    width: 100%;
+  }
+  
+  .export-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* ===== تنسيق عناوين الجدول ===== */
+.reports-page table thead th {
+  background: linear-gradient(135deg, #1a3d5d, #214c70);
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  padding: 14px 10px;
+  font-size: 15px;
+  border-bottom: 3px solid #16354d;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.reports-page table thead th:first-child {
+  border-top-right-radius: 10px;
+}
+
+.reports-page table thead th:last-child {
+  border-top-left-radius: 10px;
+}
+
+/* تأثير عند تمرير الماوس على العنوان */
+.reports-page table thead th:hover {
+  background: linear-gradient(135deg, #20486a, #2b5f8a);
+  transform: translateY(-2px);
+}
+
+/* صف الجدول */
+.reports-page table tbody tr:nth-child(even) {
+  background-color: #f9fbfd;
+}
+
+/* النص في الخلايا */
+.reports-page table tbody td {
+  text-align: center;
+  padding: 12px;
+  color: #333;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+/* شارة الحالة */
+.status-badge {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-approved {
+  background-color: #c3e6cb;
+  color: #155724;
+}
+
+.status-rejected {
+  background-color: #f5c6cb;
+  color: #721c24;
+}
+
+.status-pending {
+  background-color: #ffeeba;
+  color: #856404;
+}
+
+/* تنسيق العنوان الرئيسي الديناميكي */
+.reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 25px 30px;
+  border-radius: 15px;
+  margin-bottom: 25px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+.reports-header h2 {
+  font-size: 28px;
+  color: #343a40;
+  font-weight: 700;
+  margin: 0;
+}
