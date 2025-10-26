@@ -1,56 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiUsers, FiCheck, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiFilter, FiChevronRight, FiChevronLeft, FiSearch, FiSlash } from 'react-icons/fi';
+import { FiUser, FiUsers, FiCheck,FiRefreshCw, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiFilter, FiChevronRight, FiChevronLeft, FiSearch, FiSlash } from 'react-icons/fi';
 import '../../styles/PendingUsers.css';
+import { useData } from '../../contexts/DataContext';
 
 const AllUsers = () => {
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [listLoading, setListLoading] = useState(true);
+  const { state, dispatch } = useData();
+  const [localLoading, setLocalLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   
-  // حالة التصفية والترتيب
-  const [filters, setFilters] = useState({
-    search: '',
-    status: 'all',
-    user_type_id: 'all',
-    sort_field: 'created_at',
-    sort_direction: 'desc'
-  });
-  
-  // حالة الباجينيشن
-  const [pagination, setPagination] = useState({
+  // استخدام البيانات من Context
+  const users = state.users.data || [];
+  const pagination = state.users.pagination || {
     current_page: 1,
     last_page: 1,
     per_page: 10,
     total: 0,
     from: 0,
     to: 0
-  });
+  };
+  const filters = state.users.filters;
 
   useEffect(() => {
-    fetchAllUsers();
+    // إذا البيانات غير موجودة أو قديمة، قم بجلبها
+    if (!state.users.data || state.users.data.length === 0 || isUsersDataStale()) {
+      fetchAllUsers();
+    }
   }, [filters, pagination.current_page]);
+
+  const isUsersDataStale = () => {
+    if (!state.users.lastUpdated) return true;
+    const now = new Date();
+    const lastUpdate = new Date(state.users.lastUpdated);
+    const diffInMinutes = (now - lastUpdate) / (1000 * 60);
+    return diffInMinutes > 10; // تحديث إذا مرت أكثر من 10 دقائق
+  };
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
     
-    // إضافة معاملات البحث والتصفية فقط إذا كانت محددة
     if (filters.search.trim()) params.append('search', filters.search.trim());
     if (filters.status !== 'all') params.append('status', filters.status);
     if (filters.user_type_id !== 'all') params.append('user_type_id', filters.user_type_id);
     if (filters.sort_field) params.append('sort_field', filters.sort_field);
     if (filters.sort_direction) params.append('sort_direction', filters.sort_direction);
     
-    // إضافة معاملات الباجينيشن
     params.append('page', pagination.current_page);
     
     const queryString = params.toString();
     return queryString ? `?${queryString}` : '';
   };
 
-  const fetchAllUsers = async () => {
+  const fetchAllUsers = async (forceRefresh = false) => {
+    // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
+    if (state.users.data && state.users.data.length > 0 && !forceRefresh && !isUsersDataStale()) {
+      return;
+    }
+
     try {
-      setListLoading(true);
+      dispatch({ type: 'SET_USERS_LOADING', payload: true });
+      setLocalLoading(true);
+      
       const token = localStorage.getItem('access_token');
       
       if (!token) {
@@ -61,8 +71,6 @@ const AllUsers = () => {
 
       const queryString = buildQueryString();
       const url = `https://shahin-tqay.onrender.com/api/admin/users${queryString}`;
-
-      console.log('جلب البيانات من:', url);
 
       const response = await fetch(url, {
         method: 'GET',
@@ -81,29 +89,39 @@ const AllUsers = () => {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('بيانات الاستجابة:', result);
         
         if (result.success && result.data) {
-          setUsers(result.data);
-          // استخدام البيانات من الاستجابة مباشرة
-          setPagination(result.pagination || {
-            current_page: 1,
-            last_page: 1,
-            per_page: 10,
-            total: result.data.length,
-            from: 1,
-            to: result.data.length
+          dispatch({
+            type: 'SET_USERS_DATA',
+            payload: {
+              data: result.data,
+              pagination: result.pagination || {
+                current_page: 1,
+                last_page: 1,
+                per_page: 10,
+                total: result.data.length,
+                from: 1,
+                to: result.data.length
+              },
+              filters: filters
+            }
           });
         } else {
           console.error('هيكل البيانات غير متوقع:', result);
-          setUsers([]);
-          setPagination({
-            current_page: 1,
-            last_page: 1,
-            per_page: 10,
-            total: 0,
-            from: 0,
-            to: 0
+          dispatch({
+            type: 'SET_USERS_DATA',
+            payload: {
+              data: [],
+              pagination: {
+                current_page: 1,
+                last_page: 1,
+                per_page: 10,
+                total: 0,
+                from: 0,
+                to: 0
+              },
+              filters: filters
+            }
           });
         }
       } else {
@@ -115,35 +133,43 @@ const AllUsers = () => {
       console.error('خطأ في جلب المستخدمين:', error);
       alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
     } finally {
-      setListLoading(false);
+      dispatch({ type: 'SET_USERS_LOADING', payload: false });
+      setLocalLoading(false);
     }
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       [key]: value
-    }));
-    // العودة للصفحة الأولى عند تغيير الفلتر
-    setPagination(prev => ({ ...prev, current_page: 1 }));
+    };
+    
+    dispatch({ type: 'UPDATE_USERS_FILTERS', payload: newFilters });
+    
+    // تحديث الباجينيشن في الـ state المحلي
+    if (pagination.current_page !== 1) {
+      // سنقوم بتحديث الباجينيشن في fetchAllUsers
+      fetchAllUsers();
+    }
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    // إعادة تعيين الصفحة للاولى عند البحث
-    setPagination(prev => ({ ...prev, current_page: 1 }));
     fetchAllUsers();
   };
 
   const clearFilters = () => {
-    setFilters({
+    const defaultFilters = {
       search: '',
       status: 'all',
       user_type_id: 'all',
       sort_field: 'created_at',
-      sort_direction: 'desc'
-    });
-    setPagination(prev => ({ ...prev, current_page: 1 }));
+      sort_direction: 'desc',
+      page: 1
+    };
+    
+    dispatch({ type: 'UPDATE_USERS_FILTERS', payload: defaultFilters });
+    fetchAllUsers();
   };
 
   const handleApprove = async (userId) => {
@@ -164,7 +190,7 @@ const AllUsers = () => {
 
       if (response.ok) {
         // إعادة جلب البيانات لتحديث القائمة
-        fetchAllUsers();
+        fetchAllUsers(true); // forced refresh
         setSelectedUser(null);
         alert('تم قبول المستخدم بنجاح');
       } else {
@@ -197,7 +223,7 @@ const AllUsers = () => {
 
       if (response.ok) {
         // إعادة جلب البيانات لتحديث القائمة
-        fetchAllUsers();
+        fetchAllUsers(true); // forced refresh
         setSelectedUser(null);
         alert('تم رفض المستخدم بنجاح');
       } else {
@@ -210,6 +236,11 @@ const AllUsers = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  // دالة لتحديث الباجينيشن
+  const updatePagination = (newPage) => {
+    handleFilterChange('page', newPage);
   };
 
   const formatDate = (dateString) => {
@@ -235,7 +266,6 @@ const AllUsers = () => {
         return <span className="status-badge unknown">غير معروف</span>;
     }
   };
-
   const getUserStatusText = (status) => {
     switch (status) {
       case 'pending':
@@ -382,19 +412,18 @@ const AllUsers = () => {
   };
 
   // إنشاء أزرار الباجينيشن
-  const renderPagination = () => {
+ const renderPagination = () => {
     if (pagination.last_page <= 1) return null;
 
     const pages = [];
     const currentPage = pagination.current_page;
     const lastPage = pagination.last_page;
     
-    // زر الصفحة السابقة
     pages.push(
       <button
         key="prev"
         className={`pagination-btn ${currentPage === 1 ? 'disabled' : ''}`}
-        onClick={() => currentPage > 1 && setPagination(prev => ({ ...prev, current_page: prev.current_page - 1 }))}
+        onClick={() => currentPage > 1 && updatePagination(currentPage - 1)}
         disabled={currentPage === 1}
       >
         <FiChevronRight />
@@ -403,31 +432,24 @@ const AllUsers = () => {
 
     // أزرار الصفحات
     const showPages = [];
-    
-    // دائما نعرض الصفحة الأولى
     showPages.push(1);
     
-    // نقاط إذا كانت الصفحة الحالية بعيدة عن البداية
     if (currentPage > 3) {
       showPages.push('ellipsis-start');
     }
     
-    // الصفحات حول الصفحة الحالية
     for (let i = Math.max(2, currentPage - 1); i <= Math.min(lastPage - 1, currentPage + 1); i++) {
       showPages.push(i);
     }
     
-    // نقاط إذا كانت الصفحة الحالية بعيدة عن النهاية
     if (currentPage < lastPage - 2) {
       showPages.push('ellipsis-end');
     }
     
-    // دائما نعرض الصفحة الأخيرة إذا كانت أكثر من 1
     if (lastPage > 1) {
       showPages.push(lastPage);
     }
     
-    // إزالة التكرارات
     const uniquePages = [...new Set(showPages)];
     
     uniquePages.forEach(page => {
@@ -438,7 +460,7 @@ const AllUsers = () => {
           <button
             key={page}
             className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
-            onClick={() => setPagination(prev => ({ ...prev, current_page: page }))}
+            onClick={() => updatePagination(page)}
           >
             {page}
           </button>
@@ -451,7 +473,7 @@ const AllUsers = () => {
       <button
         key="next"
         className={`pagination-btn ${currentPage === lastPage ? 'disabled' : ''}`}
-        onClick={() => currentPage < lastPage && setPagination(prev => ({ ...prev, current_page: prev.current_page + 1 }))}
+        onClick={() => currentPage < lastPage && updatePagination(currentPage + 1)}
         disabled={currentPage === lastPage}
       >
         <FiChevronLeft />
@@ -463,8 +485,9 @@ const AllUsers = () => {
 
   // التحقق إذا كان هناك أي فلتر نشط
   const hasActiveFilters = filters.search || filters.status !== 'all' || filters.user_type_id !== 'all';
+  const loading = state.users.isLoading || localLoading;
 
-  return (
+   return (
     <div className="pending-users-container">
       <div className="content-header">
         <h1>
@@ -472,6 +495,18 @@ const AllUsers = () => {
           إدارة جميع المستخدمين
         </h1>
         <p>عرض وإدارة جميع المستخدمين في النظام - العدد الإجمالي: {pagination.total}</p>
+      <div className="dashboard-header-actions">
+        <button 
+          className="dashboard-refresh-btn" 
+          onClick={() => fetchAllUsers(true)}
+          disabled={loading}
+        >
+                              <FiRefreshCw />
+
+          تحديث البيانات
+        </button>
+        
+      </div>
       </div>
 
       {/* شريط البحث والتصفية */}
@@ -577,11 +612,11 @@ const AllUsers = () => {
               </span>
             </div>
             
-            {listLoading ? (
-              <div className="list-loading">
-                <div className="loading-spinner"></div>
-                <p>جاري تحميل المستخدمين...</p>
-              </div>
+             {loading ? (
+        <div className="list-loading">
+          <div className="loading-spinner"></div>
+          <p>جاري تحميل المستخدمين...</p>
+        </div>
             ) : users.length === 0 ? (
               <div className="empty-state">
                 <FiUser className="empty-icon" />

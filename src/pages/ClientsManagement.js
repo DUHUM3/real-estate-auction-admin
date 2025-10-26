@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiClock, FiCheck, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiGlobe, FiImage, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiUser, FiClock, FiCheck, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiGlobe, FiImage, FiPlus, FiTrash2, FiRefreshCw } from 'react-icons/fi';
+import { useData } from '../contexts/DataContext';
 import '../styles/PendingUsers.css';
 
 const ClientsManagement = () => {
-  const [clients, setClients] = useState([]);
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { state, dispatch } = useData();
+  const [localLoading, setLocalLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -15,13 +16,36 @@ const ClientsManagement = () => {
   });
   const [uploadLoading, setUploadLoading] = useState(false);
 
+  // استخدام البيانات من Context
+  const clients = state.clients.data || [];
+  const loading = state.clients.isLoading || localLoading;
+
   useEffect(() => {
-    fetchClients();
+    // إذا البيانات غير موجودة أو قديمة، قم بجلبها
+    if (!state.clients.data || state.clients.data.length === 0 || isClientsDataStale()) {
+      fetchClients();
+    }
   }, []);
 
+  const isClientsDataStale = () => {
+    if (!state.clients.lastUpdated) return true;
+    const now = new Date();
+    const lastUpdate = new Date(state.clients.lastUpdated);
+    const diffInMinutes = (now - lastUpdate) / (1000 * 60);
+    return diffInMinutes > 10; // تحديث إذا مرت أكثر من 10 دقائق
+  };
+
   // جلب العملاء المميزين
-  const fetchClients = async () => {
+  const fetchClients = async (forceRefresh = false) => {
+    // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
+    if (state.clients.data && state.clients.data.length > 0 && !forceRefresh && !isClientsDataStale()) {
+      return;
+    }
+
     try {
+      dispatch({ type: 'SET_CLIENTS_LOADING', payload: true });
+      setLocalLoading(true);
+      
       const response = await fetch('https://shahin-tqay.onrender.com/api/clients/Featured', {
         method: 'GET',
         headers: {
@@ -35,24 +59,41 @@ const ClientsManagement = () => {
         const result = await response.json();
         console.log('بيانات العملاء المستلمة:', result);
         
+        let clientsData = [];
         // تحديث بناءً على شكل الرد الجديد
         if (Array.isArray(result)) {
-          setClients(result);
+          clientsData = result;
         } else if (result.data && Array.isArray(result.data)) {
-          setClients(result.data);
+          clientsData = result.data;
         } else {
           console.error('هيكل البيانات غير متوقع:', result);
-          setClients([]);
+          clientsData = [];
         }
+
+        dispatch({
+          type: 'SET_CLIENTS_DATA',
+          payload: {
+            data: clientsData,
+            pagination: {
+              total: clientsData.length,
+              current_page: 1,
+              last_page: 1,
+              per_page: clientsData.length
+            }
+          }
+        });
       } else {
         console.error('فشل في جلب العملاء:', response.status);
         alert('فشل في جلب بيانات العملاء');
+        dispatch({ type: 'CLEAR_CLIENTS_DATA' });
       }
     } catch (error) {
       console.error('خطأ في جلب العملاء:', error);
       alert('حدث خطأ أثناء جلب البيانات');
+      dispatch({ type: 'CLEAR_CLIENTS_DATA' });
     } finally {
-      setLoading(false);
+      dispatch({ type: 'SET_CLIENTS_LOADING', payload: false });
+      setLocalLoading(false);
     }
   };
 
@@ -92,10 +133,17 @@ const ClientsManagement = () => {
         const result = await response.json();
         console.log('نتيجة الإضافة:', result);
         
+        // إضافة العميل الجديد إلى الـ context
+        if (result.data) {
+          dispatch({
+            type: 'ADD_CLIENT',
+            payload: result.data
+          });
+        }
+        
         alert('تم إضافة العميل بنجاح');
         setFormData({ name: '', website: '', logo: null });
         setShowAddForm(false);
-        fetchClients(); // تحديث القائمة
       } else {
         const errorData = await response.json();
         alert(errorData.message || 'فشل في إضافة العميل');
@@ -128,7 +176,12 @@ const ClientsManagement = () => {
       console.log('حالة حذف العميل:', response.status);
 
       if (response.ok) {
-        setClients(clients.filter(client => client.id !== clientId));
+        // حذف العميل من الـ context
+        dispatch({
+          type: 'DELETE_CLIENT',
+          payload: clientId
+        });
+        
         setSelectedClient(null);
         alert('تم حذف العميل بنجاح');
       } else {
@@ -167,6 +220,7 @@ const ClientsManagement = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
     return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
@@ -235,7 +289,7 @@ const ClientsManagement = () => {
             تاريخ الإضافة
           </div>
           <div className="detail-value">
-            {client.created_at ? formatDate(client.created_at) : 'غير محدد'}
+            {formatDate(client.created_at)}
           </div>
         </div>
 
@@ -245,14 +299,14 @@ const ClientsManagement = () => {
             آخر تحديث
           </div>
           <div className="detail-value">
-            {client.updated_at ? formatDate(client.updated_at) : 'غير محدد'}
+            {formatDate(client.updated_at)}
           </div>
         </div>
       </div>
     );
   };
 
-  if (loading) {
+  if (loading && clients.length === 0) {
     return (
       <div className="pending-users-container">
         <div className="loading">
@@ -272,14 +326,24 @@ const ClientsManagement = () => {
         </h1>
         <p>إدارة قائمة العملاء المميزين - العدد الإجمالي: {clients.length}</p>
         
-        <button 
-          className="btn btn-success2"
-          onClick={() => setShowAddForm(true)}
-          style={{ marginTop: '10px' }}
-        >
-          <FiPlus />
-          إضافة عميل جديد
-        </button>
+        <div className="dashboard-header-actions">
+          <button 
+            className="dashboard-refresh-btn" 
+            onClick={() => fetchClients(true)}
+            disabled={loading}
+          >
+            <FiRefreshCw />
+            تحديث البيانات
+          </button>
+          
+          <button 
+            className="btn btn-success2"
+            onClick={() => setShowAddForm(true)}
+          >
+            <FiPlus />
+            إضافة عميل جديد
+          </button>
+        </div>
       </div>
 
       {/* نموذج إضافة عميل جديد */}
@@ -381,7 +445,12 @@ const ClientsManagement = () => {
               <h3>قائمة العملاء ({clients.length})</h3>
             </div>
             
-            {clients.length === 0 ? (
+            {loading ? (
+              <div className="list-loading">
+                <div className="loading-spinner"></div>
+                <p>جاري تحميل العملاء...</p>
+              </div>
+            ) : clients.length === 0 ? (
               <div className="empty-state">
                 <FiUser className="empty-icon" />
                 <p>لا توجد عملاء مميزين</p>
@@ -414,12 +483,6 @@ const ClientsManagement = () => {
                     </div>
                     <div className="user-info">
                       <h4>{client.name}</h4>
-                      {/* {client.website && (
-                        <span className="user-type">
-                          <FiGlobe />
-                          {client.website}
-                        </span>
-                      )} */}
                       {client.created_at && (
                         <span className="user-date">
                           <FiCalendar />

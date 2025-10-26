@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FiUsers, 
-  FiHome, 
-  FiCalendar, 
-  FiHeart, 
-  FiFilter, 
-  FiSearch, 
-  FiDownload, 
-  FiFileText, 
+import {
+  FiUsers,
+  FiHome,
+  FiCalendar,
+  FiHeart,
+  FiFilter,
+  FiSearch,
+  FiDownload,
+  FiFileText,
   FiFile,
   FiSlash
 } from 'react-icons/fi';
@@ -44,41 +44,60 @@ const ReportsPage = () => {
   const statusOptions = {
     properties: [
       { value: 'all', label: 'الكل' },
-      { value: 'pending', label: 'قيد الانتظار' },
       { value: 'approved', label: 'مقبول' },
+      { value: 'pending', label: 'قيد المراجعة' },
       { value: 'rejected', label: 'مرفوض' },
     ],
     users: [
       { value: 'all', label: 'الكل' },
-      { value: 'active', label: 'نشط' },
-      { value: 'inactive', label: 'غير نشط' },
+      { value: 'approved', label: 'مقبول' },
+      { value: 'pending', label: 'قيد المراجعة' },
+      { value: 'rejected', label: 'مرفوض' },
     ],
     auctions: [
       { value: 'all', label: 'الكل' },
-      { value: 'upcoming', label: 'قادم' },
-      { value: 'ongoing', label: 'جاري' },
-      { value: 'completed', label: 'مكتمل' },
+      { value: 'مفتوح', label: 'مفتوح' },
+      { value: 'مغلق', label: 'مغلق' },
+      { value: 'قيد المراجعة', label: 'قيد المراجعة' },
+      { value: 'مرفوض', label: 'مرفوض' },
     ],
     interests: [
       { value: 'all', label: 'الكل' },
-      { value: 'pending', label: 'قيد الانتظار' },
-      { value: 'approved', label: 'مقبول' },
-      { value: 'rejected', label: 'مرفوض' },
+      { value: 'pending', label: 'قيد المراجعة' },
+      { value: 'reviewed', label: 'تمت المراجعة' },
+      { value: 'cancelled', label: 'ملغي' },
     ],
   };
 
   const regions = [
     { value: '', label: 'كل المناطق' },
-    { value: 'الرياض', label: 'الرياض' },
-    { value: 'مكة المكرمة', label: 'مكة المكرمة' },
-    { value: 'المدينة المنورة', label: 'المدينة المنورة' },
-    { value: 'القصيم', label: 'القصيم' },
-    { value: 'الشرقية', label: 'الشرقية' },
+    { value: 'عدن', label: 'عدن' },
+    { value: 'صنعاء', label: 'صنعاء' },
+    { value: 'تعز', label: 'تعز' },
+    { value: 'حضرموت', label: 'حضرموت' },
+    { value: 'الحديدة', label: 'الحديدة' },
+    { value: 'إب', label: 'إب' },
+    { value: 'ذمار', label: 'ذمار' },
+    { value: 'المكلا', label: 'المكلا' },
+    { value: 'سيئون', label: 'سيئون' },
+    { value: 'شبوة', label: 'شبوة' },
+    { value: 'حجة', label: 'حجة' },
+    { value: 'المهرة', label: 'المهرة' },
+    { value: 'الضالع', label: 'الضالع' },
+    { value: 'لحج', label: 'لحج' },
+    { value: 'أبين', label: 'أبين' },
+    { value: 'عمران', label: 'عمران' },
+    { value: 'البيضاء', label: 'البيضاء' },
+    { value: 'صعدة', label: 'صعدة' },
+    { value: 'الجوف', label: 'الجوف' },
+    { value: 'المحويت', label: 'المحويت' },
+    { value: 'ريمة', label: 'ريمة' },
+    { value: 'أرخبيل سقطرى', label: 'أرخبيل سقطرى' },
   ];
 
   const tableHeaders = {
     users: ['الاسم الكامل', 'البريد الإلكتروني', 'الحالة', 'نوع المستخدم', 'تاريخ التسجيل'],
-    properties: ['العنوان', 'المنطقة', 'المدينة', 'الحالة', 'المالك', 'السعر/متر', 'تاريخ الإضافة'],
+    properties: ['العنوان', 'المنطقة', 'المدينة', 'الحالة', 'المالك', 'تاريخ الإضافة'],
     auctions: ['العنوان', 'الحالة', 'تاريخ المزاد', 'الشركة', 'المالك', 'تاريخ الإنشاء'],
     interests: ['المستخدم', 'البريد الإلكتروني', 'العقار', 'الحالة', 'تاريخ الاهتمام'],
   };
@@ -90,7 +109,7 @@ const ReportsPage = () => {
   const fetchReports = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       let url = `https://shahin-tqay.onrender.com/api/admin/reports?period=${filters.period}&type=${filters.type}`;
       
@@ -161,6 +180,55 @@ const ReportsPage = () => {
     });
   };
 
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'approved':
+      case 'مقبول':
+        return 'approved';
+      case 'pending':
+      case 'قيد المراجعة':
+        return 'pending';
+      case 'rejected':
+      case 'مرفوض':
+        return 'rejected';
+      case 'reviewed':
+      case 'تمت المراجعة':
+        return 'reviewed';
+      case 'cancelled':
+      case 'ملغي':
+        return 'cancelled';
+      case 'مفتوح':
+        return 'open';
+      case 'مغلق':
+        return 'closed';
+      default:
+        return 'unknown';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'approved':
+        return 'مقبول';
+      case 'pending':
+        return 'قيد المراجعة';
+      case 'rejected':
+        return 'مرفوض';
+      case 'reviewed':
+        return 'تمت المراجعة';
+      case 'cancelled':
+        return 'ملغي';
+      case 'مفتوح':
+        return 'مفتوح';
+      case 'مغلق':
+        return 'مغلق';
+      case 'قيد المراجعة':
+        return 'قيد المراجعة';
+      default:
+        return status;
+    }
+  };
+
   const exportToExcel = () => {
     try {
       if (reports.length === 0) {
@@ -179,42 +247,37 @@ const ReportsPage = () => {
         const row = {};
         
         if (filters.type === 'users') {
-          headers.forEach((header, index) => {
+          headers.forEach((header) => {
             if (header === 'الاسم الكامل') row[header] = item.full_name || 'غير محدد';
             else if (header === 'البريد الإلكتروني') row[header] = item.email || 'غير متوفر';
-            else if (header === 'الحالة') row[header] = item.status === 'active' ? 'نشط' : 'غير نشط';
+            else if (header === 'الحالة') row[header] = getStatusText(item.status);
             else if (header === 'نوع المستخدم') row[header] = item.user_type || 'غير محدد';
             else if (header === 'تاريخ التسجيل') row[header] = item.created_at || 'غير محدد';
           });
         } else if (filters.type === 'properties') {
-          headers.forEach((header, index) => {
+          headers.forEach((header) => {
             if (header === 'العنوان') row[header] = item.title || 'غير محدد';
             else if (header === 'المنطقة') row[header] = item.region || 'غير محدد';
             else if (header === 'المدينة') row[header] = item.city || 'غير محدد';
-            else if (header === 'الحالة') row[header] = item.status === 'approved' ? 'مقبول' : 
-                             item.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار';
+            else if (header === 'الحالة') row[header] = getStatusText(item.status);
             else if (header === 'المالك') row[header] = item.owner || 'غير محدد';
-            else if (header === 'السعر/متر') row[header] = item.price_per_meter || 'غير محدد';
             else if (header === 'تاريخ الإضافة') row[header] = item.created_at || 'غير محدد';
           });
         } else if (filters.type === 'auctions') {
-          headers.forEach((header, index) => {
+          headers.forEach((header) => {
             if (header === 'العنوان') row[header] = item.title || 'غير محدد';
-            else if (header === 'الحالة') row[header] = item.status === 'upcoming' ? 'قادم' : 
-                             item.status === 'ongoing' ? 'جاري' : 
-                             item.status === 'completed' ? 'مكتمل' : item.status;
+            else if (header === 'الحالة') row[header] = getStatusText(item.status);
             else if (header === 'تاريخ المزاد') row[header] = item.auction_date || 'غير محدد';
             else if (header === 'الشركة') row[header] = item.company || 'غير محدد';
             else if (header === 'المالك') row[header] = item.owner || 'غير محدد';
             else if (header === 'تاريخ الإنشاء') row[header] = item.created_at || 'غير محدد';
           });
         } else if (filters.type === 'interests') {
-          headers.forEach((header, index) => {
+          headers.forEach((header) => {
             if (header === 'المستخدم') row[header] = item.user || 'غير محدد';
             else if (header === 'البريد الإلكتروني') row[header] = item.email || 'غير متوفر';
             else if (header === 'العقار') row[header] = item.property || 'غير محدد';
-            else if (header === 'الحالة') row[header] = item.status === 'approved' ? 'مقبول' : 
-                             item.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار';
+            else if (header === 'الحالة') row[header] = getStatusText(item.status);
             else if (header === 'تاريخ الاهتمام') row[header] = item.created_at || 'غير محدد';
           });
         }
@@ -238,186 +301,353 @@ const ReportsPage = () => {
     }
   };
 
-  const exportToPdf = () => {
-    try {
-      if (reports.length === 0) {
-        alert('لا توجد بيانات للتصدير');
-        return;
-      }
+const exportToPdf = () => {
+  try {
+    if (reports.length === 0) {
+      alert('لا توجد بيانات للتصدير');
+      return;
+    }
 
-      const reportTitle = reportTypes.find(t => t.value === filters.type)?.label || 'تقرير';
-      const periodTitle = periodTypes.find(p => p.value === filters.period)?.label || '';
-      const fileName = `${reportTitle}_${periodTitle}_${new Date().toLocaleDateString('ar-SA')}.pdf`;
-      
-      // إنشاء محتوى HTML للPDF
-      let htmlContent = `
-        <!DOCTYPE html>
-        <html dir="rtl">
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body {
-              font-family: 'Arial', sans-serif;
-              margin: 20px;
-              direction: rtl;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-              border-bottom: 2px solid #16354d;
-              padding-bottom: 10px;
-            }
-            .header h1 {
-              color: #16354d;
-              margin: 0;
-              font-size: 24px;
-            }
-            .header .subtitle {
-              color: #666;
-              font-size: 14px;
-              margin-top: 5px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-            th {
-              background-color: #16354d;
-              color: white;
-              padding: 12px 8px;
-              text-align: right;
-              font-weight: bold;
-              border: 1px solid #ddd;
-            }
-            td {
-              padding: 10px 8px;
-              border: 1px solid #ddd;
-              text-align: right;
-            }
-            tr:nth-child(even) {
-              background-color: #f8f9fa;
-            }
-            .footer {
-              margin-top: 30px;
-              text-align: center;
-              color: #666;
-              font-size: 12px;
-              border-top: 1px solid #ddd;
-              padding-top: 10px;
-            }
-            .status-badge {
-              padding: 4px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-              font-weight: bold;
-            }
-            .status-approved { background-color: #d4edda; color: #155724; }
-            .status-rejected { background-color: #f8d7da; color: #721c24; }
-            .status-pending { background-color: #fff3cd; color: #856404; }
-            .status-active { background-color: #d4edda; color: #155724; }
-            .status-inactive { background-color: #f8d7da; color: #721c24; }
-          </style>
-        </head>
-        <body>
+    const reportTitle = reportTypes.find(t => t.value === filters.type)?.label || 'تقرير';
+    const periodTitle = periodTypes.find(p => p.value === filters.period)?.label || '';
+    const fileName = `${reportTitle}_${periodTitle}_${new Date().toLocaleDateString('ar-SA')}.pdf`;
+
+    // إنشاء محتوى HTML للPDF
+    let htmlContent = `
+      <!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: 'Tajawal', 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            direction: rtl;
+            background-color: #f8f9fa;
+            color: #333;
+          }
+          .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+          }
+          .header {
+            background: linear-gradient(135deg, #16354d 0%, #1e5b8d 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+          }
+          .brand {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+          }
+          .brand-logo {
+            font-size: 35px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+          }
+          .brand-logo::before {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 5px;
+            background-color: #ffc107;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+          }
+          .brand-tagline {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 15px;
+          }
+          .header h1 {
+            margin: 0 0 10px;
+            font-size: 28px;
+            font-weight: bold;
+          }
+          .header .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 16px;
+            margin: 5px 0;
+          }
+          .content {
+            padding: 30px;
+          }
+          .report-info {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-right: 4px solid #16354d;
+          }
+          .report-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+          }
+          .report-info-label {
+            font-weight: bold;
+            color: #16354d;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+          }
+          th {
+            background: linear-gradient(to bottom, #16354d 0%, #143c5a 100%);
+            color: white;
+            padding: 15px 10px;
+            text-align: right;
+            font-weight: bold;
+            border: none;
+          }
+          td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e0e0e0;
+            text-align: right;
+          }
+          tr:last-child td {
+            border-bottom: none;
+          }
+          tr:nth-child(even) {
+            background-color: #f8f9fa;
+          }
+          tr:hover {
+            background-color: #f1f5f8;
+          }
+          .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 90px;
+          }
+          .status-approved { background-color: #d4edda; color: #155724; }
+          .status-rejected { background-color: #f8d7da; color: #721c24; }
+          .status-pending { background-color: #fff3cd; color: #856404; }
+          .status-reviewed { background-color: #cce7ff; color: #004085; }
+          .status-cancelled { background-color: #e2e3e5; color: #383d41; }
+          .status-open { background-color: #d1ecf1; color: #0c5460; }
+          .status-closed { background-color: #d6d8d9; color: #1b1e21; }
+          .footer {
+            padding: 20px 30px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 13px;
+            border-top: 1px solid #eee;
+            background-color: #f8f9fa;
+          }
+          .signature {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #16354d;
+          }
+          .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            opacity: 0.03;
+            font-size: 120px;
+            font-weight: bold;
+            color: #000;
+            white-space: nowrap;
+            pointer-events: none;
+          }
+          .report-summary {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-right: 4px solid #ffc107;
+          }
+          .summary-title {
+            font-weight: bold;
+            font-size: 18px;
+            color: #16354d;
+            margin-bottom: 15px;
+          }
+          .summary-data {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+          }
+          .summary-item {
+            text-align: center;
+            padding: 10px 20px;
+            min-width: 150px;
+          }
+          .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #16354d;
+          }
+          .summary-label {
+            font-size: 14px;
+            color: #6c757d;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="watermark">شاهين العقارية</div>
+        <div class="container">
           <div class="header">
+            <div class="brand">
+              <div class="brand-logo">شاهين</div>
+            </div>
+            <div class="brand-tagline">منصة العقارات السعودية الأولى</div>
             <h1>${reportTitle} - ${periodTitle}</h1>
             <div class="subtitle">
-              الفترة من: ${dateRange.from} إلى: ${dateRange.to}
-            </div>
-            <div class="subtitle">
-              إجمالي النتائج: ${totalCount}
+              تقرير تفصيلي للعمليات والإحصائيات
             </div>
           </div>
-      `;
+          
+          <div class="content">
+            <div class="report-info">
+              <div class="report-info-item">
+                <span class="report-info-label">الفترة من:</span>
+                <span>${dateRange.from}</span>
+              </div>
+              <div class="report-info-item">
+                <span class="report-info-label">الفترة إلى:</span>
+                <span>${dateRange.to}</span>
+              </div>
+              <div class="report-info-item">
+                <span class="report-info-label">إجمالي النتائج:</span>
+                <span>${totalCount}</span>
+              </div>
+              <div class="report-info-item">
+                <span class="report-info-label">تاريخ إنشاء التقرير:</span>
+                <span>${new Date().toLocaleString('ar-SA')}</span>
+              </div>
+            </div>
 
-      // إضافة الجدول
-      htmlContent += `<table>`;
+            <div class="report-summary">
+              <div class="summary-title">ملخص التقرير</div>
+              <div class="summary-data">
+                <div class="summary-item">
+                  <div class="summary-value">${totalCount}</div>
+                  <div class="summary-label">إجمالي السجلات</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-value">${reports.filter(item => item.status === 'approved' || item.status === 'مقبول').length}</div>
+                  <div class="summary-label">مقبول</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-value">${reports.filter(item => item.status === 'pending' || item.status === 'قيد المراجعة').length}</div>
+                  <div class="summary-label">قيد المراجعة</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-value">${reports.filter(item => item.status === 'rejected' || item.status === 'مرفوض').length}</div>
+                  <div class="summary-label">مرفوض</div>
+                </div>
+              </div>
+            </div>
+    `;
+
+    // إضافة الجدول
+    htmlContent += `<table>`;
+    
+    // رأس الجدول
+    htmlContent += `<thead><tr>`;
+    htmlContent += `<th>#</th>`;
+    tableHeaders[filters.type].forEach(header => {
+      htmlContent += `<th>${header}</th>`;
+    });
+    htmlContent += `</tr></thead>`;
+    
+    // جسم الجدول
+    htmlContent += `<tbody>`;
+    reports.forEach((item, index) => {
+      htmlContent += `<tr>`;
+      htmlContent += `<td>${index + 1}</td>`;
       
-      // رأس الجدول
-      htmlContent += `<thead><tr>`;
-      htmlContent += `<th>#</th>`;
-      tableHeaders[filters.type].forEach(header => {
-        htmlContent += `<th>${header}</th>`;
-      });
-      htmlContent += `</tr></thead>`;
+      if (filters.type === 'users') {
+        htmlContent += `
+          <td>${item.full_name || 'غير محدد'}</td>
+          <td>${item.email || 'غير متوفر'}</td>
+          <td><span class="status-badge status-${getStatusBadgeClass(item.status)}">${getStatusText(item.status)}</span></td>
+          <td>${item.user_type || 'غير محدد'}</td>
+          <td>${item.created_at || 'غير محدد'}</td>
+        `;
+      } else if (filters.type === 'properties') {
+        htmlContent += `
+          <td>${item.title || 'غير محدد'}</td>
+          <td>${item.region || 'غير محدد'}</td>
+          <td>${item.city || 'غير محدد'}</td>
+          <td><span class="status-badge status-${getStatusBadgeClass(item.status)}">${getStatusText(item.status)}</span></td>
+          <td>${item.owner || 'غير محدد'}</td>
+          <td>${item.created_at || 'غير محدد'}</td>
+        `;
+      } else if (filters.type === 'auctions') {
+        htmlContent += `
+          <td>${item.title || 'غير محدد'}</td>
+          <td><span class="status-badge status-${getStatusBadgeClass(item.status)}">${getStatusText(item.status)}</span></td>
+          <td>${item.auction_date || 'غير محدد'}</td>
+          <td>${item.company || 'غير محدد'}</td>
+          <td>${item.owner || 'غير محدد'}</td>
+          <td>${item.created_at || 'غير محدد'}</td>
+        `;
+      } else if (filters.type === 'interests') {
+        htmlContent += `
+          <td>${item.user || 'غير محدد'}</td>
+          <td>${item.email || 'غير متوفر'}</td>
+          <td>${item.property || 'غير محدد'}</td>
+          <td><span class="status-badge status-${getStatusBadgeClass(item.status)}">${getStatusText(item.status)}</span></td>
+          <td>${item.created_at || 'غير محدد'}</td>
+        `;
+      }
       
-      // جسم الجدول
-      htmlContent += `<tbody>`;
-      reports.forEach((item, index) => {
-        htmlContent += `<tr>`;
-        htmlContent += `<td>${index + 1}</td>`;
-        
-        if (filters.type === 'users') {
-          htmlContent += `
-            <td>${item.full_name || 'غير محدد'}</td>
-            <td>${item.email || 'غير متوفر'}</td>
-            <td><span class="status-badge status-${item.status}">${item.status === 'active' ? 'نشط' : 'غير نشط'}</span></td>
-            <td>${item.user_type || 'غير محدد'}</td>
-            <td>${item.created_at || 'غير محدد'}</td>
-          `;
-        } else if (filters.type === 'properties') {
-          const statusClass = item.status === 'approved' ? 'approved' : 
-                            item.status === 'rejected' ? 'rejected' : 'pending';
-          htmlContent += `
-            <td>${item.title || 'غير محدد'}</td>
-            <td>${item.region || 'غير محدد'}</td>
-            <td>${item.city || 'غير محدد'}</td>
-            <td><span class="status-badge status-${statusClass}">${item.status === 'approved' ? 'مقبول' : item.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'}</span></td>
-            <td>${item.owner || 'غير محدد'}</td>
-            <td>${item.price_per_meter || 'غير محدد'}</td>
-            <td>${item.created_at || 'غير محدد'}</td>
-          `;
-        } else if (filters.type === 'auctions') {
-          htmlContent += `
-            <td>${item.title || 'غير محدد'}</td>
-            <td>${item.status === 'upcoming' ? 'قادم' : item.status === 'ongoing' ? 'جاري' : item.status === 'completed' ? 'مكتمل' : item.status}</td>
-            <td>${item.auction_date || 'غير محدد'}</td>
-            <td>${item.company || 'غير محدد'}</td>
-            <td>${item.owner || 'غير محدد'}</td>
-            <td>${item.created_at || 'غير محدد'}</td>
-          `;
-        } else if (filters.type === 'interests') {
-          const statusClass = item.status === 'approved' ? 'approved' : 
-                            item.status === 'rejected' ? 'rejected' : 'pending';
-          htmlContent += `
-            <td>${item.user || 'غير محدد'}</td>
-            <td>${item.email || 'غير متوفر'}</td>
-            <td>${item.property || 'غير محدد'}</td>
-            <td><span class="status-badge status-${statusClass}">${item.status === 'approved' ? 'مقبول' : item.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'}</span></td>
-            <td>${item.created_at || 'غير محدد'}</td>
-          `;
-        }
-        
-        htmlContent += `</tr>`;
-      });
-      htmlContent += `</tbody></table>`;
-      
-      // التذييل
-      htmlContent += `
+      htmlContent += `</tr>`;
+    });
+    htmlContent += `</tbody></table>`;
+    
+    // التذييل
+    htmlContent += `
+          </div>
+          
           <div class="footer">
-            تم إنشاء التقرير في: ${new Date().toLocaleString('ar-SA')}
+            <p>© ${new Date().getFullYear()} شاهين - منصة العقارات السعودية الأولى. جميع الحقوق محفوظة</p>
+            <div class="signature">تم إصدار هذا التقرير آلياً من منصة شاهين</div>
           </div>
-        </body>
-        </html>
-      `;
+        </div>
+      </body>
+      </html>
+    `;
 
-      // فتح نافذة جديدة للطباعة/الحفظ كPDF
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      
-      // الانتظار حتى يتم تحميل المحتوى ثم الطباعة
-      setTimeout(() => {
-        printWindow.print();
-        // يمكن للمستخدم اختيار الحفظ كPDF من خيارات الطباعة
-      }, 500);
-      
-    } catch (error) {
-      console.error('خطأ في تصدير PDF:', error);
-      alert('حدث خطأ أثناء تصدير PDF: ' + error.message);
-    }
-  };
+    // فتح نافذة جديدة للطباعة/الحفظ كPDF
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    // الانتظار حتى يتم تحميل المحتوى ثم الطباعة
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+    
+  } catch (error) {
+    console.error('خطأ في تصدير PDF:', error);
+    alert('حدث خطأ أثناء تصدير PDF: ' + error.message);
+  }
+};
 
   const hasActiveFilters = filters.status !== 'all' || filters.search || filters.region;
 
@@ -435,9 +665,9 @@ const ReportsPage = () => {
       return (
         <div className="error-state">
           <p>{error}</p>
-          {/* <button className="btn btn-primary" onClick={fetchReports}>
+          <button className="btn btn-primary" onClick={fetchReports}>
             إعادة المحاولة
-          </button> */}
+          </button>
         </div>
       );
     }
@@ -477,8 +707,8 @@ const ReportsPage = () => {
                       <td>{item.full_name || 'غير محدد'}</td>
                       <td>{item.email || 'غير متوفر'}</td>
                       <td>
-                        <span className={`status-badge ${item.status}`}>
-                          {item.status === 'active' ? 'نشط' : 'غير نشط'}
+                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
+                          {getStatusText(item.status)}
                         </span>
                       </td>
                       <td>{item.user_type || 'غير محدد'}</td>
@@ -491,13 +721,11 @@ const ReportsPage = () => {
                       <td>{item.region || 'غير محدد'}</td>
                       <td>{item.city || 'غير محدد'}</td>
                       <td>
-                        <span className={`status-badge ${item.status}`}>
-                          {item.status === 'approved' ? 'مقبول' : 
-                           item.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'}
+                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
+                          {getStatusText(item.status)}
                         </span>
                       </td>
                       <td>{item.owner || 'غير محدد'}</td>
-                      <td>{item.price_per_meter || 'غير محدد'}</td>
                       <td>{item.created_at || 'غير محدد'}</td>
                     </>
                   )}
@@ -505,10 +733,8 @@ const ReportsPage = () => {
                     <>
                       <td>{item.title || 'غير محدد'}</td>
                       <td>
-                        <span className={`status-badge ${item.status}`}>
-                          {item.status === 'upcoming' ? 'قادم' : 
-                           item.status === 'ongoing' ? 'جاري' : 
-                           item.status === 'completed' ? 'مكتمل' : item.status}
+                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
+                          {getStatusText(item.status)}
                         </span>
                       </td>
                       <td>{item.auction_date || 'غير محدد'}</td>
@@ -523,9 +749,8 @@ const ReportsPage = () => {
                       <td>{item.email || 'غير متوفر'}</td>
                       <td>{item.property || 'غير محدد'}</td>
                       <td>
-                        <span className={`status-badge ${item.status}`}>
-                          {item.status === 'approved' ? 'مقبول' : 
-                           item.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'}
+                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
+                          {getStatusText(item.status)}
                         </span>
                       </td>
                       <td>{item.created_at || 'غير محدد'}</td>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FiUser, 
-  FiHeart, 
+  FiMap, 
   FiCheck, 
   FiX, 
   FiMail, 
@@ -16,26 +16,28 @@ import {
   FiSlash,
   FiMessageSquare,
   FiEdit,
-  FiRefreshCw
+  FiRefreshCw,
+  FiNavigation,
+  FiTarget,
+  FiLayers
 } from 'react-icons/fi';
 import { useData } from '../../contexts/DataContext';
 import '../../styles/PendingUsers.css';
 
-const AllInterests = () => {
+const LandRequests = () => {
   const { state, dispatch } = useData();
   const [localLoading, setLocalLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [selectedInterest, setSelectedInterest] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const [statusModal, setStatusModal] = useState({
     show: false,
-    interestId: null,
-    newStatus: '',
-    adminNote: ''
+    requestId: null,
+    newStatus: ''
   });
   
   // استخدام البيانات من Context
-  const interestsData = state.interests.data || [];
-  const pagination = state.interests.pagination || {
+  const landRequestsData = state.landRequests.data || [];
+  const pagination = state.landRequests.pagination || {
     current_page: 1,
     last_page: 1,
     per_page: 10,
@@ -43,23 +45,20 @@ const AllInterests = () => {
     from: 0,
     to: 0
   };
-  const filters = state.interests.filters;
-  const filtersData = state.interests.filtersData || {
-    status_options: [],
-    properties: []
-  };
+  const filters = state.landRequests.filters;
+  const filtersData = state.landRequests.filtersData;
 
   useEffect(() => {
     // إذا البيانات غير موجودة أو قديمة، قم بجلبها
-    if (!state.interests.data || state.interests.data.length === 0 || isInterestsDataStale()) {
-      fetchAllInterests();
+    if (!state.landRequests.data || state.landRequests.data.length === 0 || isLandRequestsDataStale()) {
+      fetchLandRequests();
     }
   }, [filters, pagination.current_page]);
 
-  const isInterestsDataStale = () => {
-    if (!state.interests.lastUpdated) return true;
+  const isLandRequestsDataStale = () => {
+    if (!state.landRequests.lastUpdated) return true;
     const now = new Date();
-    const lastUpdate = new Date(state.interests.lastUpdated);
+    const lastUpdate = new Date(state.landRequests.lastUpdated);
     const diffInMinutes = (now - lastUpdate) / (1000 * 60);
     return diffInMinutes > 10; // تحديث إذا مرت أكثر من 10 دقائق
   };
@@ -69,10 +68,15 @@ const AllInterests = () => {
     
     // إضافة معاملات البحث والتصفية فقط إذا كانت محددة
     if (filters.search.trim()) params.append('search', filters.search.trim());
+    if (filters.region !== 'all') params.append('region', filters.region);
+    if (filters.city !== 'all') params.append('city', filters.city);
+    if (filters.purpose !== 'all') params.append('purpose', filters.purpose);
+    if (filters.type !== 'all') params.append('type', filters.type);
     if (filters.status !== 'all') params.append('status', filters.status);
-    if (filters.property_id !== 'all') params.append('property_id', filters.property_id);
-    if (filters.date_from) params.append('date_from', filters.date_from);
-    if (filters.date_to) params.append('date_to', filters.date_to);
+    if (filters.area_min) params.append('area_min', filters.area_min);
+    if (filters.area_max) params.append('area_max', filters.area_max);
+    if (filters.start_date) params.append('start_date', filters.start_date);
+    if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.sort_by) params.append('sort_by', filters.sort_by);
     if (filters.sort_order) params.append('sort_order', filters.sort_order);
     
@@ -84,14 +88,14 @@ const AllInterests = () => {
     return queryString ? `?${queryString}` : '';
   };
 
-  const fetchAllInterests = async (forceRefresh = false) => {
+  const fetchLandRequests = async (forceRefresh = false) => {
     // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
-    if (state.interests.data && state.interests.data.length > 0 && !forceRefresh && !isInterestsDataStale()) {
+    if (state.landRequests.data && state.landRequests.data.length > 0 && !forceRefresh && !isLandRequestsDataStale()) {
       return;
     }
 
     try {
-      dispatch({ type: 'SET_INTERESTS_LOADING', payload: true });
+      dispatch({ type: 'SET_LAND_REQUESTS_LOADING', payload: true });
       setLocalLoading(true);
       
       const token = localStorage.getItem('access_token');
@@ -103,7 +107,7 @@ const AllInterests = () => {
       }
 
       const queryString = buildQueryString();
-      const url = `https://shahin-tqay.onrender.com/api/admin/interests${queryString}`;
+      const url = `https://shahin-tqay.onrender.com/api/admin/land-requests${queryString}`;
 
       console.log('جلب البيانات من:', url);
 
@@ -128,56 +132,43 @@ const AllInterests = () => {
         
         if (result.success && result.data) {
           dispatch({
-            type: 'SET_INTERESTS_DATA',
+            type: 'SET_LAND_REQUESTS_DATA',
             payload: {
-              data: result.data.interests || [],
-              pagination: result.data.pagination || {
+              data: result.data,
+              pagination: result.meta || {
                 current_page: 1,
                 last_page: 1,
                 per_page: 10,
-                total: result.data.interests?.length || 0,
+                total: result.data.length,
                 from: 1,
-                to: result.data.interests?.length || 0
+                to: result.data.length
               },
               filters: filters,
-              filtersData: result.data.filters || {
-                status_options: [],
-                properties: []
+              filtersData: {
+                regions: result.meta?.filters?.regions || [],
+                cities: result.meta?.filters?.cities || [],
+                purposes: result.meta?.filters?.purposes || [],
+                types: result.meta?.filters?.types || [],
+                statuses: result.meta?.filters?.statuses || []
               }
             }
           });
         } else {
           console.error('هيكل البيانات غير متوقع:', result);
-          dispatch({
-            type: 'SET_INTERESTS_DATA',
-            payload: {
-              data: [],
-              pagination: {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: 0,
-                from: 0,
-                to: 0
-              },
-              filters: filters,
-              filtersData: {
-                status_options: [],
-                properties: []
-              }
-            }
-          });
+          dispatch({ type: 'CLEAR_LAND_REQUESTS_DATA' });
         }
       } else {
         const errorText = await response.text();
-        console.error('فشل في جلب طلبات الاهتمام:', errorText);
-        alert('فشل في جلب بيانات طلبات الاهتمام');
+        console.error('فشل في جلب طلبات الأراضي:', errorText);
+        alert('فشل في جلب بيانات طلبات الأراضي');
+        dispatch({ type: 'CLEAR_LAND_REQUESTS_DATA' });
       }
     } catch (error) {
-      console.error('خطأ في جلب طلبات الاهتمام:', error);
+      console.error('خطأ في جلب طلبات الأراضي:', error);
       alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
+      dispatch({ type: 'CLEAR_LAND_REQUESTS_DATA' });
     } finally {
-      dispatch({ type: 'SET_INTERESTS_LOADING', payload: false });
+      dispatch({ type: 'SET_LAND_REQUESTS_LOADING', payload: false });
       setLocalLoading(false);
     }
   };
@@ -189,23 +180,28 @@ const AllInterests = () => {
     };
     
     dispatch({
-      type: 'UPDATE_INTERESTS_FILTERS',
+      type: 'UPDATE_LAND_REQUESTS_FILTERS',
       payload: newFilters
     });
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchAllInterests();
+    fetchLandRequests();
   };
 
   const clearFilters = () => {
     const defaultFilters = {
       search: '',
+      region: 'all',
+      city: 'all',
+      purpose: 'all',
+      type: 'all',
       status: 'all',
-      property_id: 'all',
-      date_from: '',
-      date_to: '',
+      area_min: '',
+      area_max: '',
+      start_date: '',
+      end_date: '',
       sort_by: 'created_at',
       sort_order: 'desc',
       page: 1,
@@ -213,31 +209,29 @@ const AllInterests = () => {
     };
     
     dispatch({
-      type: 'UPDATE_INTERESTS_FILTERS',
+      type: 'UPDATE_LAND_REQUESTS_FILTERS',
       payload: defaultFilters
     });
   };
 
-  const openStatusModal = (interestId, newStatus) => {
+  const openStatusModal = (requestId, newStatus) => {
     setStatusModal({
       show: true,
-      interestId,
-      newStatus,
-      adminNote: ''
+      requestId,
+      newStatus
     });
   };
 
   const closeStatusModal = () => {
     setStatusModal({
       show: false,
-      interestId: null,
-      newStatus: '',
-      adminNote: ''
+      requestId: null,
+      newStatus: ''
     });
   };
 
   const handleStatusUpdate = async () => {
-    if (!statusModal.interestId || !statusModal.newStatus) {
+    if (!statusModal.requestId || !statusModal.newStatus) {
       alert('بيانات غير مكتملة');
       return;
     }
@@ -245,31 +239,37 @@ const AllInterests = () => {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/interests/${statusModal.interestId}/status`, {
-        method: 'PUT',
+      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/land-requests/${statusModal.requestId}/status`, {
+        method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: statusModal.newStatus,
-          admin_note: statusModal.adminNote.trim() || undefined
+          status: statusModal.newStatus
         })
       });
 
       if (response.ok) {
-        // إعادة جلب البيانات لتحديث القائمة
-        fetchAllInterests(true); // forced refresh
-        setSelectedInterest(null);
+        // تحديث الحالة في الـ context مباشرة
+        dispatch({
+          type: 'UPDATE_LAND_REQUESTS_STATUS',
+          payload: {
+            requestId: statusModal.requestId,
+            status: statusModal.newStatus
+          }
+        });
+        
+        setSelectedRequest(null);
         closeStatusModal();
-        alert('تم تحديث حالة الاهتمام بنجاح');
+        alert('تم تحديث حالة الطلب بنجاح');
       } else {
         const errorData = await response.json();
-        alert(errorData.message || 'فشل في تحديث حالة الاهتمام');
+        alert(errorData.message || 'فشل في تحديث حالة الطلب');
       }
     } catch (error) {
-      console.error('Error updating interest status:', error);
-      alert('حدث خطأ أثناء تحديث حالة الاهتمام');
+      console.error('Error updating request status:', error);
+      alert('حدث خطأ أثناء تحديث حالة الطلب');
     } finally {
       setActionLoading(false);
     }
@@ -293,13 +293,13 @@ const AllInterests = () => {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case 'قيد المراجعة':
-        return <span className="status-badge pending">قيد المراجعة</span>;
-      case 'تمت المراجعة':
-        return <span className="status-badge approved">تمت المراجعة</span>;
-      case 'تم التواصل':
-        return <span className="status-badge contacted">تم التواصل</span>;
-      case 'ملغي':
+      case 'open':
+        return <span className="status-badge pending">مفتوح</span>;
+      case 'in_progress':
+        return <span className="status-badge in-progress">قيد المعالجة</span>;
+      case 'completed':
+        return <span className="status-badge approved">مكتمل</span>;
+      case 'cancelled':
         return <span className="status-badge rejected">ملغي</span>;
       default:
         return <span className="status-badge unknown">{status}</span>;
@@ -308,13 +308,13 @@ const AllInterests = () => {
 
   const getStatusText = (status) => {
     switch (status) {
-      case 'قيد المراجعة':
-        return 'قيد المراجعة';
-      case 'تمت المراجعة':
-        return 'تمت المراجعة';
-      case 'تم التواصل':
-        return 'تم التواصل';
-      case 'ملغي':
+      case 'open':
+        return 'مفتوح';
+      case 'in_progress':
+        return 'قيد المعالجة';
+      case 'completed':
+        return 'مكتمل';
+      case 'cancelled':
         return 'ملغي';
       default:
         return status;
@@ -323,31 +323,44 @@ const AllInterests = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'قيد المراجعة':
+      case 'open':
         return 'pending';
-      case 'تمت المراجعة':
+      case 'in_progress':
+        return 'in-progress';
+      case 'completed':
         return 'approved';
-      case 'تم التواصل':
-        return 'contacted';
-      case 'ملغي':
+      case 'cancelled':
         return 'rejected';
       default:
         return 'unknown';
     }
   };
 
-  const getStatusMessagePlaceholder = (status) => {
-    switch (status) {
-      case 'تمت المراجعة':
-        return 'اكتب رسالة للمهتم توضح الخطوات القادمة...';
-      case 'تم التواصل':
-        return 'اكتب ملاحظات حول عملية التواصل...';
-      case 'ملغي':
-        return 'اكتب سبب إلغاء طلب الاهتمام...';
-      case 'قيد المراجعة':
-        return 'اكتب ملاحظات إضافية حول المراجعة...';
+  const getPurposeText = (purpose) => {
+    switch (purpose) {
+      case 'sale':
+        return 'بيع';
+      case 'rent':
+        return 'إيجار';
+      case 'investment':
+        return 'استثمار';
       default:
-        return 'اكتب ملاحظات إضافية...';
+        return purpose;
+    }
+  };
+
+  const getTypeText = (type) => {
+    switch (type) {
+      case 'residential':
+        return 'سكني';
+      case 'commercial':
+        return 'تجاري';
+      case 'industrial':
+        return 'صناعي';
+      case 'agricultural':
+        return 'زراعي';
+      default:
+        return type;
     }
   };
 
@@ -432,21 +445,31 @@ const AllInterests = () => {
   };
 
   // التحقق إذا كان هناك أي فلتر نشط
-  const hasActiveFilters = filters.search || filters.status !== 'all' || filters.property_id !== 'all' || filters.date_from || filters.date_to;
-  const loading = state.interests.isLoading || localLoading;
+  const hasActiveFilters = filters.search || 
+    filters.region !== 'all' || 
+    filters.city !== 'all' || 
+    filters.purpose !== 'all' || 
+    filters.type !== 'all' || 
+    filters.status !== 'all' || 
+    filters.area_min || 
+    filters.area_max || 
+    filters.start_date || 
+    filters.end_date;
+
+  const loading = state.landRequests.isLoading || localLoading;
 
   return (
     <div className="pending-users-container">
       <div className="content-header">
         <h1>
-          <FiHeart className="header-icon" />
-          إدارة طلبات الاهتمام
+          <FiMap className="header-icon" />
+          إدارة طلبات الأراضي
         </h1>
-        <p>عرض وإدارة جميع طلبات الاهتمام بالعقارات - العدد الإجمالي: {pagination.total}</p>
+        <p>عرض وإدارة جميع طلبات الأراضي - العدد الإجمالي: {pagination.total}</p>
         <div className="dashboard-header-actions">
           <button 
             className="dashboard-refresh-btn" 
-            onClick={() => fetchAllInterests(true)}
+            onClick={() => fetchLandRequests(true)}
             disabled={loading}
           >
             <FiRefreshCw />
@@ -473,7 +496,7 @@ const AllInterests = () => {
             <FiSearch className="search-icon" />
             <input
               type="text"
-              placeholder="ابحث بالاسم أو البريد الإلكتروني أو الرسالة..."
+              placeholder="ابحث باسم المستخدم أو الوصف..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               className="search-input"
@@ -486,6 +509,63 @@ const AllInterests = () => {
 
         <div className="filter-controls">
           <div className="filter-group">
+            <label>المنطقة:</label>
+            <select 
+              value={filters.region} 
+              onChange={(e) => handleFilterChange('region', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع المناطق</option>
+              {filtersData.regions.map(region => (
+                <option key={region} value={region}>{region}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>المدينة:</label>
+            <select 
+              value={filters.city} 
+              onChange={(e) => handleFilterChange('city', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع المدن</option>
+              {filtersData.cities.map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>الغرض:</label>
+            <select 
+              value={filters.purpose} 
+              onChange={(e) => handleFilterChange('purpose', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع الأغراض</option>
+              <option value="sale">بيع</option>
+              <option value="rent">إيجار</option>
+              <option value="investment">استثمار</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>النوع:</label>
+            <select 
+              value={filters.type} 
+              onChange={(e) => handleFilterChange('type', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع الأنواع</option>
+              <option value="residential">سكني</option>
+              <option value="commercial">تجاري</option>
+              <option value="industrial">صناعي</option>
+              <option value="agricultural">زراعي</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
             <label>الحالة:</label>
             <select 
               value={filters.status} 
@@ -493,32 +573,41 @@ const AllInterests = () => {
               className="filter-select"
             >
               <option value="all">جميع الحالات</option>
-              {filtersData.status_options.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
+              <option value="open">مفتوح</option>
+              <option value="in_progress">قيد المعالجة</option>
+              <option value="completed">مكتمل</option>
+              <option value="cancelled">ملغي</option>
             </select>
           </div>
 
           <div className="filter-group">
-            <label>العقار:</label>
-            <select 
-              value={filters.property_id} 
-              onChange={(e) => handleFilterChange('property_id', e.target.value)}
+            <label>المساحة من (م²):</label>
+            <input
+              type="number"
+              value={filters.area_min}
+              onChange={(e) => handleFilterChange('area_min', e.target.value)}
+              placeholder="أدنى مساحة"
               className="filter-select"
-            >
-              <option value="all">جميع العقارات</option>
-              {filtersData.properties.map(property => (
-                <option key={property.id} value={property.id}>{property.title}</option>
-              ))}
-            </select>
+            />
+          </div>
+
+          <div className="filter-group">
+            <label>المساحة إلى (م²):</label>
+            <input
+              type="number"
+              value={filters.area_max}
+              onChange={(e) => handleFilterChange('area_max', e.target.value)}
+              placeholder="أقصى مساحة"
+              className="filter-select"
+            />
           </div>
 
           <div className="filter-group">
             <label>من تاريخ:</label>
             <input
               type="date"
-              value={filters.date_from}
-              onChange={(e) => handleFilterChange('date_from', e.target.value)}
+              value={filters.start_date}
+              onChange={(e) => handleFilterChange('start_date', e.target.value)}
               className="filter-select"
             />
           </div>
@@ -527,8 +616,8 @@ const AllInterests = () => {
             <label>إلى تاريخ:</label>
             <input
               type="date"
-              value={filters.date_to}
-              onChange={(e) => handleFilterChange('date_to', e.target.value)}
+              value={filters.end_date}
+              onChange={(e) => handleFilterChange('end_date', e.target.value)}
               className="filter-select"
             />
           </div>
@@ -540,9 +629,9 @@ const AllInterests = () => {
               onChange={(e) => handleFilterChange('sort_by', e.target.value)}
               className="filter-select"
             >
-              <option value="created_at">تاريخ الاهتمام</option>
-              <option value="full_name">اسم المستخدم</option>
-              <option value="status">الحالة</option>
+              <option value="created_at">تاريخ الطلب</option>
+              <option value="area">المساحة</option>
+              <option value="region">المنطقة</option>
             </select>
           </div>
 
@@ -562,10 +651,10 @@ const AllInterests = () => {
 
       <div className="content-body">
         <div className="users-grid">
-          {/* Interests List */}
+          {/* Land Requests List */}
           <div className="users-list">
             <div className="list-header">
-              <h3>قائمة طلبات الاهتمام ({interestsData.length})</h3>
+              <h3>قائمة طلبات الأراضي ({landRequestsData.length})</h3>
               <span className="page-info">
                 {pagination.total > 0 ? (
                   <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
@@ -578,11 +667,11 @@ const AllInterests = () => {
             {loading ? (
               <div className="list-loading">
                 <div className="loading-spinner"></div>
-                <p>جاري تحميل طلبات الاهتمام...</p>
+                <p>جاري تحميل طلبات الأراضي...</p>
               </div>
-            ) : interestsData.length === 0 ? (
+            ) : landRequestsData.length === 0 ? (
               <div className="empty-state">
-                <FiHeart className="empty-icon" />
+                <FiMap className="empty-icon" />
                 <p>لا توجد نتائج</p>
                 {hasActiveFilters && (
                   <button className="btn btn-primary" onClick={clearFilters}>
@@ -593,29 +682,36 @@ const AllInterests = () => {
             ) : (
               <>
                 <div className="users-cards">
-                  {interestsData.map((interest) => (
+                  {landRequestsData.map((request) => (
                     <div 
-                      key={interest.id} 
-                      className={`user-card ${selectedInterest?.id === interest.id ? 'active' : ''}`}
-                      onClick={() => setSelectedInterest(interest)}
+                      key={request.id} 
+                      className={`user-card ${selectedRequest?.id === request.id ? 'active' : ''}`}
+                      onClick={() => setSelectedRequest(request)}
                     >
                       <div className="user-avatar">
                         <FiUser />
                       </div>
                       <div className="user-info">
-                        <h4>{interest.full_name}</h4>
-                        <span className="user-type">{interest.property?.title}</span>
+                        <h4>{request.user?.full_name}</h4>
+                        <span className="user-type">
+                          <FiNavigation />
+                          {request.region} - {request.city}
+                        </span>
+                        <span className="user-type">
+                          <FiTarget />
+                          {getPurposeText(request.purpose)} - {getTypeText(request.type)}
+                        </span>
                         <span className="user-date">
                           <FiCalendar />
-                          {formatDate(interest.created_at)}
+                          {formatDate(request.created_at)}
                         </span>
                         <div className="user-message-preview">
                           <FiMessageSquare />
-                          {interest.message?.substring(0, 50)}...
+                          {request.description?.substring(0, 50)}...
                         </div>
                       </div>
-                      <div className={`user-status ${getStatusColor(interest.status)}`}>
-                        {getStatusText(interest.status)}
+                      <div className={`user-status ${getStatusColor(request.status)}`}>
+                        {getStatusText(request.status)}
                       </div>
                     </div>
                   ))}
@@ -631,22 +727,22 @@ const AllInterests = () => {
             )}
           </div>
 
-          {/* Interest Details */}
+          {/* Request Details */}
           <div className="user-details">
-            {selectedInterest ? (
+            {selectedRequest ? (
               <div className="details-card">
                 <div className="details-header">
-                  <h3>تفاصيل طلب الاهتمام</h3>
-                  <span className="user-id">ID: {selectedInterest.id}</span>
+                  <h3>تفاصيل طلب الأرض</h3>
+                  <span className="user-id">ID: {selectedRequest.id}</span>
                 </div>
                 
                 <div className="details-content">
                   <div className="detail-item">
                     <div className="detail-label">
                       <FiUser />
-                      اسم المهتم
+                      اسم مقدم الطلب
                     </div>
-                    <div className="detail-value">{selectedInterest.full_name}</div>
+                    <div className="detail-value">{selectedRequest.user?.full_name}</div>
                   </div>
 
                   <div className="detail-item">
@@ -654,7 +750,7 @@ const AllInterests = () => {
                       <FiMail />
                       البريد الإلكتروني
                     </div>
-                    <div className="detail-value">{selectedInterest.email}</div>
+                    <div className="detail-value">{selectedRequest.user?.email}</div>
                   </div>
 
                   <div className="detail-item">
@@ -662,19 +758,46 @@ const AllInterests = () => {
                       <FiPhone />
                       رقم الهاتف
                     </div>
-                    <div className="detail-value">{selectedInterest.phone}</div>
+                    <div className="detail-value">{selectedRequest.user?.phone}</div>
+                  </div>
+
+                  <div className="detail-item">
+                    <div className="detail-label">
+                      <FiNavigation />
+                      المنطقة
+                    </div>
+                    <div className="detail-value">{selectedRequest.region}</div>
                   </div>
 
                   <div className="detail-item">
                     <div className="detail-label">
                       <FiHome />
-                      العقار المهتم به
+                      المدينة
                     </div>
-                    <div className="detail-value">
-                      <span className="property-badge">
-                        {selectedInterest.property?.title}
-                      </span>
+                    <div className="detail-value">{selectedRequest.city}</div>
+                  </div>
+
+                  <div className="detail-item">
+                    <div className="detail-label">
+                      <FiTarget />
+                      الغرض
                     </div>
+                    <div className="detail-value">{getPurposeText(selectedRequest.purpose)}</div>
+                  </div>
+
+                  <div className="detail-item">
+                    <div className="detail-label">
+                      <FiLayers />
+                      النوع
+                    </div>
+                    <div className="detail-value">{getTypeText(selectedRequest.type)}</div>
+                  </div>
+
+                  <div className="detail-item">
+                    <div className="detail-label">
+                      المساحة
+                    </div>
+                    <div className="detail-value">{selectedRequest.area} م²</div>
                   </div>
 
                   <div className="detail-item">
@@ -682,69 +805,51 @@ const AllInterests = () => {
                       الحالة
                     </div>
                     <div className="detail-value">
-                      {getStatusBadge(selectedInterest.status)}
+                      {getStatusBadge(selectedRequest.status)}
                     </div>
                   </div>
 
                   <div className="detail-item">
                     <div className="detail-label">
                       <FiCalendar />
-                      تاريخ الاهتمام
+                      تاريخ الطلب
                     </div>
-                    <div className="detail-value">{formatDate(selectedInterest.created_at)}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiCalendar />
-                      آخر تحديث
-                    </div>
-                    <div className="detail-value">{formatDate(selectedInterest.updated_at)}</div>
+                    <div className="detail-value">{formatDate(selectedRequest.created_at)}</div>
                   </div>
 
                   <div className="detail-item full-width">
                     <div className="detail-label">
                       <FiMessageSquare />
-                      رسالة المهتم
+                      الوصف
                     </div>
-                    <div className="detail-value message-text">{selectedInterest.message}</div>
+                    <div className="detail-value message-text">{selectedRequest.description}</div>
                   </div>
-
-                  {selectedInterest.admin_notes && (
-                    <div className="detail-item full-width">
-                      <div className="detail-label">
-                        <FiEdit />
-                        ملاحظات المسؤول
-                      </div>
-                      <div className="detail-value admin-notes">{selectedInterest.admin_notes}</div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="details-actions">
                   <div className="status-actions">
                     <button 
                       className="btn btn-success"
-                      onClick={() => openStatusModal(selectedInterest.id, 'تمت المراجعة')}
-                      disabled={selectedInterest.status === 'تمت المراجعة'}
+                      onClick={() => openStatusModal(selectedRequest.id, 'completed')}
+                      disabled={selectedRequest.status === 'completed'}
                     >
                       <FiCheck />
-                      تمت المراجعة
+                      إكمال
                     </button>
                     
                     <button 
                       className="btn btn-warning"
-                      onClick={() => openStatusModal(selectedInterest.id, 'قيد المراجعة')}
-                      disabled={selectedInterest.status === 'قيد المراجعة'}
+                      onClick={() => openStatusModal(selectedRequest.id, 'in_progress')}
+                      disabled={selectedRequest.status === 'in_progress'}
                     >
                       <FiFileText />
-                      قيد المراجعة
+                      قيد المعالجة
                     </button>
                     
                     <button 
                       className="btn btn-danger"
-                      onClick={() => openStatusModal(selectedInterest.id, 'ملغي')}
-                      disabled={selectedInterest.status === 'ملغي'}
+                      onClick={() => openStatusModal(selectedRequest.id, 'cancelled')}
+                      disabled={selectedRequest.status === 'cancelled'}
                     >
                       <FiX />
                       إلغاء
@@ -754,8 +859,8 @@ const AllInterests = () => {
               </div>
             ) : (
               <div className="no-selection">
-                <FiHeart className="no-selection-icon" />
-                <p>اختر طلب اهتمام لعرض التفاصيل</p>
+                <FiMap className="no-selection-icon" />
+                <p>اختر طلب أرض لعرض التفاصيل</p>
               </div>
             )}
           </div>
@@ -769,7 +874,7 @@ const AllInterests = () => {
             <div className="modal-header">
               <h3>
                 <FiEdit />
-                تغيير حالة الاهتمام
+                تغيير حالة الطلب
               </h3>
               <button 
                 className="close-btn"
@@ -789,20 +894,9 @@ const AllInterests = () => {
               </div>
               
               <div className="form-group">
-                <label>رسالة / ملاحظات إضافية</label>
-                <textarea
-                  value={statusModal.adminNote}
-                  onChange={(e) => setStatusModal(prev => ({
-                    ...prev,
-                    adminNote: e.target.value
-                  }))}
-                  className="form-input"
-                  rows="4"
-                  placeholder={getStatusMessagePlaceholder(statusModal.newStatus)}
-                />
-                <div className="form-hint">
-                  هذه الرسالة ستظهر للمستخدم كتفسير لتغيير الحالة
-                </div>
+                <p className="confirmation-message">
+                  هل أنت متأكد من تغيير حالة هذا الطلب إلى <strong>{getStatusText(statusModal.newStatus)}</strong>؟
+                </p>
               </div>
             </div>
             <div className="modal-actions">
@@ -829,4 +923,4 @@ const AllInterests = () => {
   );
 };
 
-export default AllInterests;
+export default LandRequests;

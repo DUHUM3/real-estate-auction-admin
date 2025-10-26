@@ -16,7 +16,10 @@ import {
   FiClock,
   FiCheckCircle,
   FiTag,
-  FiHeart // 🔹 أيقونة للمهتمين بالشراء
+  FiHeart,
+   FiBell,        // 🔔 للإشعارات
+  FiShield,      // 🛡️ لسياسة الخصوصية
+  FiSend  // 🔹 أيقونة للمهتمين بالشراء
 } from 'react-icons/fi';
 
 const Sidebar = () => {
@@ -69,35 +72,14 @@ const Sidebar = () => {
 
       
         {/* إدارة الأراضي */}
-        <li className={`dropdown ${isDropdownActive('lands') ? 'active' : ''}`}>
-          <div className="dropdown-toggle" onClick={() => toggleDropdown('lands')}>
-            <div className="dropdown-title">
-              <FiMapPin className="menu-icon" />
-              <span className="menu-text">إدارة الأراضي</span>
-            </div>
-            {isDropdownActive('lands') ? <FiChevronUp className="dropdown-arrow" /> : <FiChevronDown className="dropdown-arrow" />}
-          </div>
-          <ul className={`dropdown-menu ${isDropdownActive('lands') ? 'show' : ''}`}>
+       
             <li>
               <Link to="/all-lands" className={location.pathname === '/all-lands' ? 'active' : ''}>
                 <FiMap className="submenu-icon" />
                 <span className="submenu-text">عرض جميع الأراضي</span>
               </Link>
             </li>
-            <li>
-              <Link to="/pending-lands" className={location.pathname === '/lands/pending' ? 'active' : ''}>
-                <FiClock className="submenu-icon" />
-                <span className="submenu-text">الأراضي قيد المراجعة</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/lands/status" className={location.pathname === '/lands/status' ? 'active' : ''}>
-                <FiCheckCircle className="submenu-icon" />
-                <span className="submenu-text">تغيير حالة الأرض</span>
-              </Link>
-            </li>
-          </ul>
-        </li>
+           
 
         {/* إدارة المزادات */}
       <li>
@@ -116,12 +98,18 @@ const Sidebar = () => {
         </li>
 
         <li>
-          <Link to="/orders" className={location.pathname === '/orders' ? 'active' : ''}>
+          <Link to="/land-requests" className={location.pathname === '/land-requests' ? 'active' : ''}>
             <FiShoppingCart className="menu-icon" />
-            <span className="menu-text">الطلبات</span>
+            <span className="menu-text">طلبات شراء الاراضي</span>
           </Link>
         </li>
-
+  {/* 📩 طلبات التسويق */}
+        <li>
+          <Link to="/marketing-requests" className={location.pathname === '/marketing-requests' ? 'active' : ''}>
+            <FiSend className="menu-icon" />
+            <span className="menu-text">طلبات التسويق</span>
+          </Link>
+        </li>
         <li>
           <Link to="/clients-management" className={location.pathname === '/clients-management' ? 'active' : ''}>
             <FiBriefcase className="menu-icon" />
@@ -133,6 +121,22 @@ const Sidebar = () => {
           <Link to="/reports" className={location.pathname === '/reports' ? 'active' : ''}>
             <FiBarChart2 className="menu-icon" />
             <span className="menu-text">التقارير</span>
+          </Link>
+        </li>
+          <li>
+          <Link to="/notifications" className={location.pathname === '/notifications' ? 'active' : ''}>
+            <FiBell className="menu-icon" />
+            <span className="menu-text">الإشعارات</span>
+          </Link>
+        </li>
+
+      
+
+        {/* 🛡️ سياسة الخصوصية */}
+        <li>
+          <Link to="/privacy-policy" className={location.pathname === '/privacy-policy' ? 'active' : ''}>
+            <FiShield className="menu-icon" />
+            <span className="menu-text">سياسة الخصوصية</span>
           </Link>
         </li>
       </ul>
