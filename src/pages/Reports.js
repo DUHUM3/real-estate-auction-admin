@@ -649,6 +649,7 @@ const exportToPdf = () => {
   }
 };
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
   const hasActiveFilters = filters.status !== 'all' || filters.search || filters.region;
 
   const renderTable = () => {

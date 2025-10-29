@@ -328,23 +328,7 @@ input, select, textarea {
   color: #16354d;
 }
 
-.login-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
 
-.login-header h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #16354d;
-  margin-bottom: 10px;
-}
-
-.login-header p {
-  color: #64748b;
-  font-size: 1rem;
-  margin: 0;
-}
 
 /* خيارات التسجيل */
 .auth-options {
@@ -460,52 +444,9 @@ input, select, textarea {
   height: 16px;
 }
 
-.forgot-password {
-  color: #16354d;
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
 
-.forgot-password:hover {
-  color: #0f2d44;
-  text-decoration: underline;
-}
 
-/* زر تسجيل الدخول */
-.btn-login-submit {
-  width: 100%;
-  padding: 14px 20px;
-  background: #16354d;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-top: 10px;
-  box-shadow: 0 2px 8px rgba(22, 53, 77, 0.2);
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
 
-.btn-login-submit:hover:not(:disabled) {
-  background: #0f2d44;
-  box-shadow: 0 4px 12px rgba(22, 53, 77, 0.3);
-  transform: translateY(-1px);
-}
-
-.btn-login-submit:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
 
 .loading-spinner {
   width: 16px;
@@ -613,10 +554,7 @@ input, select, textarea {
     border-radius: 16px;
   }
   
-  .login-header h1 {
-    font-size: 1.75rem;
-  }
-  
+
   .social-buttons {
     flex-direction: column;
   }

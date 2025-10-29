@@ -17,9 +17,10 @@ import {
   FiCheckCircle,
   FiTag,
   FiHeart,
-   FiBell,        // 🔔 للإشعارات
-  FiShield,      // 🛡️ لسياسة الخصوصية
-  FiSend  // 🔹 أيقونة للمهتمين بالشراء
+  FiBell,
+  FiShield,
+  FiSend,
+  FiCreditCard  // 🔹 أيقونة الحساب البنكي
 } from 'react-icons/fi';
 
 const Sidebar = () => {
@@ -49,8 +50,12 @@ const Sidebar = () => {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <div className="logo">
-          <h2>LOGO</h2>
+        <div className="logo2">
+          <img 
+            src={process.env.PUBLIC_URL + "/images/logo2.png"} 
+            alt="شاهين Logo" 
+            className="brand-logo2"
+          />
         </div>
       </div>
       
@@ -62,7 +67,7 @@ const Sidebar = () => {
           </Link>
         </li>
 
-        {/* إدارة المستخدمين بدون قائمة منسدلة */}
+        {/* إدارة المستخدمين */}
         <li>
           <Link to="/all-users" className={location.pathname === '/all-users' ? 'active' : ''}>
             <FiUsers className="menu-icon" />
@@ -70,26 +75,23 @@ const Sidebar = () => {
           </Link>
         </li>
 
-      
         {/* إدارة الأراضي */}
-       
-            <li>
-              <Link to="/all-lands" className={location.pathname === '/all-lands' ? 'active' : ''}>
-                <FiMap className="submenu-icon" />
-                <span className="submenu-text">عرض جميع الأراضي</span>
-              </Link>
-            </li>
-           
+        <li>
+          <Link to="/all-lands" className={location.pathname === '/all-lands' ? 'active' : ''}>
+            <FiMap className="menu-icon" />
+            <span className="menu-text">عرض جميع الأراضي</span>
+          </Link>
+        </li>
 
         {/* إدارة المزادات */}
-      <li>
-  <Link to="/all-auctions" className={location.pathname === '/all-auctions' ? 'active' : ''}>
-    <FiTag className="menu-icon" />
-    <span className="menu-text">إدارة المزادات</span>
-  </Link>
-</li>
+        <li>
+          <Link to="/all-auctions" className={location.pathname === '/all-auctions' ? 'active' : ''}>
+            <FiTag className="menu-icon" />
+            <span className="menu-text">إدارة المزادات</span>
+          </Link>
+        </li>
 
-  {/* 🔹 شاشة المهتمين بالشراء */}
+        {/* المهتمين بالشراء */}
         <li>
           <Link to="/inventory" className={location.pathname === '/inventory' ? 'active' : ''}>
             <FiHeart className="menu-icon" />
@@ -97,19 +99,23 @@ const Sidebar = () => {
           </Link>
         </li>
 
+        {/* طلبات شراء الأراضي */}
         <li>
           <Link to="/land-requests" className={location.pathname === '/land-requests' ? 'active' : ''}>
             <FiShoppingCart className="menu-icon" />
             <span className="menu-text">طلبات شراء الاراضي</span>
           </Link>
         </li>
-  {/* 📩 طلبات التسويق */}
+
+        {/* طلبات التسويق */}
         <li>
           <Link to="/marketing-requests" className={location.pathname === '/marketing-requests' ? 'active' : ''}>
             <FiSend className="menu-icon" />
             <span className="menu-text">طلبات التسويق</span>
           </Link>
         </li>
+        
+        {/* العملاء */}
         <li>
           <Link to="/clients-management" className={location.pathname === '/clients-management' ? 'active' : ''}>
             <FiBriefcase className="menu-icon" />
@@ -117,22 +123,31 @@ const Sidebar = () => {
           </Link>
         </li>
         
+        {/* التقارير */}
         <li>
           <Link to="/reports" className={location.pathname === '/reports' ? 'active' : ''}>
             <FiBarChart2 className="menu-icon" />
             <span className="menu-text">التقارير</span>
           </Link>
         </li>
-          <li>
+
+        {/* الإشعارات */}
+        <li>
           <Link to="/notifications" className={location.pathname === '/notifications' ? 'active' : ''}>
             <FiBell className="menu-icon" />
             <span className="menu-text">الإشعارات</span>
           </Link>
         </li>
 
-      
+        {/* الحساب البنكي */}
+        <li>
+          <Link to="/bank-account" className={location.pathname === '/bank-account' ? 'active' : ''}>
+            <FiCreditCard className="menu-icon" />
+            <span className="menu-text">الحساب البنكي</span>
+          </Link>
+        </li>
 
-        {/* 🛡️ سياسة الخصوصية */}
+        {/* سياسة الخصوصية */}
         <li>
           <Link to="/privacy-policy" className={location.pathname === '/privacy-policy' ? 'active' : ''}>
             <FiShield className="menu-icon" />
@@ -142,10 +157,16 @@ const Sidebar = () => {
       </ul>
       
       <div className="sidebar-footer">
-        <button className="sidebar-logout-btn" onClick={handleLogout}>
-          <FiLogOut className="logout-icon" />
-          <span>تسجيل الخروج</span>
-        </button>
+        <div className="footer-buttons horizontal">
+          <Link to="/bank-account" className="bank-account-btn">
+            <FiCreditCard className="bank-icon" />
+            <span>الحساب</span>
+          </Link>
+          <button className="sidebar-logout-btn" onClick={handleLogout}>
+            <FiLogOut className="logout-icon" />
+            <span>خروج</span>
+          </button>
+        </div>
       </div>
     </div>
   );

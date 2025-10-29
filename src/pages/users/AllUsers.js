@@ -1,40 +1,69 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiUsers, FiCheck,FiRefreshCw, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiFilter, FiChevronRight, FiChevronLeft, FiSearch, FiSlash } from 'react-icons/fi';
+import { FiUser, FiUsers, FiCheck, FiRefreshCw, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiFilter, FiChevronRight, FiChevronLeft, FiSearch, FiSlash, FiEdit } from 'react-icons/fi';
 import '../../styles/PendingUsers.css';
-import { useData } from '../../contexts/DataContext';
+import { useQueryClient, useQuery, useMutation } from 'react-query';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const AllUsers = () => {
-  const { state, dispatch } = useData();
-  const [localLoading, setLocalLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
+  const getInitialFilters = () => {
+    const savedFilters = localStorage.getItem('usersFilters');
+    if (savedFilters) {
+      return JSON.parse(savedFilters);
+    }
+    return {
+      search: '',
+      status: 'all',
+      user_type_id: 'all',
+      sort_field: 'created_at',
+      sort_direction: 'desc'
+    };
+  };
+  
+  const [filters, setFilters] = useState(getInitialFilters());
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('usersCurrentPage');
+    return savedPage ? parseInt(savedPage) : 1;
+  });
   
-  // استخدام البيانات من Context
-  const users = state.users.data || [];
-  const pagination = state.users.pagination || {
-    current_page: 1,
-    last_page: 1,
-    per_page: 10,
-    total: 0,
-    from: 0,
-    to: 0
-  };
-  const filters = state.users.filters;
-
+  // حالة المودال للرفض
+  const [rejectModal, setRejectModal] = useState({
+    show: false,
+    userId: null,
+    adminMessage: ''
+  });
+  
+  // حفظ الفلاتر والصفحة في localStorage عند تغييرها
   useEffect(() => {
-    // إذا البيانات غير موجودة أو قديمة، قم بجلبها
-    if (!state.users.data || state.users.data.length === 0 || isUsersDataStale()) {
-      fetchAllUsers();
+    localStorage.setItem('usersFilters', JSON.stringify(filters));
+  }, [filters]);
+  
+  useEffect(() => {
+    localStorage.setItem('usersCurrentPage', currentPage.toString());
+  }, [currentPage]);
+  
+  // استعادة المستخدم المحدد من localStorage إذا كان موجوداً
+  useEffect(() => {
+    const savedSelectedUser = localStorage.getItem('selectedUser');
+    if (savedSelectedUser) {
+      setSelectedUser(JSON.parse(savedSelectedUser));
     }
-  }, [filters, pagination.current_page]);
-
-  const isUsersDataStale = () => {
-    if (!state.users.lastUpdated) return true;
-    const now = new Date();
-    const lastUpdate = new Date(state.users.lastUpdated);
-    const diffInMinutes = (now - lastUpdate) / (1000 * 60);
-    return diffInMinutes > 10; // تحديث إذا مرت أكثر من 10 دقائق
-  };
+  }, []);
+  
+  // حفظ المستخدم المحدد في localStorage
+  useEffect(() => {
+    if (selectedUser) {
+      localStorage.setItem('selectedUser', JSON.stringify(selectedUser));
+    } else {
+      localStorage.removeItem('selectedUser');
+    }
+  }, [selectedUser]);
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -45,140 +74,80 @@ const AllUsers = () => {
     if (filters.sort_field) params.append('sort_field', filters.sort_field);
     if (filters.sort_direction) params.append('sort_direction', filters.sort_direction);
     
-    params.append('page', pagination.current_page);
+    params.append('page', currentPage);
     
-    const queryString = params.toString();
-    return queryString ? `?${queryString}` : '';
+    return params.toString();
   };
 
-  const fetchAllUsers = async (forceRefresh = false) => {
-    // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
-    if (state.users.data && state.users.data.length > 0 && !forceRefresh && !isUsersDataStale()) {
-      return;
-    }
-
-    try {
-      dispatch({ type: 'SET_USERS_LOADING', payload: true });
-      setLocalLoading(true);
+  // استخدام React Query لجلب البيانات
+  const fetchUsers = async () => {
+    const token = localStorage.getItem('access_token');
       
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        alert('لم يتم العثور على رمز الدخول. يرجى تسجيل الدخول مرة أخرى.');
-        window.location.href = '/login';
-        return;
-      }
-
-      const queryString = buildQueryString();
-      const url = `https://shahin-tqay.onrender.com/api/admin/users${queryString}`;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.status === 401) {
-        alert('انتهت جلسة الدخول أو التوكن غير صالح');
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
-        return;
-      }
-
-      if (response.ok) {
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          dispatch({
-            type: 'SET_USERS_DATA',
-            payload: {
-              data: result.data,
-              pagination: result.pagination || {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: result.data.length,
-                from: 1,
-                to: result.data.length
-              },
-              filters: filters
-            }
-          });
-        } else {
-          console.error('هيكل البيانات غير متوقع:', result);
-          dispatch({
-            type: 'SET_USERS_DATA',
-            payload: {
-              data: [],
-              pagination: {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: 0,
-                from: 0,
-                to: 0
-              },
-              filters: filters
-            }
-          });
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('فشل في جلب المستخدمين:', errorText);
-        alert('فشل في جلب بيانات المستخدمين');
-      }
-    } catch (error) {
-      console.error('خطأ في جلب المستخدمين:', error);
-      alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
-    } finally {
-      dispatch({ type: 'SET_USERS_LOADING', payload: false });
-      setLocalLoading(false);
-    }
-  };
-
-  const handleFilterChange = (key, value) => {
-    const newFilters = {
-      ...filters,
-      [key]: value
-    };
-    
-    dispatch({ type: 'UPDATE_USERS_FILTERS', payload: newFilters });
-    
-    // تحديث الباجينيشن في الـ state المحلي
-    if (pagination.current_page !== 1) {
-      // سنقوم بتحديث الباجينيشن في fetchAllUsers
-      fetchAllUsers();
-    }
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchAllUsers();
-  };
-
-  const clearFilters = () => {
-    const defaultFilters = {
-      search: '',
-      status: 'all',
-      user_type_id: 'all',
-      sort_field: 'created_at',
-      sort_direction: 'desc',
-      page: 1
-    };
-    
-    dispatch({ type: 'UPDATE_USERS_FILTERS', payload: defaultFilters });
-    fetchAllUsers();
-  };
-
-  const handleApprove = async (userId) => {
-    if (!window.confirm('هل أنت متأكد من قبول هذا المستخدم؟')) {
-      return;
+    if (!token) {
+      navigate('/login');
+      throw new Error('لم يتم العثور على رمز الدخول');
     }
 
-    setActionLoading(true);
-    try {
+    const queryString = buildQueryString();
+    const url = `https://shahin-tqay.onrender.com/api/admin/users?${queryString}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`فشل في جلب المستخدمين: ${errorText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  };
+
+  const { data: usersData, isLoading, error, refetch } = useQuery(
+    ['users', filters, currentPage],
+    fetchUsers,
+    {
+      staleTime: 5 * 60 * 1000, // 5 دقائق
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error('خطأ في جلب المستخدمين:', error);
+        alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
+      }
+    }
+  );
+
+  // فتح مودال الرفض
+  const openRejectModal = (userId) => {
+    setRejectModal({
+      show: true,
+      userId,
+      adminMessage: ''
+    });
+  };
+
+  // إغلاق مودال الرفض
+  const closeRejectModal = () => {
+    setRejectModal({
+      show: false,
+      userId: null,
+      adminMessage: ''
+    });
+  };
+
+  // تنفيذ عمليات الموافقة والرفض باستخدام useMutation
+  const approveMutation = useMutation(
+    async (userId) => {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/users/${userId}/approve`, {
         method: 'POST',
@@ -188,30 +157,27 @@ const AllUsers = () => {
         },
       });
 
-      if (response.ok) {
-        // إعادة جلب البيانات لتحديث القائمة
-        fetchAllUsers(true); // forced refresh
-        setSelectedUser(null);
-        alert('تم قبول المستخدم بنجاح');
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        alert(errorData.message || 'فشل في قبول المستخدم');
+        throw new Error(errorData.message || 'فشل في قبول المستخدم');
       }
-    } catch (error) {
-      console.error('Error approving user:', error);
-      alert('حدث خطأ أثناء قبول المستخدم');
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
-  const handleReject = async (userId) => {
-    if (!window.confirm('هل أنت متأكد من رفض هذا المستخدم؟')) {
-      return;
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم قبول المستخدم بنجاح');
+        refetch(); // إعادة تحميل البيانات
+        setSelectedUser(null);
+      },
+      onError: (error) => {
+        alert(error.message);
+      }
     }
+  );
 
-    setActionLoading(true);
-    try {
+  const rejectMutation = useMutation(
+    async ({ userId, adminMessage }) => {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/users/${userId}/reject`, {
         method: 'POST',
@@ -219,28 +185,90 @@ const AllUsers = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          admin_message: adminMessage
+        })
       });
 
-      if (response.ok) {
-        // إعادة جلب البيانات لتحديث القائمة
-        fetchAllUsers(true); // forced refresh
-        setSelectedUser(null);
-        alert('تم رفض المستخدم بنجاح');
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        alert(errorData.message || 'فشل في رفض المستخدم');
+        throw new Error(errorData.message || 'فشل في رفض المستخدم');
       }
-    } catch (error) {
-      console.error('Error rejecting user:', error);
-      alert('حدث خطأ أثناء رفض المستخدم');
-    } finally {
-      setActionLoading(false);
+
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم رفض المستخدم بنجاح');
+        refetch(); // إعادة تحميل البيانات
+        setSelectedUser(null);
+        closeRejectModal();
+      },
+      onError: (error) => {
+        alert(error.message);
+      }
+    }
+  );
+
+  const handleFilterChange = (key, value) => {
+    const newFilters = {
+      ...filters,
+      [key]: value
+    };
+    
+    setFilters(newFilters);
+    
+    // إعادة ضبط الصفحة عند تغيير الفلاتر
+    if (key !== 'page' && currentPage !== 1) {
+      setCurrentPage(1);
     }
   };
 
-  // دالة لتحديث الباجينيشن
+  const handleSearch = (e) => {
+    e.preventDefault();
+    // القيام بعملية البحث
+    refetch();
+  };
+
+  const clearFilters = () => {
+    const defaultFilters = {
+      search: '',
+      status: 'all',
+      user_type_id: 'all',
+      sort_field: 'created_at',
+      sort_direction: 'desc'
+    };
+    
+    setFilters(defaultFilters);
+    setCurrentPage(1);
+  };
+
+  const handleApprove = async (userId) => {
+    if (!window.confirm('هل أنت متأكد من قبول هذا المستخدم؟')) {
+      return;
+    }
+    approveMutation.mutate(userId);
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal.adminMessage.trim()) {
+      alert('يرجى إدخال سبب الرفض');
+      return;
+    }
+
+    if (!window.confirm('هل أنت متأكد من رفض هذا المستخدم؟')) {
+      return;
+    }
+    
+    rejectMutation.mutate({
+      userId: rejectModal.userId,
+      adminMessage: rejectModal.adminMessage
+    });
+  };
+
+  // تحديث الصفحة الحالية
   const updatePagination = (newPage) => {
-    handleFilterChange('page', newPage);
+    setCurrentPage(newPage);
   };
 
   const formatDate = (dateString) => {
@@ -266,6 +294,7 @@ const AllUsers = () => {
         return <span className="status-badge unknown">غير معروف</span>;
     }
   };
+  
   const getUserStatusText = (status) => {
     switch (status) {
       case 'pending':
@@ -413,11 +442,10 @@ const AllUsers = () => {
 
   // إنشاء أزرار الباجينيشن
  const renderPagination = () => {
-    if (pagination.last_page <= 1) return null;
+    if (!usersData || !usersData.pagination || usersData.pagination.last_page <= 1) return null;
 
     const pages = [];
-    const currentPage = pagination.current_page;
-    const lastPage = pagination.last_page;
+    const pagination = usersData.pagination;
     
     pages.push(
       <button
@@ -438,16 +466,16 @@ const AllUsers = () => {
       showPages.push('ellipsis-start');
     }
     
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(lastPage - 1, currentPage + 1); i++) {
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(pagination.last_page - 1, currentPage + 1); i++) {
       showPages.push(i);
     }
     
-    if (currentPage < lastPage - 2) {
+    if (currentPage < pagination.last_page - 2) {
       showPages.push('ellipsis-end');
     }
     
-    if (lastPage > 1) {
-      showPages.push(lastPage);
+    if (pagination.last_page > 1) {
+      showPages.push(pagination.last_page);
     }
     
     const uniquePages = [...new Set(showPages)];
@@ -472,9 +500,9 @@ const AllUsers = () => {
     pages.push(
       <button
         key="next"
-        className={`pagination-btn ${currentPage === lastPage ? 'disabled' : ''}`}
-        onClick={() => currentPage < lastPage && updatePagination(currentPage + 1)}
-        disabled={currentPage === lastPage}
+        className={`pagination-btn ${currentPage === pagination.last_page ? 'disabled' : ''}`}
+        onClick={() => currentPage < pagination.last_page && updatePagination(currentPage + 1)}
+        disabled={currentPage === pagination.last_page}
       >
         <FiChevronLeft />
       </button>
@@ -485,30 +513,21 @@ const AllUsers = () => {
 
   // التحقق إذا كان هناك أي فلتر نشط
   const hasActiveFilters = filters.search || filters.status !== 'all' || filters.user_type_id !== 'all';
-  const loading = state.users.isLoading || localLoading;
+  const loading = isLoading || approveMutation.isLoading || rejectMutation.isLoading;
+  
+  // استخراج البيانات من نتيجة الاستعلام
+  const users = usersData?.data || [];
+  const pagination = usersData?.pagination || {
+    current_page: currentPage,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: 0,
+    to: 0
+  };
 
-   return (
+  return (
     <div className="pending-users-container">
-      <div className="content-header">
-        <h1>
-          <FiUsers className="header-icon" />
-          إدارة جميع المستخدمين
-        </h1>
-        <p>عرض وإدارة جميع المستخدمين في النظام - العدد الإجمالي: {pagination.total}</p>
-      <div className="dashboard-header-actions">
-        <button 
-          className="dashboard-refresh-btn" 
-          onClick={() => fetchAllUsers(true)}
-          disabled={loading}
-        >
-                              <FiRefreshCw />
-
-          تحديث البيانات
-        </button>
-        
-      </div>
-      </div>
-
       {/* شريط البحث والتصفية */}
       <div className="filter-section">
         <div className="filter-header">
@@ -535,6 +554,16 @@ const AllUsers = () => {
             <button type="submit" className="search-btn">
               بحث
             </button>
+            <div className="dashboard-header-actions">
+              <button 
+                className="dashboard-refresh-btn" 
+                onClick={() => refetch()}
+                disabled={loading}
+              >
+                <FiRefreshCw />
+                تحديث البيانات
+              </button>
+            </div>
           </div>
         </form>
 
@@ -612,11 +641,15 @@ const AllUsers = () => {
               </span>
             </div>
             
-             {loading ? (
-        <div className="list-loading">
-          <div className="loading-spinner"></div>
-          <p>جاري تحميل المستخدمين...</p>
-        </div>
+            {loading ? (
+              <div className="dashboard-loading">
+                <div className="dashboard-loading-dots">
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                </div>
+                <p className="dashboard-loading-text">جاري تحميل البيانات...</p>
+              </div>
             ) : users.length === 0 ? (
               <div className="empty-state">
                 <FiUser className="empty-icon" />
@@ -736,40 +769,40 @@ const AllUsers = () => {
                       <button 
                         className="btn btn-success"
                         onClick={() => handleApprove(selectedUser.id)}
-                        disabled={actionLoading}
+                        disabled={loading}
                       >
                         <FiCheck />
-                        {actionLoading ? 'جاري المعالجة...' : 'قبول المستخدم'}
+                        {loading ? 'جاري المعالجة...' : 'قبول المستخدم'}
                       </button>
                       
                       <button 
                         className="btn btn-danger"
-                        onClick={() => handleReject(selectedUser.id)}
-                        disabled={actionLoading}
+                        onClick={() => openRejectModal(selectedUser.id)}
+                        disabled={loading}
                       >
                         <FiX />
-                        {actionLoading ? 'جاري المعالجة...' : 'رفض المستخدم'}
+                        {loading ? 'جاري المعالجة...' : 'رفض المستخدم'}
                       </button>
                     </>
                   )}
                   {selectedUser.status === 'approved' && (
                     <button 
                       className="btn btn-danger"
-                      onClick={() => handleReject(selectedUser.id)}
-                      disabled={actionLoading}
+                      onClick={() => openRejectModal(selectedUser.id)}
+                      disabled={loading}
                     >
                       <FiX />
-                      {actionLoading ? 'جاري المعالجة...' : 'رفض المستخدم'}
+                      {loading ? 'جاري المعالجة...' : 'رفض المستخدم'}
                     </button>
                   )}
                   {selectedUser.status === 'rejected' && (
                     <button 
                       className="btn btn-success"
                       onClick={() => handleApprove(selectedUser.id)}
-                      disabled={actionLoading}
+                      disabled={loading}
                     >
                       <FiCheck />
-                      {actionLoading ? 'جاري المعالجة...' : 'قبول المستخدم'}
+                      {loading ? 'جاري المعالجة...' : 'قبول المستخدم'}
                     </button>
                   )}
                 </div>
@@ -783,6 +816,61 @@ const AllUsers = () => {
           </div>
         </div>
       </div>
+
+      {/* مودال الرفض */}
+      {rejectModal.show && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>
+                <FiEdit />
+                رفض المستخدم
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={closeRejectModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>سبب الرفض</label>
+                <textarea
+                  value={rejectModal.adminMessage}
+                  onChange={(e) => setRejectModal(prev => ({
+                    ...prev,
+                    adminMessage: e.target.value
+                  }))}
+                  className="form-input"
+                  rows="4"
+                  placeholder="اكتب سبب رفض المستخدم هنا..."
+                />
+                <div className="form-hint">
+                  هذا السبب سيظهر للمستخدم كتفسير لرفض طلبه
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-secondary"
+                onClick={closeRejectModal}
+                disabled={loading}
+              >
+                إلغاء
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={handleReject}
+                disabled={loading}
+              >
+                <FiX />
+                {loading ? 'جاري الحفظ...' : 'تأكيد الرفض'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

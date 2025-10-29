@@ -18,56 +18,73 @@ import {
   FiEdit,
   FiRefreshCw
 } from 'react-icons/fi';
-import { useData } from '../../contexts/DataContext';
+import { useQueryClient, useQuery, useMutation } from 'react-query';
+import { useNavigate } from 'react-router-dom';
 import '../../styles/PendingUsers.css';
 
 const AllInterests = () => {
-  const { state, dispatch } = useData();
-  const [localLoading, setLocalLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  
+  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
+  const getInitialFilters = () => {
+    const savedFilters = localStorage.getItem('interestsFilters');
+    if (savedFilters) {
+      return JSON.parse(savedFilters);
+    }
+    return {
+      search: '',
+      status: 'all',
+      property_id: 'all',
+      date_from: '',
+      date_to: '',
+      sort_by: 'created_at',
+      sort_order: 'desc'
+    };
+  };
+  
+  const [filters, setFilters] = useState(getInitialFilters());
   const [selectedInterest, setSelectedInterest] = useState(null);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('interestsCurrentPage');
+    return savedPage ? parseInt(savedPage) : 1;
+  });
   const [statusModal, setStatusModal] = useState({
     show: false,
     interestId: null,
     newStatus: '',
     adminNote: ''
   });
-  
-  // استخدام البيانات من Context
-  const interestsData = state.interests.data || [];
-  const pagination = state.interests.pagination || {
-    current_page: 1,
-    last_page: 1,
-    per_page: 10,
-    total: 0,
-    from: 0,
-    to: 0
-  };
-  const filters = state.interests.filters;
-  const filtersData = state.interests.filtersData || {
-    status_options: [],
-    properties: []
-  };
 
+  // حفظ الفلاتر والصفحة في localStorage عند تغييرها
   useEffect(() => {
-    // إذا البيانات غير موجودة أو قديمة، قم بجلبها
-    if (!state.interests.data || state.interests.data.length === 0 || isInterestsDataStale()) {
-      fetchAllInterests();
+    localStorage.setItem('interestsFilters', JSON.stringify(filters));
+  }, [filters]);
+  
+  useEffect(() => {
+    localStorage.setItem('interestsCurrentPage', currentPage.toString());
+  }, [currentPage]);
+  
+  // استعادة الاهتمام المحدد من localStorage إذا كان موجوداً
+  useEffect(() => {
+    const savedSelectedInterest = localStorage.getItem('selectedInterest');
+    if (savedSelectedInterest) {
+      setSelectedInterest(JSON.parse(savedSelectedInterest));
     }
-  }, [filters, pagination.current_page]);
-
-  const isInterestsDataStale = () => {
-    if (!state.interests.lastUpdated) return true;
-    const now = new Date();
-    const lastUpdate = new Date(state.interests.lastUpdated);
-    const diffInMinutes = (now - lastUpdate) / (1000 * 60);
-    return diffInMinutes > 10; // تحديث إذا مرت أكثر من 10 دقائق
-  };
+  }, []);
+  
+  // حفظ الاهتمام المحدد في localStorage
+  useEffect(() => {
+    if (selectedInterest) {
+      localStorage.setItem('selectedInterest', JSON.stringify(selectedInterest));
+    } else {
+      localStorage.removeItem('selectedInterest');
+    }
+  }, [selectedInterest]);
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
     
-    // إضافة معاملات البحث والتصفية فقط إذا كانت محددة
     if (filters.search.trim()) params.append('search', filters.search.trim());
     if (filters.status !== 'all') params.append('status', filters.status);
     if (filters.property_id !== 'all') params.append('property_id', filters.property_id);
@@ -76,111 +93,120 @@ const AllInterests = () => {
     if (filters.sort_by) params.append('sort_by', filters.sort_by);
     if (filters.sort_order) params.append('sort_order', filters.sort_order);
     
-    // إضافة معاملات الباجينيشن
-    params.append('page', pagination.current_page);
-    params.append('per_page', filters.per_page);
+    params.append('page', currentPage);
+    params.append('per_page', 10);
     
-    const queryString = params.toString();
-    return queryString ? `?${queryString}` : '';
+    return params.toString();
   };
 
-  const fetchAllInterests = async (forceRefresh = false) => {
-    // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
-    if (state.interests.data && state.interests.data.length > 0 && !forceRefresh && !isInterestsDataStale()) {
-      return;
+  // استخدام React Query لجلب بيانات طلبات الاهتمام
+  const fetchInterests = async () => {
+    const token = localStorage.getItem('access_token');
+      
+    if (!token) {
+      navigate('/login');
+      throw new Error('لم يتم العثور على رمز الدخول');
     }
 
-    try {
-      dispatch({ type: 'SET_INTERESTS_LOADING', payload: true });
-      setLocalLoading(true);
-      
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        alert('لم يتم العثور على رمز الدخول. يرجى تسجيل الدخول مرة أخرى.');
-        window.location.href = '/login';
-        return;
+    const queryString = buildQueryString();
+    const url = `https://shahin-tqay.onrender.com/api/admin/interests?${queryString}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`فشل في جلب طلبات الاهتمام: ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return {
+        data: result.data.interests || [],
+        pagination: result.data.pagination || {
+          current_page: currentPage,
+          last_page: 1,
+          per_page: 10,
+          total: 0,
+          from: 0,
+          to: 0
+        },
+        filtersData: result.data.filters || {
+          status_options: [],
+          properties: []
+        }
+      };
+    } else {
+      throw new Error(result.message || 'هيكل البيانات غير متوقع');
+    }
+  };
+
+  const { 
+    data: interestsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery(
+    ['interests', filters, currentPage],
+    fetchInterests,
+    {
+      staleTime: 5 * 60 * 1000, // 5 دقائق
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error('خطأ في جلب طلبات الاهتمام:', error);
+        alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
       }
+    }
+  );
 
-      const queryString = buildQueryString();
-      const url = `https://shahin-tqay.onrender.com/api/admin/interests${queryString}`;
-
-      console.log('جلب البيانات من:', url);
-
-      const response = await fetch(url, {
-        method: 'GET',
+  // استخدام useMutation لتحديث حالة الاهتمام
+  const statusMutation = useMutation(
+    async ({ interestId, status, adminNote }) => {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/interests/${interestId}/status`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          status: status,
+          admin_note: adminNote.trim() || undefined
+        })
       });
 
-      if (response.status === 401) {
-        alert('انتهت جلسة الدخول أو التوكن غير صالح');
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'فشل في تحديث حالة الاهتمام');
       }
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('بيانات الاستجابة:', result);
-        
-        if (result.success && result.data) {
-          dispatch({
-            type: 'SET_INTERESTS_DATA',
-            payload: {
-              data: result.data.interests || [],
-              pagination: result.data.pagination || {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: result.data.interests?.length || 0,
-                from: 1,
-                to: result.data.interests?.length || 0
-              },
-              filters: filters,
-              filtersData: result.data.filters || {
-                status_options: [],
-                properties: []
-              }
-            }
-          });
-        } else {
-          console.error('هيكل البيانات غير متوقع:', result);
-          dispatch({
-            type: 'SET_INTERESTS_DATA',
-            payload: {
-              data: [],
-              pagination: {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: 0,
-                from: 0,
-                to: 0
-              },
-              filters: filters,
-              filtersData: {
-                status_options: [],
-                properties: []
-              }
-            }
-          });
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('فشل في جلب طلبات الاهتمام:', errorText);
-        alert('فشل في جلب بيانات طلبات الاهتمام');
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم تحديث حالة الاهتمام بنجاح');
+        refetch(); // إعادة تحميل البيانات
+        setSelectedInterest(null);
+        closeStatusModal();
+        queryClient.invalidateQueries(['interests']);
+      },
+      onError: (error) => {
+        alert(error.message);
       }
-    } catch (error) {
-      console.error('خطأ في جلب طلبات الاهتمام:', error);
-      alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
-    } finally {
-      dispatch({ type: 'SET_INTERESTS_LOADING', payload: false });
-      setLocalLoading(false);
     }
-  };
+  );
 
   const handleFilterChange = (key, value) => {
     const newFilters = {
@@ -188,15 +214,17 @@ const AllInterests = () => {
       [key]: value
     };
     
-    dispatch({
-      type: 'UPDATE_INTERESTS_FILTERS',
-      payload: newFilters
-    });
+    setFilters(newFilters);
+    
+    // إعادة ضبط الصفحة عند تغيير الفلاتر
+    if (key !== 'page' && currentPage !== 1) {
+      setCurrentPage(1);
+    }
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchAllInterests();
+    refetch();
   };
 
   const clearFilters = () => {
@@ -207,15 +235,11 @@ const AllInterests = () => {
       date_from: '',
       date_to: '',
       sort_by: 'created_at',
-      sort_order: 'desc',
-      page: 1,
-      per_page: 10
+      sort_order: 'desc'
     };
     
-    dispatch({
-      type: 'UPDATE_INTERESTS_FILTERS',
-      payload: defaultFilters
-    });
+    setFilters(defaultFilters);
+    setCurrentPage(1);
   };
 
   const openStatusModal = (interestId, newStatus) => {
@@ -242,45 +266,24 @@ const AllInterests = () => {
       return;
     }
 
-    setActionLoading(true);
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/interests/${statusModal.interestId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: statusModal.newStatus,
-          admin_note: statusModal.adminNote.trim() || undefined
-        })
-      });
-
-      if (response.ok) {
-        // إعادة جلب البيانات لتحديث القائمة
-        fetchAllInterests(true); // forced refresh
-        setSelectedInterest(null);
-        closeStatusModal();
-        alert('تم تحديث حالة الاهتمام بنجاح');
-      } else {
-        const errorData = await response.json();
-        alert(errorData.message || 'فشل في تحديث حالة الاهتمام');
-      }
-    } catch (error) {
-      console.error('Error updating interest status:', error);
-      alert('حدث خطأ أثناء تحديث حالة الاهتمام');
-    } finally {
-      setActionLoading(false);
+    if (!window.confirm(`هل أنت متأكد من تغيير الحالة إلى "${getStatusText(statusModal.newStatus)}"؟`)) {
+      return;
     }
+
+    statusMutation.mutate({
+      interestId: statusModal.interestId,
+      status: statusModal.newStatus,
+      adminNote: statusModal.adminNote
+    });
   };
 
-  // دالة لتحديث الباجينيشن
+  // تحديث الصفحة الحالية
   const updatePagination = (newPage) => {
-    handleFilterChange('page', newPage);
+    setCurrentPage(newPage);
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
     return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
@@ -351,15 +354,98 @@ const AllInterests = () => {
     }
   };
 
+  const renderInterestDetails = (interest) => {
+    return (
+      <div className="details-content">
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiUser />
+            اسم المهتم
+          </div>
+          <div className="detail-value">{interest.full_name}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiMail />
+            البريد الإلكتروني
+          </div>
+          <div className="detail-value">{interest.email}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiPhone />
+            رقم الهاتف
+          </div>
+          <div className="detail-value">{interest.phone}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiHome />
+            العقار المهتم به
+          </div>
+          <div className="detail-value">
+            <span className="property-badge">
+              {interest.property?.title || 'غير محدد'}
+            </span>
+          </div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            الحالة
+          </div>
+          <div className="detail-value">
+            {getStatusBadge(interest.status)}
+          </div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiCalendar />
+            تاريخ الاهتمام
+          </div>
+          <div className="detail-value">{formatDate(interest.created_at)}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiCalendar />
+            آخر تحديث
+          </div>
+          <div className="detail-value">{formatDate(interest.updated_at)}</div>
+        </div>
+
+        <div className="detail-item full-width">
+          <div className="detail-label">
+            <FiMessageSquare />
+            رسالة المهتم
+          </div>
+          <div className="detail-value message-text">{interest.message || 'لا توجد رسالة'}</div>
+        </div>
+
+        {interest.admin_notes && (
+          <div className="detail-item full-width">
+            <div className="detail-label">
+              <FiEdit />
+              ملاحظات المسؤول
+            </div>
+            <div className="detail-value admin-notes">{interest.admin_notes}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // إنشاء أزرار الباجينيشن
   const renderPagination = () => {
-    if (pagination.last_page <= 1) return null;
+    if (!interestsData || !interestsData.pagination || interestsData.pagination.last_page <= 1) return null;
 
     const pages = [];
-    const currentPage = pagination.current_page;
-    const lastPage = pagination.last_page;
+    const pagination = interestsData.pagination;
     
-    // زر الصفحة السابقة
     pages.push(
       <button
         key="prev"
@@ -373,31 +459,24 @@ const AllInterests = () => {
 
     // أزرار الصفحات
     const showPages = [];
-    
-    // دائما نعرض الصفحة الأولى
     showPages.push(1);
     
-    // نقاط إذا كانت الصفحة الحالية بعيدة عن البداية
     if (currentPage > 3) {
       showPages.push('ellipsis-start');
     }
     
-    // الصفحات حول الصفحة الحالية
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(lastPage - 1, currentPage + 1); i++) {
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(pagination.last_page - 1, currentPage + 1); i++) {
       showPages.push(i);
     }
     
-    // نقاط إذا كانت الصفحة الحالية بعيدة عن النهاية
-    if (currentPage < lastPage - 2) {
+    if (currentPage < pagination.last_page - 2) {
       showPages.push('ellipsis-end');
     }
     
-    // دائما نعرض الصفحة الأخيرة إذا كانت أكثر من 1
-    if (lastPage > 1) {
-      showPages.push(lastPage);
+    if (pagination.last_page > 1) {
+      showPages.push(pagination.last_page);
     }
     
-    // إزالة التكرارات
     const uniquePages = [...new Set(showPages)];
     
     uniquePages.forEach(page => {
@@ -420,9 +499,9 @@ const AllInterests = () => {
     pages.push(
       <button
         key="next"
-        className={`pagination-btn ${currentPage === lastPage ? 'disabled' : ''}`}
-        onClick={() => currentPage < lastPage && updatePagination(currentPage + 1)}
-        disabled={currentPage === lastPage}
+        className={`pagination-btn ${currentPage === pagination.last_page ? 'disabled' : ''}`}
+        onClick={() => currentPage < pagination.last_page && updatePagination(currentPage + 1)}
+        disabled={currentPage === pagination.last_page}
       >
         <FiChevronLeft />
       </button>
@@ -432,29 +511,28 @@ const AllInterests = () => {
   };
 
   // التحقق إذا كان هناك أي فلتر نشط
-  const hasActiveFilters = filters.search || filters.status !== 'all' || filters.property_id !== 'all' || filters.date_from || filters.date_to;
-  const loading = state.interests.isLoading || localLoading;
+  const hasActiveFilters = filters.search || filters.status !== 'all' || filters.property_id !== 'all' || 
+                          filters.date_from || filters.date_to;
+
+  // استخراج البيانات من نتيجة الاستعلام
+  const interests = interestsData?.data || [];
+  const pagination = interestsData?.pagination || {
+    current_page: currentPage,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: 0,
+    to: 0
+  };
+  const filtersData = interestsData?.filtersData || {
+    status_options: [],
+    properties: []
+  };
+
+  const loading = isLoading || statusMutation.isLoading;
 
   return (
     <div className="pending-users-container">
-      <div className="content-header">
-        <h1>
-          <FiHeart className="header-icon" />
-          إدارة طلبات الاهتمام
-        </h1>
-        <p>عرض وإدارة جميع طلبات الاهتمام بالعقارات - العدد الإجمالي: {pagination.total}</p>
-        <div className="dashboard-header-actions">
-          <button 
-            className="dashboard-refresh-btn" 
-            onClick={() => fetchAllInterests(true)}
-            disabled={loading}
-          >
-            <FiRefreshCw />
-            تحديث البيانات
-          </button>
-        </div>
-      </div>
-
       {/* شريط البحث والتصفية */}
       <div className="filter-section">
         <div className="filter-header">
@@ -481,6 +559,16 @@ const AllInterests = () => {
             <button type="submit" className="search-btn">
               بحث
             </button>
+            <div className="dashboard-header-actions">
+              <button 
+                className="dashboard-refresh-btn" 
+                onClick={() => refetch()}
+                disabled={loading}
+              >
+                <FiRefreshCw />
+                تحديث البيانات
+              </button>
+            </div>
           </div>
         </form>
 
@@ -565,7 +653,7 @@ const AllInterests = () => {
           {/* Interests List */}
           <div className="users-list">
             <div className="list-header">
-              <h3>قائمة طلبات الاهتمام ({interestsData.length})</h3>
+              <h3>قائمة طلبات الاهتمام ({interests.length})</h3>
               <span className="page-info">
                 {pagination.total > 0 ? (
                   <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
@@ -576,11 +664,15 @@ const AllInterests = () => {
             </div>
             
             {loading ? (
-              <div className="list-loading">
-                <div className="loading-spinner"></div>
-                <p>جاري تحميل طلبات الاهتمام...</p>
+              <div className="dashboard-loading">
+                <div className="dashboard-loading-dots">
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                </div>
+                <p className="dashboard-loading-text">جاري تحميل البيانات...</p>
               </div>
-            ) : interestsData.length === 0 ? (
+            ) : interests.length === 0 ? (
               <div className="empty-state">
                 <FiHeart className="empty-icon" />
                 <p>لا توجد نتائج</p>
@@ -593,7 +685,7 @@ const AllInterests = () => {
             ) : (
               <>
                 <div className="users-cards">
-                  {interestsData.map((interest) => (
+                  {interests.map((interest) => (
                     <div 
                       key={interest.id} 
                       className={`user-card ${selectedInterest?.id === interest.id ? 'active' : ''}`}
@@ -640,93 +732,14 @@ const AllInterests = () => {
                   <span className="user-id">ID: {selectedInterest.id}</span>
                 </div>
                 
-                <div className="details-content">
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiUser />
-                      اسم المهتم
-                    </div>
-                    <div className="detail-value">{selectedInterest.full_name}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiMail />
-                      البريد الإلكتروني
-                    </div>
-                    <div className="detail-value">{selectedInterest.email}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiPhone />
-                      رقم الهاتف
-                    </div>
-                    <div className="detail-value">{selectedInterest.phone}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiHome />
-                      العقار المهتم به
-                    </div>
-                    <div className="detail-value">
-                      <span className="property-badge">
-                        {selectedInterest.property?.title}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      الحالة
-                    </div>
-                    <div className="detail-value">
-                      {getStatusBadge(selectedInterest.status)}
-                    </div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiCalendar />
-                      تاريخ الاهتمام
-                    </div>
-                    <div className="detail-value">{formatDate(selectedInterest.created_at)}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiCalendar />
-                      آخر تحديث
-                    </div>
-                    <div className="detail-value">{formatDate(selectedInterest.updated_at)}</div>
-                  </div>
-
-                  <div className="detail-item full-width">
-                    <div className="detail-label">
-                      <FiMessageSquare />
-                      رسالة المهتم
-                    </div>
-                    <div className="detail-value message-text">{selectedInterest.message}</div>
-                  </div>
-
-                  {selectedInterest.admin_notes && (
-                    <div className="detail-item full-width">
-                      <div className="detail-label">
-                        <FiEdit />
-                        ملاحظات المسؤول
-                      </div>
-                      <div className="detail-value admin-notes">{selectedInterest.admin_notes}</div>
-                    </div>
-                  )}
-                </div>
+                {renderInterestDetails(selectedInterest)}
 
                 <div className="details-actions">
                   <div className="status-actions">
                     <button 
                       className="btn btn-success"
                       onClick={() => openStatusModal(selectedInterest.id, 'تمت المراجعة')}
-                      disabled={selectedInterest.status === 'تمت المراجعة'}
+                      disabled={selectedInterest.status === 'تمت المراجعة' || loading}
                     >
                       <FiCheck />
                       تمت المراجعة
@@ -735,7 +748,7 @@ const AllInterests = () => {
                     <button 
                       className="btn btn-warning"
                       onClick={() => openStatusModal(selectedInterest.id, 'قيد المراجعة')}
-                      disabled={selectedInterest.status === 'قيد المراجعة'}
+                      disabled={selectedInterest.status === 'قيد المراجعة' || loading}
                     >
                       <FiFileText />
                       قيد المراجعة
@@ -744,7 +757,7 @@ const AllInterests = () => {
                     <button 
                       className="btn btn-danger"
                       onClick={() => openStatusModal(selectedInterest.id, 'ملغي')}
-                      disabled={selectedInterest.status === 'ملغي'}
+                      disabled={selectedInterest.status === 'ملغي' || loading}
                     >
                       <FiX />
                       إلغاء
@@ -809,17 +822,17 @@ const AllInterests = () => {
               <button 
                 className="btn btn-secondary"
                 onClick={closeStatusModal}
-                disabled={actionLoading}
+                disabled={loading}
               >
                 إلغاء
               </button>
               <button 
                 className="btn btn-primary"
                 onClick={handleStatusUpdate}
-                disabled={actionLoading}
+                disabled={loading}
               >
                 <FiCheck />
-                {actionLoading ? 'جاري الحفظ...' : 'تأكيد التغيير'}
+                {loading ? 'جاري الحفظ...' : 'تأكيد التغيير'}
               </button>
             </div>
           </div>

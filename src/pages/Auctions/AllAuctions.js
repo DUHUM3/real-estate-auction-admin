@@ -1,40 +1,78 @@
 import React, { useState, useEffect } from 'react';
-import { FiCalendar, FiClock, FiMapPin, FiUser, FiVideo, FiImage, FiFilter, FiChevronRight, FiChevronLeft, FiExternalLink, FiSearch, FiSlash, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
-import { useData } from '../../contexts/DataContext';
+import { 
+  FiCalendar, 
+  FiClock, 
+  FiMapPin, 
+  FiUser, 
+  FiVideo, 
+  FiImage, 
+  FiFilter, 
+  FiChevronRight, 
+  FiChevronLeft, 
+  FiExternalLink, 
+  FiSearch, 
+  FiSlash, 
+  FiCheck, 
+  FiX, 
+  FiRefreshCw 
+} from 'react-icons/fi';
+import { useQueryClient, useQuery, useMutation } from 'react-query';
+import { useNavigate } from 'react-router-dom';
 import '../../styles/PendingUsers.css';
 
 const AllAuctions = () => {
-  const { state, dispatch } = useData();
-  const [localLoading, setLocalLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [selectedAuction, setSelectedAuction] = useState(null);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
-  // استخدام البيانات من Context
-  const auctions = state.auctions.data || [];
-  const pagination = state.auctions.pagination || {
-    current_page: 1,
-    last_page: 1,
-    per_page: 10,
-    total: 0,
-    from: 0,
-    to: 0
-  };
-  const filters = state.auctions.filters;
-
-  useEffect(() => {
-    // إذا البيانات غير موجودة أو قديمة، قم بجلبها
-    if (!state.auctions.data || state.auctions.data.length === 0 || isAuctionsDataStale()) {
-      fetchAuctions();
+  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
+  const getInitialFilters = () => {
+    const savedFilters = localStorage.getItem('auctionsFilters');
+    if (savedFilters) {
+      return JSON.parse(savedFilters);
     }
-  }, [filters, pagination.current_page]);
-
-  const isAuctionsDataStale = () => {
-    if (!state.auctions.lastUpdated) return true;
-    const now = new Date();
-    const lastUpdate = new Date(state.auctions.lastUpdated);
-    const diffInMinutes = (now - lastUpdate) / (1000 * 60);
-    return diffInMinutes > 10; // تحديث إذا مرت أكثر من 10 دقائق
+    return {
+      search: '',
+      status: 'all',
+      region: 'all',
+      city: 'all',
+      date: '',
+      sort_field: 'created_at',
+      sort_direction: 'desc'
+    };
   };
+  
+  const [filters, setFilters] = useState(getInitialFilters());
+  const [selectedAuction, setSelectedAuction] = useState(null);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('auctionsCurrentPage');
+    return savedPage ? parseInt(savedPage) : 1;
+  });
+
+  // حفظ الفلاتر والصفحة في localStorage عند تغييرها
+  useEffect(() => {
+    localStorage.setItem('auctionsFilters', JSON.stringify(filters));
+  }, [filters]);
+  
+  useEffect(() => {
+    localStorage.setItem('auctionsCurrentPage', currentPage.toString());
+  }, [currentPage]);
+  
+  // استعادة المزاد المحدد من localStorage إذا كان موجوداً
+  useEffect(() => {
+    const savedSelectedAuction = localStorage.getItem('selectedAuction');
+    if (savedSelectedAuction) {
+      setSelectedAuction(JSON.parse(savedSelectedAuction));
+    }
+  }, []);
+  
+  // حفظ المزاد المحدد في localStorage
+  useEffect(() => {
+    if (selectedAuction) {
+      localStorage.setItem('selectedAuction', JSON.stringify(selectedAuction));
+    } else {
+      localStorage.removeItem('selectedAuction');
+    }
+  }, [selectedAuction]);
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -42,160 +80,88 @@ const AllAuctions = () => {
     if (filters.search.trim()) params.append('search', filters.search.trim());
     if (filters.status !== 'all') params.append('status', filters.status);
     if (filters.region !== 'all') params.append('region', filters.region);
+    if (filters.city !== 'all') params.append('city', filters.city);
     if (filters.date) params.append('date', filters.date);
     if (filters.sort_field) params.append('sort_field', filters.sort_field);
     if (filters.sort_direction) params.append('sort_direction', filters.sort_direction);
     
-    params.append('page', pagination.current_page);
-    params.append('per_page', pagination.per_page);
+    params.append('page', currentPage);
+    params.append('per_page', 10);
     
-    const queryString = params.toString();
-    return queryString ? `?${queryString}` : '';
+    return params.toString();
   };
 
-  const fetchAuctions = async (forceRefresh = false) => {
-    // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
-    if (state.auctions.data && state.auctions.data.length > 0 && !forceRefresh && !isAuctionsDataStale()) {
-      return;
+  // استخدام React Query لجلب بيانات المزادات
+  const fetchAuctions = async () => {
+    const token = localStorage.getItem('access_token');
+      
+    if (!token) {
+      navigate('/login');
+      throw new Error('لم يتم العثور على رمز الدخول');
     }
 
-    try {
-      dispatch({ type: 'SET_AUCTIONS_LOADING', payload: true });
-      setLocalLoading(true);
-      
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        alert('لم يتم العثور على رمز الدخول. يرجى تسجيل الدخول مرة أخرى.');
-        window.location.href = '/login';
-        return;
-      }
+    const queryString = buildQueryString();
+    const url = `https://shahin-tqay.onrender.com/api/admin/auctions?${queryString}`;
 
-      const queryString = buildQueryString();
-      const url = `https://shahin-tqay.onrender.com/api/admin/auctions${queryString}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-      console.log('جلب البيانات من:', url);
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
+    }
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`فشل في جلب المزادات: ${errorText}`);
+    }
 
-      if (response.status === 401) {
-        alert('انتهت جلسة الدخول أو التوكن غير صالح');
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
-        return;
-      }
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('بيانات الاستجابة:', result);
-        
-        if (result.success && result.data) {
-          // تعديل حسب هيكل الاستجابة
-          const auctionsData = result.data.data || result.data || [];
-          
-          dispatch({
-            type: 'SET_AUCTIONS_DATA',
-            payload: {
-              data: auctionsData,
-              pagination: result.data || result.pagination || {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: auctionsData.length,
-                from: 1,
-                to: auctionsData.length
-              },
-              filters: filters
-            }
-          });
-        } else {
-          console.error('هيكل البيانات غير متوقع:', result);
-          dispatch({
-            type: 'SET_AUCTIONS_DATA',
-            payload: {
-              data: [],
-              pagination: {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: 0,
-                from: 0,
-                to: 0
-              },
-              filters: filters
-            }
-          });
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return {
+        data: result.data.data || result.data || [],
+        pagination: result.data || result.pagination || {
+          current_page: currentPage,
+          last_page: 1,
+          per_page: 10,
+          total: 0,
+          from: 0,
+          to: 0
         }
-      } else {
-        const errorText = await response.text();
-        console.error('فشل في جلب المزادات:', errorText);
-        alert('فشل في جلب بيانات المزادات');
+      };
+    } else {
+      throw new Error(result.message || 'هيكل البيانات غير متوقع');
+    }
+  };
+
+  const { 
+    data: auctionsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery(
+    ['auctions', filters, currentPage],
+    fetchAuctions,
+    {
+      staleTime: 5 * 60 * 1000, // 5 دقائق
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error('خطأ في جلب المزادات:', error);
+        alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
       }
-    } catch (error) {
-      console.error('خطأ في جلب المزادات:', error);
-      alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
-    } finally {
-      dispatch({ type: 'SET_AUCTIONS_LOADING', payload: false });
-      setLocalLoading(false);
     }
-  };
+  );
 
-  const handleFilterChange = (key, value) => {
-    const newFilters = {
-      ...filters,
-      [key]: value
-    };
-    
-    dispatch({ type: 'UPDATE_AUCTIONS_FILTERS', payload: newFilters });
-    
-    // إذا تغيرت الفلاتر (عدا الصفحة)، نعيد تعيين الصفحة للاولى
-    if (key !== 'page' && pagination.current_page !== 1) {
-      handlePageChange(1);
-    }
-  };
-
-  const handlePageChange = (newPage) => {
-    handleFilterChange('page', newPage);
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    fetchAuctions();
-  };
-
-  const clearFilters = () => {
-    const defaultFilters = {
-      search: '',
-      status: 'all',
-      region: 'all',
-      date: '',
-      sort_field: 'created_at',
-      sort_direction: 'desc',
-      page: 1,
-      per_page: 10
-    };
-    
-    dispatch({ type: 'UPDATE_AUCTIONS_FILTERS', payload: defaultFilters });
-    fetchAuctions();
-  };
-
-  const handleRefresh = () => {
-    fetchAuctions(true); // forced refresh
-  };
-
-  const handleApprove = async (auctionId) => {
-    if (!window.confirm('هل أنت متأكد من قبول هذا المزاد؟')) {
-      return;
-    }
-
-    setActionLoading(true);
-    try {
+  // استخدام useMutation لعمليات الموافقة والرفض
+  const approveMutation = useMutation(
+    async (auctionId) => {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/auctions/${auctionId}/approve`, {
         method: 'POST',
@@ -205,30 +171,28 @@ const AllAuctions = () => {
         },
       });
 
-      if (response.ok) {
-        // إعادة جلب البيانات لتحديث القائمة
-        fetchAuctions(true); // forced refresh
-        setSelectedAuction(null);
-        alert('تم قبول المزاد بنجاح');
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        alert(errorData.message || 'فشل في قبول المزاد');
+        throw new Error(errorData.message || 'فشل في قبول المزاد');
       }
-    } catch (error) {
-      console.error('Error approving auction:', error);
-      alert('حدث خطأ أثناء قبول المزاد');
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
-  const handleReject = async (auctionId) => {
-    if (!window.confirm('هل أنت متأكد من رفض هذا المزاد؟')) {
-      return;
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم قبول المزاد بنجاح');
+        refetch(); // إعادة تحميل البيانات
+        setSelectedAuction(null);
+        queryClient.invalidateQueries(['auctions']);
+      },
+      onError: (error) => {
+        alert(error.message);
+      }
     }
+  );
 
-    setActionLoading(true);
-    try {
+  const rejectMutation = useMutation(
+    async (auctionId) => {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/auctions/${auctionId}/reject`, {
         method: 'POST',
@@ -238,21 +202,77 @@ const AllAuctions = () => {
         },
       });
 
-      if (response.ok) {
-        // إعادة جلب البيانات لتحديث القائمة
-        fetchAuctions(true); // forced refresh
-        setSelectedAuction(null);
-        alert('تم رفض المزاد بنجاح');
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        alert(errorData.message || 'فشل في رفض المزاد');
+        throw new Error(errorData.message || 'فشل في رفض المزاد');
       }
-    } catch (error) {
-      console.error('Error rejecting auction:', error);
-      alert('حدث خطأ أثناء رفض المزاد');
-    } finally {
-      setActionLoading(false);
+
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم رفض المزاد بنجاح');
+        refetch(); // إعادة تحميل البيانات
+        setSelectedAuction(null);
+        queryClient.invalidateQueries(['auctions']);
+      },
+      onError: (error) => {
+        alert(error.message);
+      }
     }
+  );
+
+  const handleFilterChange = (key, value) => {
+    const newFilters = {
+      ...filters,
+      [key]: value
+    };
+    
+    setFilters(newFilters);
+    
+    // إعادة ضبط الصفحة عند تغيير الفلاتر
+    if (key !== 'page' && currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    refetch();
+  };
+
+  const clearFilters = () => {
+    const defaultFilters = {
+      search: '',
+      status: 'all',
+      region: 'all',
+      city: 'all',
+      date: '',
+      sort_field: 'created_at',
+      sort_direction: 'desc'
+    };
+    
+    setFilters(defaultFilters);
+    setCurrentPage(1);
+  };
+
+  const handleApprove = async (auctionId) => {
+    if (!window.confirm('هل أنت متأكد من قبول هذا المزاد؟')) {
+      return;
+    }
+    approveMutation.mutate(auctionId);
+  };
+
+  const handleReject = async (auctionId) => {
+    if (!window.confirm('هل أنت متأكد من رفض هذا المزاد؟')) {
+      return;
+    }
+    rejectMutation.mutate(auctionId);
+  };
+
+  // تحديث الصفحة الحالية
+  const updatePagination = (newPage) => {
+    setCurrentPage(newPage);
   };
 
   const formatDate = (dateString) => {
@@ -309,19 +329,19 @@ const AllAuctions = () => {
             <button 
               className="btn btn-success"
               onClick={() => handleApprove(auction.id)}
-              disabled={actionLoading}
+              disabled={approveMutation.isLoading || rejectMutation.isLoading}
             >
               <FiCheck />
-              {actionLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
+              {approveMutation.isLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
             </button>
             
             <button 
               className="btn btn-danger"
               onClick={() => handleReject(auction.id)}
-              disabled={actionLoading}
+              disabled={approveMutation.isLoading || rejectMutation.isLoading}
             >
               <FiX />
-              {actionLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
+              {rejectMutation.isLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
             </button>
           </>
         );
@@ -331,10 +351,10 @@ const AllAuctions = () => {
           <button 
             className="btn btn-success"
             onClick={() => handleApprove(auction.id)}
-            disabled={actionLoading}
+            disabled={approveMutation.isLoading || rejectMutation.isLoading}
           >
             <FiCheck />
-            {actionLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
+            {approveMutation.isLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
           </button>
         );
       
@@ -343,10 +363,10 @@ const AllAuctions = () => {
           <button 
             className="btn btn-danger"
             onClick={() => handleReject(auction.id)}
-            disabled={actionLoading}
+            disabled={approveMutation.isLoading || rejectMutation.isLoading}
           >
             <FiX />
-            {actionLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
+            {rejectMutation.isLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
           </button>
         );
       
@@ -363,19 +383,19 @@ const AllAuctions = () => {
             <button 
               className="btn btn-success"
               onClick={() => handleApprove(auction.id)}
-              disabled={actionLoading}
+              disabled={approveMutation.isLoading || rejectMutation.isLoading}
             >
               <FiCheck />
-              {actionLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
+              {approveMutation.isLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
             </button>
             
             <button 
               className="btn btn-danger"
               onClick={() => handleReject(auction.id)}
-              disabled={actionLoading}
+              disabled={approveMutation.isLoading || rejectMutation.isLoading}
             >
               <FiX />
-              {actionLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
+              {rejectMutation.isLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
             </button>
           </>
         );
@@ -454,6 +474,13 @@ const AllAuctions = () => {
             المنطقة
           </div>
           <div className="detail-value">{auction.region || 'غير محدد'}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            المدينة
+          </div>
+          <div className="detail-value">{auction.city || 'غير محدد'}</div>
         </div>
 
         {auction.latitude && auction.longitude && (
@@ -540,18 +567,16 @@ const AllAuctions = () => {
 
   // إنشاء أزرار الباجينيشن
   const renderPagination = () => {
-    if (pagination.last_page <= 1) return null;
+    if (!auctionsData || !auctionsData.pagination || auctionsData.pagination.last_page <= 1) return null;
 
     const pages = [];
-    const currentPage = pagination.current_page;
-    const lastPage = pagination.last_page;
+    const pagination = auctionsData.pagination;
     
-    // زر الصفحة السابقة
     pages.push(
       <button
         key="prev"
         className={`pagination-btn ${currentPage === 1 ? 'disabled' : ''}`}
-        onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+        onClick={() => currentPage > 1 && updatePagination(currentPage - 1)}
         disabled={currentPage === 1}
       >
         <FiChevronRight />
@@ -560,31 +585,24 @@ const AllAuctions = () => {
 
     // أزرار الصفحات
     const showPages = [];
-    
-    // دائما نعرض الصفحة الأولى
     showPages.push(1);
     
-    // نقاط إذا كانت الصفحة الحالية بعيدة عن البداية
     if (currentPage > 3) {
       showPages.push('ellipsis-start');
     }
     
-    // الصفحات حول الصفحة الحالية
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(lastPage - 1, currentPage + 1); i++) {
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(pagination.last_page - 1, currentPage + 1); i++) {
       showPages.push(i);
     }
     
-    // نقاط إذا كانت الصفحة الحالية بعيدة عن النهاية
-    if (currentPage < lastPage - 2) {
+    if (currentPage < pagination.last_page - 2) {
       showPages.push('ellipsis-end');
     }
     
-    // دائما نعرض الصفحة الأخيرة إذا كانت أكثر من 1
-    if (lastPage > 1) {
-      showPages.push(lastPage);
+    if (pagination.last_page > 1) {
+      showPages.push(pagination.last_page);
     }
     
-    // إزالة التكرارات
     const uniquePages = [...new Set(showPages)];
     
     uniquePages.forEach(page => {
@@ -595,7 +613,7 @@ const AllAuctions = () => {
           <button
             key={page}
             className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
-            onClick={() => handlePageChange(page)}
+            onClick={() => updatePagination(page)}
           >
             {page}
           </button>
@@ -607,9 +625,9 @@ const AllAuctions = () => {
     pages.push(
       <button
         key="next"
-        className={`pagination-btn ${currentPage === lastPage ? 'disabled' : ''}`}
-        onClick={() => currentPage < lastPage && handlePageChange(currentPage + 1)}
-        disabled={currentPage === lastPage}
+        className={`pagination-btn ${currentPage === pagination.last_page ? 'disabled' : ''}`}
+        onClick={() => currentPage < pagination.last_page && updatePagination(currentPage + 1)}
+        disabled={currentPage === pagination.last_page}
       >
         <FiChevronLeft />
       </button>
@@ -619,29 +637,24 @@ const AllAuctions = () => {
   };
 
   // التحقق إذا كان هناك أي فلتر نشط
-  const hasActiveFilters = filters.search || filters.status !== 'all' || filters.region !== 'all' || filters.date;
-  const loading = state.auctions.isLoading || localLoading;
+  const hasActiveFilters = filters.search || filters.status !== 'all' || filters.region !== 'all' || 
+                          filters.city !== 'all' || filters.date;
+
+  // استخراج البيانات من نتيجة الاستعلام
+  const auctions = auctionsData?.data || [];
+  const pagination = auctionsData?.pagination || {
+    current_page: currentPage,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: 0,
+    to: 0
+  };
+
+  const loading = isLoading || approveMutation.isLoading || rejectMutation.isLoading;
 
   return (
     <div className="pending-users-container">
-      <div className="content-header">
-        <h1>
-          <FiCalendar className="header-icon" />
-          إدارة جميع المزادات
-        </h1>
-        <p>عرض وإدارة جميع المزادات في النظام - العدد الإجمالي: {pagination.total}</p>
-        <div className="header-actions">
-          <button 
-            className="btn-refresh" 
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            <FiRefreshCw className={loading ? 'spinning' : ''} />
-            تحديث البيانات
-          </button>
-        </div>
-      </div>
-
       {/* شريط البحث والتصفية */}
       <div className="filter-section">
         <div className="filter-header">
@@ -665,9 +678,19 @@ const AllAuctions = () => {
               onChange={(e) => handleFilterChange('search', e.target.value)}
               className="search-input"
             />
-            <button type="submit" className="search-btn" disabled={loading}>
-              {loading ? 'جاري البحث...' : 'بحث'}
+            <button type="submit" className="search-btn">
+              بحث
             </button>
+            <div className="dashboard-header-actions">
+              <button 
+                className="dashboard-refresh-btn" 
+                onClick={() => refetch()}
+                disabled={loading}
+              >
+                <FiRefreshCw />
+                تحديث البيانات
+              </button>
+            </div>
           </div>
         </form>
 
@@ -678,7 +701,6 @@ const AllAuctions = () => {
               value={filters.status} 
               onChange={(e) => handleFilterChange('status', e.target.value)}
               className="filter-select"
-              disabled={loading}
             >
               <option value="all">جميع الحالات</option>
               <option value="مفتوح">مفتوح</option>
@@ -694,12 +716,25 @@ const AllAuctions = () => {
               value={filters.region} 
               onChange={(e) => handleFilterChange('region', e.target.value)}
               className="filter-select"
-              disabled={loading}
             >
               <option value="all">جميع المناطق</option>
               <option value="عدن">عدن</option>
               <option value="صنعاء">صنعاء</option>
               {/* ... باقي المناطق */}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>المدينة:</label>
+            <select 
+              value={filters.city} 
+              onChange={(e) => handleFilterChange('city', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع المدن</option>
+              <option value="عدن">عدن</option>
+              <option value="صنعاء">صنعاء</option>
+              {/* ... باقي المدن */}
             </select>
           </div>
 
@@ -710,7 +745,6 @@ const AllAuctions = () => {
               value={filters.date}
               onChange={(e) => handleFilterChange('date', e.target.value)}
               className="filter-select"
-              disabled={loading}
             />
           </div>
 
@@ -720,7 +754,6 @@ const AllAuctions = () => {
               value={filters.sort_field} 
               onChange={(e) => handleFilterChange('sort_field', e.target.value)}
               className="filter-select"
-              disabled={loading}
             >
               <option value="created_at">تاريخ الإنشاء</option>
               <option value="auction_date">تاريخ المزاد</option>
@@ -734,7 +767,6 @@ const AllAuctions = () => {
               value={filters.sort_direction} 
               onChange={(e) => handleFilterChange('sort_direction', e.target.value)}
               className="filter-select"
-              disabled={loading}
             >
               <option value="desc">تنازلي</option>
               <option value="asc">تصاعدي</option>
@@ -759,9 +791,13 @@ const AllAuctions = () => {
             </div>
             
             {loading ? (
-              <div className="list-loading">
-                <div className="loading-spinner"></div>
-                <p>جاري تحميل المزادات...</p>
+              <div className="dashboard-loading">
+                <div className="dashboard-loading-dots">
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                </div>
+                <p className="dashboard-loading-text">جاري تحميل البيانات...</p>
               </div>
             ) : auctions.length === 0 ? (
               <div className="empty-state">

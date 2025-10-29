@@ -1,70 +1,315 @@
 import React, { useState, useEffect } from 'react';
-import { FiMap, FiMapPin, FiUser, FiCalendar, FiDollarSign, FiLayers, FiFilter, FiChevronRight, FiChevronLeft, FiImage } from 'react-icons/fi';
+import { 
+  FiMap, 
+  FiMapPin, 
+  FiUser, 
+  FiCalendar, 
+  FiDollarSign, 
+  FiLayers, 
+  FiFilter, 
+  FiChevronRight, 
+  FiChevronLeft, 
+  FiImage, 
+  FiSearch, 
+  FiSlash,
+  FiCheck,
+  FiX,
+  FiEdit,
+  FiRefreshCw,
+  FiHome
+} from 'react-icons/fi';
+import { useQueryClient, useQuery, useMutation } from 'react-query';
+import { useNavigate } from 'react-router-dom';
 import '../../styles/PendingUsers.css';
 
 const AllLands = () => {
-  const [lands, setLands] = useState([]);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  
+  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
+  const getInitialFilters = () => {
+    const savedFilters = localStorage.getItem('landsFilters');
+    if (savedFilters) {
+      return JSON.parse(savedFilters);
+    }
+    return {
+      search: '',
+      status: 'all',
+      region: 'all',
+      city: 'all',
+      land_type: 'all',
+      purpose: 'all',
+      user_type_id: 'all',
+      min_area: '',
+      max_area: '',
+      sort_field: 'created_at',
+      sort_direction: 'desc'
+    };
+  };
+  
+  const [filters, setFilters] = useState(getInitialFilters());
   const [selectedLand, setSelectedLand] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [perPage, setPerPage] = useState(15);
-  const [total, setTotal] = useState(0);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('landsCurrentPage');
+    return savedPage ? parseInt(savedPage) : 1;
+  });
+  
+  // حالة المودال للرفض
+  const [rejectModal, setRejectModal] = useState({
+    show: false,
+    landId: null,
+    reason: ''
+  });
 
+  // حفظ الفلاتر والصفحة في localStorage عند تغييرها
   useEffect(() => {
-    fetchLands();
+    localStorage.setItem('landsFilters', JSON.stringify(filters));
+  }, [filters]);
+  
+  useEffect(() => {
+    localStorage.setItem('landsCurrentPage', currentPage.toString());
   }, [currentPage]);
+  
+  // استعادة الأرض المحددة من localStorage إذا كانت موجودة
+  useEffect(() => {
+    const savedSelectedLand = localStorage.getItem('selectedLand');
+    if (savedSelectedLand) {
+      setSelectedLand(JSON.parse(savedSelectedLand));
+    }
+  }, []);
+  
+  // حفظ الأرض المحددة في localStorage
+  useEffect(() => {
+    if (selectedLand) {
+      localStorage.setItem('selectedLand', JSON.stringify(selectedLand));
+    } else {
+      localStorage.removeItem('selectedLand');
+    }
+  }, [selectedLand]);
 
+  const buildQueryString = () => {
+    const params = new URLSearchParams();
+    
+    if (filters.search.trim()) params.append('search', filters.search.trim());
+    if (filters.status !== 'all') params.append('status', filters.status);
+    if (filters.region !== 'all') params.append('region', filters.region);
+    if (filters.city !== 'all') params.append('city', filters.city);
+    if (filters.land_type !== 'all') params.append('land_type', filters.land_type);
+    if (filters.purpose !== 'all') params.append('purpose', filters.purpose);
+    if (filters.user_type_id !== 'all') params.append('user_type_id', filters.user_type_id);
+    if (filters.min_area) params.append('min_area', filters.min_area);
+    if (filters.max_area) params.append('max_area', filters.max_area);
+    if (filters.sort_field) params.append('sort_field', filters.sort_field);
+    if (filters.sort_direction) params.append('sort_direction', filters.sort_direction);
+    
+    params.append('page', currentPage);
+    
+    return params.toString();
+  };
+
+  // استخدام React Query لجلب بيانات الأراضي
   const fetchLands = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
       
-      if (!token) {
-        alert('لم يتم العثور على رمز الدخول. يرجى تسجيل الدخول مرة أخرى.');
-        window.location.href = '/login';
-        return;
-      }
+    if (!token) {
+      navigate('/login');
+      throw new Error('لم يتم العثور على رمز الدخول');
+    }
 
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties?page=${currentPage}`, {
-        method: 'GET',
+    const queryString = buildQueryString();
+    const url = `https://shahin-tqay.onrender.com/api/admin/properties?${queryString}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`فشل في جلب الأراضي: ${errorText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  };
+
+  const { 
+    data: landsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery(
+    ['lands', filters, currentPage],
+    fetchLands,
+    {
+      staleTime: 5 * 60 * 1000, // 5 دقائق
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error('خطأ في جلب الأراضي:', error);
+        alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
+      }
+    }
+  );
+
+  // فتح مودال الرفض
+  const openRejectModal = (landId) => {
+    setRejectModal({
+      show: true,
+      landId,
+      reason: ''
+    });
+  };
+
+  // إغلاق مودال الرفض
+  const closeRejectModal = () => {
+    setRejectModal({
+      show: false,
+      landId: null,
+      reason: ''
+    });
+  };
+
+  // استخدام useMutation لعمليات الموافقة والرفض
+  const approveMutation = useMutation(
+    async (landId) => {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties/${landId}/approve`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        // لا نرسل أي بيانات في body
       });
 
-      if (response.status === 401) {
-        alert('انتهت جلسة الدخول أو التوكن غير صالح');
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'فشل في قبول الإعلان');
       }
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('بيانات الأراضي:', result);
-        
-        if (result.success && result.data) {
-          setLands(result.data.data || []);
-          setCurrentPage(result.data.current_page);
-          setLastPage(result.data.last_page);
-          setPerPage(result.data.per_page);
-          setTotal(result.data.total);
-        } else {
-          console.error('هيكل البيانات غير متوقع:', result);
-          setLands([]);
-        }
-      } else {
-        console.error('فشل في جلب الأراضي:', response.status);
-        alert('فشل في جلب بيانات الأراضي');
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم قبول الإعلان بنجاح');
+        refetch(); // إعادة تحميل البيانات
+        setSelectedLand(null);
+        queryClient.invalidateQueries(['lands']);
+      },
+      onError: (error) => {
+        alert(error.message);
       }
-    } catch (error) {
-      console.error('خطأ في جلب الأراضي:', error);
-      alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
-    } finally {
-      setLoading(false);
     }
+  );
+
+  const rejectMutation = useMutation(
+    async ({ landId, reason }) => {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties/${landId}/reject`, {
+        method: 'POST', // تم التغيير من PUT إلى POST
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: reason
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'فشل في رفض الإعلان');
+      }
+
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم رفض الإعلان بنجاح');
+        refetch(); // إعادة تحميل البيانات
+        setSelectedLand(null);
+        closeRejectModal();
+        queryClient.invalidateQueries(['lands']);
+      },
+      onError: (error) => {
+        alert(error.message);
+      }
+    }
+  );
+
+  const handleFilterChange = (key, value) => {
+    const newFilters = {
+      ...filters,
+      [key]: value
+    };
+    
+    setFilters(newFilters);
+    
+    // إعادة ضبط الصفحة عند تغيير الفلاتر
+    if (key !== 'page' && currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    refetch();
+  };
+
+  const clearFilters = () => {
+    const defaultFilters = {
+      search: '',
+      status: 'all',
+      region: 'all',
+      city: 'all',
+      land_type: 'all',
+      purpose: 'all',
+      user_type_id: 'all',
+      min_area: '',
+      max_area: '',
+      sort_field: 'created_at',
+      sort_direction: 'desc'
+    };
+    
+    setFilters(defaultFilters);
+    setCurrentPage(1);
+  };
+
+  const handleApprove = async (landId) => {
+    if (!window.confirm('هل أنت متأكد من قبول هذا الإعلان؟')) {
+      return;
+    }
+    approveMutation.mutate(landId);
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal.reason.trim()) {
+      alert('يرجى إدخال سبب الرفض');
+      return;
+    }
+
+    if (!window.confirm('هل أنت متأكد من رفض هذا الإعلان؟')) {
+      return;
+    }
+    
+    rejectMutation.mutate({
+      landId: rejectModal.landId,
+      reason: rejectModal.reason
+    });
+  };
+
+  // تحديث الصفحة الحالية
+  const updatePagination = (newPage) => {
+    setCurrentPage(newPage);
   };
 
   const formatDate = (dateString) => {
@@ -73,13 +318,15 @@ const AllLands = () => {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
   const getStatusBadge = (status) => {
     switch (status) {
       case 'مفتوح':
-        return <span className="status-badge open">مفتوح</span>;
+        return <span className="status-badge approved">مفتوح</span>;
       case 'مرفوض':
         return <span className="status-badge rejected">مرفوض</span>;
       case 'تم البيع':
@@ -88,6 +335,21 @@ const AllLands = () => {
         return <span className="status-badge pending">قيد المراجعة</span>;
       default:
         return <span className="status-badge unknown">{status}</span>;
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'مفتوح':
+        return 'مفتوح';
+      case 'مرفوض':
+        return 'مرفوض';
+      case 'تم البيع':
+        return 'تم البيع';
+      case 'قيد المراجعة':
+        return 'قيد المراجعة';
+      default:
+        return status;
     }
   };
 
@@ -120,7 +382,7 @@ const AllLands = () => {
       <div className="details-content">
         <div className="detail-item">
           <div className="detail-label">
-            <FiMapPin />
+            <FiHome />
             العنوان
           </div>
           <div className="detail-value">{land.title}</div>
@@ -132,7 +394,7 @@ const AllLands = () => {
             المالك
           </div>
           <div className="detail-value">
-            {land.user?.full_name} ({land.user?.email})
+            {land.user?.full_name} ({land.user?.email}) - {land.user?.phone}
           </div>
         </div>
 
@@ -145,6 +407,7 @@ const AllLands = () => {
 
         <div className="detail-item">
           <div className="detail-label">
+            <FiMapPin />
             الموقع
           </div>
           <div className="detail-value">{land.region} - {land.city}</div>
@@ -284,27 +547,18 @@ const AllLands = () => {
     );
   };
 
-  // تصفية الأراضي حسب الحالة
-  const filteredLands = lands.filter(land => {
-    if (filterStatus === 'all') return true;
-    return land.status === filterStatus;
-  });
-
-  const openCount = lands.filter(land => land.status === 'مفتوح').length;
-  const rejectedCount = lands.filter(land => land.status === 'مرفوض').length;
-  const soldCount = lands.filter(land => land.status === 'تم البيع').length;
-  const pendingCount = lands.filter(land => land.status === 'قيد المراجعة').length;
-
   // إنشاء أزرار الباجينيشن
   const renderPagination = () => {
+    if (!landsData || !landsData.pagination || landsData.pagination.last_page <= 1) return null;
+
     const pages = [];
+    const pagination = landsData.pagination;
     
-    // زر الصفحة السابقة
     pages.push(
       <button
         key="prev"
         className={`pagination-btn ${currentPage === 1 ? 'disabled' : ''}`}
-        onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+        onClick={() => currentPage > 1 && updatePagination(currentPage - 1)}
         disabled={currentPage === 1}
       >
         <FiChevronRight />
@@ -312,29 +566,50 @@ const AllLands = () => {
     );
 
     // أزرار الصفحات
-    for (let i = 1; i <= lastPage; i++) {
-      if (i === 1 || i === lastPage || (i >= currentPage - 1 && i <= currentPage + 1)) {
+    const showPages = [];
+    showPages.push(1);
+    
+    if (currentPage > 3) {
+      showPages.push('ellipsis-start');
+    }
+    
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(pagination.last_page - 1, currentPage + 1); i++) {
+      showPages.push(i);
+    }
+    
+    if (currentPage < pagination.last_page - 2) {
+      showPages.push('ellipsis-end');
+    }
+    
+    if (pagination.last_page > 1) {
+      showPages.push(pagination.last_page);
+    }
+    
+    const uniquePages = [...new Set(showPages)];
+    
+    uniquePages.forEach(page => {
+      if (page === 'ellipsis-start' || page === 'ellipsis-end') {
+        pages.push(<span key={page} className="pagination-ellipsis">...</span>);
+      } else {
         pages.push(
           <button
-            key={i}
-            className={`pagination-btn ${currentPage === i ? 'active' : ''}`}
-            onClick={() => setCurrentPage(i)}
+            key={page}
+            className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+            onClick={() => updatePagination(page)}
           >
-            {i}
+            {page}
           </button>
         );
-      } else if (i === currentPage - 2 || i === currentPage + 2) {
-        pages.push(<span key={i} className="pagination-ellipsis">...</span>);
       }
-    }
+    });
 
     // زر الصفحة التالية
     pages.push(
       <button
         key="next"
-        className={`pagination-btn ${currentPage === lastPage ? 'disabled' : ''}`}
-        onClick={() => currentPage < lastPage && setCurrentPage(currentPage + 1)}
-        disabled={currentPage === lastPage}
+        className={`pagination-btn ${currentPage === pagination.last_page ? 'disabled' : ''}`}
+        onClick={() => currentPage < pagination.last_page && updatePagination(currentPage + 1)}
+        disabled={currentPage === pagination.last_page}
       >
         <FiChevronLeft />
       </button>
@@ -343,64 +618,192 @@ const AllLands = () => {
     return pages;
   };
 
-  if (loading) {
-    return (
-      <div className="pending-users-container">
-        <div className="loading">
-          <FiMap className="loading-icon" />
-          جاري تحميل البيانات...
-        </div>
-      </div>
-    );
-  }
+  // التحقق إذا كان هناك أي فلتر نشط
+  const hasActiveFilters = filters.search || filters.status !== 'all' || filters.region !== 'all' || 
+                          filters.city !== 'all' || filters.land_type !== 'all' || filters.purpose !== 'all' ||
+                          filters.user_type_id !== 'all' || filters.min_area || filters.max_area;
+
+  // استخراج البيانات من نتيجة الاستعلام
+  const lands = landsData?.data || [];
+  const pagination = landsData?.pagination || {
+    current_page: currentPage,
+    last_page: 1,
+    per_page: 15,
+    total: 0,
+    from: 0,
+    to: 0
+  };
+
+  const loading = isLoading || approveMutation.isLoading || rejectMutation.isLoading;
 
   return (
     <div className="pending-users-container">
-      <div className="content-header">
+      {/* <div className="content-header">
         <h1>
           <FiMap className="header-icon" />
           إدارة جميع الأراضي
         </h1>
-        <p>عرض وإدارة جميع الأراضي في النظام - العدد الإجمالي: {total}</p>
-      </div>
+        <p>عرض وإدارة جميع الأراضي في النظام - العدد الإجمالي: {pagination.total}</p>
+      
+      </div> */}
 
-      {/* فلتر الحالة */}
+      {/* شريط البحث والتصفية */}
       <div className="filter-section">
         <div className="filter-header">
           <FiFilter className="filter-icon" />
-          <span>تصفية حسب الحالة:</span>
+          <span>أدوات البحث والتصفية:</span>
+          {hasActiveFilters && (
+            <button className="clear-filters-btn" onClick={clearFilters}>
+              <FiSlash />
+              مسح الفلاتر
+            </button>
+          )}
         </div>
-        <div className="filter-buttons">
+        
+        <form onSubmit={handleSearch} className="search-form">
+          <div className="search-input-group">
+            <FiSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="ابحث بالعنوان أو رقم الإعلان أو وصف الأرض..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="search-input"
+            />
+            <button type="submit" className="search-btn">
+              بحث
+            </button>
+              <div className="dashboard-header-actions">
           <button 
-            className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('all')}
+            className="dashboard-refresh-btn" 
+            onClick={() => refetch()}
+            disabled={loading}
           >
-            الكل ({lands.length})
+            <FiRefreshCw />
+            تحديث البيانات
           </button>
-          <button 
-            className={`filter-btn ${filterStatus === 'مفتوح' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('مفتوح')}
-          >
-            مفتوح ({openCount})
-          </button>
-          <button 
-            className={`filter-btn ${filterStatus === 'مرفوض' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('مرفوض')}
-          >
-            مرفوض ({rejectedCount})
-          </button>
-          <button 
-            className={`filter-btn ${filterStatus === 'تم البيع' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('تم البيع')}
-          >
-            تم البيع ({soldCount})
-          </button>
-          <button 
-            className={`filter-btn ${filterStatus === 'قيد المراجعة' ? 'active' : ''}`}
-            onClick={() => setFilterStatus('قيد المراجعة')}
-          >
-            قيد المراجعة ({pendingCount})
-          </button>
+        </div>
+          </div>
+        </form>
+
+        <div className="filter-controls">
+          <div className="filter-group">
+            <label>الحالة:</label>
+            <select 
+              value={filters.status} 
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع الحالات</option>
+              <option value="قيد المراجعة">قيد المراجعة</option>
+              <option value="مفتوح">مفتوح</option>
+              <option value="مرفوض">مرفوض</option>
+              <option value="تم البيع">تم البيع</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>المنطقة:</label>
+            <select 
+              value={filters.region} 
+              onChange={(e) => handleFilterChange('region', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع المناطق</option>
+              <option value="الرياض">الرياض</option>
+              <option value="صنعا">صنعا</option>
+              {/* يمكن إضافة المزيد من المناطق */}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>المدينة:</label>
+            <select 
+              value={filters.city} 
+              onChange={(e) => handleFilterChange('city', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع المدن</option>
+              <option value="الرياض">الرياض</option>
+              <option value="صنهاء">صنهاء</option>
+              {/* يمكن إضافة المزيد من المدن */}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>نوع الأرض:</label>
+            <select 
+              value={filters.land_type} 
+              onChange={(e) => handleFilterChange('land_type', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع الأنواع</option>
+              <option value="سكني">سكني</option>
+              <option value="تجاري">تجاري</option>
+              <option value="زراعي">زراعي</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>الغرض:</label>
+            <select 
+              value={filters.purpose} 
+              onChange={(e) => handleFilterChange('purpose', e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">جميع الأغراض</option>
+              <option value="بيع">بيع</option>
+              <option value="استثمار">استثمار</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>أقل مساحة:</label>
+            <input
+              type="number"
+              value={filters.min_area}
+              onChange={(e) => handleFilterChange('min_area', e.target.value)}
+              className="filter-select"
+              placeholder="0"
+            />
+          </div>
+
+          <div className="filter-group">
+            <label>أكبر مساحة:</label>
+            <input
+              type="number"
+              value={filters.max_area}
+              onChange={(e) => handleFilterChange('max_area', e.target.value)}
+              className="filter-select"
+              placeholder="10000"
+            />
+          </div>
+
+          <div className="filter-group">
+            <label>ترتيب حسب:</label>
+            <select 
+              value={filters.sort_field} 
+              onChange={(e) => handleFilterChange('sort_field', e.target.value)}
+              className="filter-select"
+            >
+              <option value="created_at">تاريخ الإضافة</option>
+              <option value="title">العنوان</option>
+              <option value="total_area">المساحة</option>
+              <option value="price_per_sqm">سعر المتر</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>الاتجاه:</label>
+            <select 
+              value={filters.sort_direction} 
+              onChange={(e) => handleFilterChange('sort_direction', e.target.value)}
+              className="filter-select"
+            >
+              <option value="desc">تنازلي</option>
+              <option value="asc">تصاعدي</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -409,54 +812,74 @@ const AllLands = () => {
           {/* Lands List */}
           <div className="users-list">
             <div className="list-header">
-              <h3>قائمة الأراضي ({filteredLands.length})</h3>
+              <h3>قائمة الأراضي ({lands.length})</h3>
               <span className="page-info">
-                الصفحة {currentPage} من {lastPage} - إجمالي {total} أرض
+                {pagination.total > 0 ? (
+                  <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
+                ) : (
+                  'لا توجد نتائج'
+                )}
               </span>
             </div>
             
-            {filteredLands.length === 0 ? (
+            {loading ? (
+              <div className="dashboard-loading">
+                <div className="dashboard-loading-dots">
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                </div>
+                <p className="dashboard-loading-text">جاري تحميل البيانات...</p>
+              </div>
+            ) : lands.length === 0 ? (
               <div className="empty-state">
                 <FiMap className="empty-icon" />
-                <p>لا توجد أراضي</p>
+                <p>لا توجد نتائج</p>
+                {hasActiveFilters && (
+                  <button className="btn btn-primary" onClick={clearFilters}>
+                    مسح الفلاتر
+                  </button>
+                )}
               </div>
             ) : (
-              <div className="users-cards">
-                {filteredLands.map((land) => (
-                  <div 
-                    key={land.id} 
-                    className={`user-card ${selectedLand?.id === land.id ? 'active' : ''}`}
-                    onClick={() => setSelectedLand(land)}
-                  >
-                    <div className="user-avatar">
-                      <FiMap />
-                    </div>
-                    <div className="user-info">
-                      <h4>{land.title}</h4>
-                      <span className="user-type">{land.region} - {land.city}</span>
-                      <span className="user-date">
-                        <FiCalendar />
-                        {formatDate(land.created_at)}
-                      </span>
-                      <div className="land-badges">
-                        {getLandTypeBadge(land.land_type)}
-                        {getPurposeBadge(land.purpose)}
+              <>
+                <div className="users-cards">
+                  {lands.map((land) => (
+                    <div 
+                      key={land.id} 
+                      className={`user-card ${selectedLand?.id === land.id ? 'active' : ''}`}
+                      onClick={() => setSelectedLand(land)}
+                    >
+                      <div className="user-avatar">
+                        <FiMap />
+                      </div>
+                      <div className="user-info">
+                        <h4>{land.title}</h4>
+                        <span className="user-type">{land.region} - {land.city}</span>
+                        <span className="user-date">
+                          <FiCalendar />
+                          {formatDate(land.created_at)}
+                        </span>
+                        <div className="land-badges">
+                          {getLandTypeBadge(land.land_type)}
+                          {getPurposeBadge(land.purpose)}
+                        </div>
+                      </div>
+                      <div className={`user-status ${land.status.replace(/\s+/g, '-')}`}>
+                        {getStatusText(land.status)}
+                        <div className="land-area">{land.total_area} م²</div>
                       </div>
                     </div>
-                    <div className="user-status-container">
-                      {getStatusBadge(land.status)}
-                      <div className="land-area">{land.total_area} م²</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
 
-            {/* الباجينيشن */}
-            {lastPage > 1 && (
-              <div className="pagination">
-                {renderPagination()}
-              </div>
+                {/* الباجينيشن */}
+                {pagination.last_page > 1 && (
+                  <div className="pagination">
+                    {renderPagination()}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -470,6 +893,50 @@ const AllLands = () => {
                 </div>
                 
                 {renderLandDetails(selectedLand)}
+
+                <div className="details-actions">
+                  {selectedLand.status === 'قيد المراجعة' && (
+                    <>
+                      <button 
+                        className="btn btn-success"
+                        onClick={() => handleApprove(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiCheck />
+                        {loading ? 'جاري المعالجة...' : 'قبول الإعلان'}
+                      </button>
+                      
+                      <button 
+                        className="btn btn-danger"
+                        onClick={() => openRejectModal(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiX />
+                        {loading ? 'جاري المعالجة...' : 'رفض الإعلان'}
+                      </button>
+                    </>
+                  )}
+                  {(selectedLand.status === 'مرفوض') && (
+                    <button 
+                      className="btn btn-success"
+                      onClick={() => handleApprove(selectedLand.id)}
+                      disabled={loading}
+                    >
+                      <FiCheck />
+                      {loading ? 'جاري المعالجة...' : 'قبول الإعلان'}
+                    </button>
+                  )}
+                  {(selectedLand.status === 'مفتوح' || selectedLand.status === 'مرفوض') && (
+                    <button 
+                      className="btn btn-danger"
+                      onClick={() => openRejectModal(selectedLand.id)}
+                      disabled={loading}
+                    >
+                      <FiX />
+                      {loading ? 'جاري المعالجة...' : 'رفض الإعلان'}
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="no-selection">
@@ -480,6 +947,61 @@ const AllLands = () => {
           </div>
         </div>
       </div>
+
+      {/* مودال الرفض */}
+      {rejectModal.show && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>
+                <FiEdit />
+                رفض الإعلان
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={closeRejectModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>سبب الرفض</label>
+                <textarea
+                  value={rejectModal.reason}
+                  onChange={(e) => setRejectModal(prev => ({
+                    ...prev,
+                    reason: e.target.value
+                  }))}
+                  className="form-input"
+                  rows="4"
+                  placeholder="اكتب سبب رفض الإعلان هنا..."
+                />
+                <div className="form-hint">
+                  هذا السبب سيظهر للمستخدم كتفسير لرفض إعلانه
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-secondary"
+                onClick={closeRejectModal}
+                disabled={loading}
+              >
+                إلغاء
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={handleReject}
+                disabled={loading}
+              >
+                <FiX />
+                {loading ? 'جاري الحفظ...' : 'تأكيد الرفض'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
-
 import {
   FiUsers,
   FiCalendar,
@@ -28,16 +27,14 @@ const Dashboard = () => {
   const loading = state.dashboard.isLoading || localLoading;
 
   useEffect(() => {
-    // إذا البيانات موجودة مسبقاً ولا تحتاج تحديث، لا تقم بجلبها مجدداً
     if (!statistics) {
       fetchStatistics();
     } else {
       setLastUpdated(state.dashboard.lastUpdated);
     }
-  }, []); // [] تعني التشغيل مرة واحدة فقط
+  }, []);
 
   const fetchStatistics = async (forceRefresh = false) => {
-    // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
     if (statistics && !forceRefresh && !isDataStale()) {
       return;
     }
@@ -69,12 +66,12 @@ const Dashboard = () => {
         return;
       }
 
- if (response.ok) {
+      if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
-          dispatch({ 
-            type: 'SET_DASHBOARD_DATA', 
-            payload: result.data 
+          dispatch({
+            type: 'SET_DASHBOARD_DATA',
+            payload: result.data
           });
           setLastUpdated(new Date());
         }
@@ -86,17 +83,17 @@ const Dashboard = () => {
       setLocalLoading(false);
     }
   };
-  
-    const isDataStale = () => {
+
+  const isDataStale = () => {
     if (!state.dashboard.lastUpdated) return true;
     const now = new Date();
     const lastUpdate = new Date(state.dashboard.lastUpdated);
     const diffInMinutes = (now - lastUpdate) / (1000 * 60);
-    return diffInMinutes > 5; // تحديث إذا مرت أكثر من 5 دقائق
+    return diffInMinutes > 5;
   };
 
   const handleRefresh = () => {
-    fetchStatistics(true); // forced refresh
+    fetchStatistics(true);
   };
 
   const formatNumber = (num) => {
@@ -108,134 +105,146 @@ const Dashboard = () => {
     return ((current - previous) / previous) * 100;
   };
 
-  const renderStatCard = (icon, title, value, growth, subtitle) => {
-    const isPositive = growth >= 0;
-    const growthClass = isPositive ? 'positive' : 'negative';
+  // Stock Line Chart Component
+  const renderStockChart = (data, title, color = '#53a1dd') => {
+    const values = Object.values(data);
+    const maxValue = Math.max(...values);
+    const labels = Object.keys(data);
     
     return (
-      <div className="dashboard-stat-card">
-        <div className="dashboard-stat-icon">
-          {icon}
+      <div className="dashboard-stock-chart">
+        <div className="dashboard-stock-chart-header">
+          <h4>{title}</h4>
+          <span className="dashboard-stock-change positive">
+            <FiArrowUp /> +12.5%
+          </span>
         </div>
-        <div className="dashboard-stat-content">
-          <h3>{formatNumber(value)}</h3>
-          <p className="dashboard-stat-title">{title}</p>
-          <div className="dashboard-stat-trend">
-            <span className={`dashboard-trend-indicator ${growthClass}`}>
-              {isPositive ? <FiArrowUp /> : <FiArrowDown />}
-              {Math.abs(growth).toFixed(1)}%
-            </span>
-            <span className="dashboard-stat-subtitle">{subtitle}</span>
-          </div>
+        <div className="dashboard-stock-chart-content">
+          <svg viewBox={`0 0 ${labels.length * 40} 100`} className="dashboard-stock-svg">
+            <defs>
+              <linearGradient id={`gradient-${title}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.1" />
+              </linearGradient>
+            </defs>
+            
+            {/* Area */}
+            <path
+              className="dashboard-stock-area"
+              d={`
+                M 0,${100 - (values[0] / maxValue) * 80}
+                ${values.map((value, index) => 
+                  `L ${index * 40},${100 - (value / maxValue) * 80}`
+                ).join(' ')}
+                L ${(values.length - 1) * 40},100
+                L 0,100
+                Z
+              `}
+              fill={`url(#gradient-${title})`}
+            />
+            
+            {/* Line */}
+            <path
+              className="dashboard-stock-line"
+              d={`
+                M 0,${100 - (values[0] / maxValue) * 80}
+                ${values.map((value, index) => 
+                  `L ${index * 40},${100 - (value / maxValue) * 80}`
+                ).join(' ')}
+              `}
+              stroke={color}
+              strokeWidth="2"
+              fill="none"
+            />
+            
+            {/* Data points */}
+            {values.map((value, index) => (
+              <circle
+                key={index}
+                cx={index * 40}
+                cy={100 - (value / maxValue) * 80}
+                r="3"
+                fill={color}
+                className="dashboard-stock-point"
+              />
+            ))}
+          </svg>
+        </div>
+        <div className="dashboard-stock-labels">
+          {labels.map((label, index) => (
+            <span key={index} className="dashboard-stock-label">{label}</span>
+          ))}
         </div>
       </div>
     );
   };
 
-  const renderModernChart = (data) => {
+  // Flow Chart Component
+  const renderFlowChart = (data, title) => {
+    const total = Object.values(data).reduce((sum, val) => sum + val, 0);
+    const items = Object.entries(data);
+    
+    return (
+      <div className="dashboard-flow-chart">
+        <h4>{title}</h4>
+        <div className="dashboard-flow-container">
+          {items.map(([key, value], index) => {
+            const percentage = (value / total) * 100;
+            const width = Math.max(20, percentage);
+            
+            return (
+              <div key={key} className="dashboard-flow-item">
+                <div className="dashboard-flow-label">
+                  <span>{key}</span>
+                  <span className="dashboard-flow-value">{formatNumber(value)}</span>
+                </div>
+                <div className="dashboard-flow-bar-container">
+                  <div 
+                    className="dashboard-flow-bar"
+                    style={{ 
+                      width: `${width}%`,
+                      backgroundColor: `hsl(${210 + index * 30}, 70%, 55%)`
+                    }}
+                  >
+                    <span className="dashboard-flow-percentage">{percentage.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Modern Chart Component
+  const renderModernChart = (data, title, type = 'bar') => {
     const values = Object.values(data);
+    const labels = Object.keys(data);
     const maxValue = Math.max(...values);
-    const total = values.reduce((sum, value) => sum + value, 0);
+    
+    if (type === 'line') {
+      return renderStockChart(data, title);
+    }
     
     return (
       <div className="dashboard-modern-chart">
-        <div className="dashboard-chart-bars">
+        <h4>{title}</h4>
+        <div className="dashboard-chart-bars-modern">
           {values.map((value, index) => (
-            <div
-              key={index}
-              className="dashboard-chart-bar-wrapper"
-            >
-              <div
-                className="dashboard-chart-bar"
-                style={{
-                  height: `${maxValue > 0 ? (value / maxValue) * 100 : 0}%`,
-                  backgroundColor: 'var(--primary-color)'
-                }}
-              >
-                <span className="dashboard-chart-value">{value}</span>
+            <div key={index} className="dashboard-chart-bar-modern-wrapper">
+              <div className="dashboard-chart-bar-modern">
+                <div 
+                  className="dashboard-chart-bar-fill"
+                  style={{
+                    height: `${maxValue > 0 ? (value / maxValue) * 100 : 0}%`,
+                    background: `linear-gradient(to top, #53a1dd, #7bb8e8)`
+                  }}
+                >
+                  <span className="dashboard-chart-value-modern">{value}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-        <div className="dashboard-chart-info">
-          <span className="dashboard-chart-total">المجموع: {formatNumber(total)}</span>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDonutChart = (data, title) => {
-    const total = Object.values(data).reduce((sum, val) => sum + val, 0);
-    const entries = Object.entries(data);
-    
-    const colors = [
-      'var(--primary-color)',
-      'var(--secondary-color)',
-      '#2c4d6b',
-      '#3a6185',
-      '#4a75a0'
-    ];
-    
-    let startAngle = 0;
-    const segments = entries.map(([key, value], index) => {
-      const percentage = (value / total) * 100;
-      const angle = (percentage / 100) * 360;
-      const segmentData = {
-        key,
-        value,
-        percentage,
-        startAngle,
-        endAngle: startAngle + angle,
-        color: colors[index % colors.length]
-      };
-      startAngle += angle;
-      return segmentData;
-    });
-
-    return (
-      <div className="dashboard-donut-chart-container">
-        <h4 className="dashboard-donut-title">{title}</h4>
-        <div className="dashboard-donut-chart">
-          <svg viewBox="0 0 100 100">
-            <circle 
-              cx="50" 
-              cy="50" 
-              r="40" 
-              fill="none" 
-              stroke="#f0f0f0" 
-              strokeWidth="15"
-            />
-            {segments.map((segment) => {
-              const startRad = (segment.startAngle - 90) * Math.PI / 180;
-              const endRad = (segment.endAngle - 90) * Math.PI / 180;
-              
-              const x1 = 50 + 40 * Math.cos(startRad);
-              const y1 = 50 + 40 * Math.sin(startRad);
-              const x2 = 50 + 40 * Math.cos(endRad);
-              const y2 = 50 + 40 * Math.sin(endRad);
-              
-              const largeArc = segment.endAngle - segment.startAngle > 180 ? 1 : 0;
-              
-              return (
-                <path 
-                  key={segment.key}
-                  d={`M 50,50 L ${x1},${y1} A 40,40 0 ${largeArc} 1 ${x2},${y2} Z`}
-                  fill={segment.color}
-                />
-              );
-            })}
-            <circle cx="50" cy="50" r="25" fill="white" />
-            <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" className="dashboard-donut-text">
-              {formatNumber(total)}
-            </text>
-          </svg>
-        </div>
-        <div className="dashboard-donut-legend">
-          {segments.map(segment => (
-            <div className="dashboard-legend-item" key={segment.key}>
-              <span className="dashboard-legend-color" style={{ backgroundColor: segment.color }}></span>
-              <span className="dashboard-legend-label">{segment.key}</span>
-              <span className="dashboard-legend-value">{formatNumber(segment.value)} ({segment.percentage.toFixed(1)}%)</span>
+              <span className="dashboard-chart-label-modern">{labels[index]}</span>
             </div>
           ))}
         </div>
@@ -247,8 +256,12 @@ const Dashboard = () => {
     return (
       <div className="dashboard-container">
         <div className="dashboard-loading">
-          <FiRefreshCw className="dashboard-loading-spinner" />
-          <p>جاري تحميل الإحصائيات...</p>
+          <div className="dashboard-loading-dots">
+            <div className="dashboard-loading-dot"></div>
+            <div className="dashboard-loading-dot"></div>
+            <div className="dashboard-loading-dot"></div>
+          </div>
+          <p className="dashboard-loading-text">جاري تحميل الإحصائيات...</p>
         </div>
       </div>
     );
@@ -272,7 +285,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Header */}
+      {/* Header - نفس العنوان كما هو */}
       <div className="dashboard-header">
         <div className="dashboard-header-content">
           <h1>
@@ -282,7 +295,7 @@ const Dashboard = () => {
           <p>نظرة عامة على أداء النظام والأنشطة</p>
         </div>
         <div className="dashboard-header-actions">
-          <button onClick={fetchStatistics} className="dashboard-refresh-btn">
+          <button onClick={handleRefresh} className="dashboard-refresh-btn">
             <FiRefreshCw />
             تحديث البيانات
           </button>
@@ -294,11 +307,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Summary Cards - Single Row */}
-      <div className="dashboard-summary-header">
-        <h2>الملخص العام</h2>
-      </div>
-
+      {/* Summary Cards - صف واحد فقط */}
       <div className="dashboard-summary-cards-single-row">
         <div className="dashboard-summary-stat-card dashboard-summary-users">
           <div className="dashboard-summary-stat-icon">
@@ -309,7 +318,8 @@ const Dashboard = () => {
             <p className="dashboard-summary-stat-title">إجمالي المستخدمين</p>
             <div className="dashboard-summary-stat-trend">
               <span className="dashboard-summary-trend-indicator">
-                {calculateGrowth(users.monthly_trend.current_month, users.monthly_trend.last_month) >= 0 ? <FiArrowUp /> : <FiArrowDown />}
+                {calculateGrowth(users.monthly_trend.current_month, users.monthly_trend.last_month) >= 0 ? 
+                  <FiArrowUp /> : <FiArrowDown />}
                 {Math.abs(calculateGrowth(users.monthly_trend.current_month, users.monthly_trend.last_month)).toFixed(1)}%
               </span>
             </div>
@@ -365,206 +375,52 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="dashboard-quick-stats-section">
-        {/* <h2 className="dashboard-section-title">إحصائيات سريعة</h2> */}
-        <div className="dashboard-quick-stats-grid">
-          <div className="dashboard-quick-stat">
-            <div className="dashboard-quick-stat-icon dashboard-quick-stat-pending">
-              <FiUsers />
-            </div>
-            <div className="dashboard-quick-stat-content">
-              <span className="dashboard-quick-stat-value">{formatNumber(users.pending)}</span>
-              <span className="dashboard-quick-stat-label">مستخدم قيد المراجعة</span>
-            </div>
-          </div>
-
-          <div className="dashboard-quick-stat">
-            <div className="dashboard-quick-stat-icon dashboard-quick-stat-active">
-              <FiCalendar />
-            </div>
-            <div className="dashboard-quick-stat-content">
-              <span className="dashboard-quick-stat-value">{formatNumber(auctions.active)}</span>
-              <span className="dashboard-quick-stat-label">مزاد نشط</span>
-            </div>
-          </div>
-
-          <div className="dashboard-quick-stat">
-            <div className="dashboard-quick-stat-icon dashboard-quick-stat-reviewed">
-              <FiHeart />
-            </div>
-            <div className="dashboard-quick-stat-content">
-              <span className="dashboard-quick-stat-value">{formatNumber(interests.reviewed)}</span>
-              <span className="dashboard-quick-stat-label">اهتمام تمت مراجعته</span>
-            </div>
-          </div>
-
-          <div className="dashboard-quick-stat">
-            <div className="dashboard-quick-stat-icon dashboard-quick-stat-today">
-              <FiTrendingUp />
-            </div>
-            <div className="dashboard-quick-stat-content">
-              <span className="dashboard-quick-stat-value">{formatNumber(general.today_registrations)}</span>
-              <span className="dashboard-quick-stat-label">تسجيل اليوم</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Section */}
+      {/* Charts Section - تصميم جديد */}
       <div className="dashboard-charts-section">
-        <h2 className="dashboard-section-title">الرسومات البيانية</h2>
+        {/* <h2 className="dashboard-section-title">الرسومات البيانية المتقدمة</h2> */}
         
-        <div className="dashboard-charts-row">
-          {/* Registration Chart */}
-          <div className="dashboard-chart-card">
+        <div className="dashboard-charts-grid">
+          {/* Stock Line Chart */}
+          <div className="dashboard-chart-card dashboard-stock-chart-card">
             <div className="dashboard-chart-header">
               <h3>تسجيلات المستخدمين</h3>
+              <span className="dashboard-chart-subtitle">اتجاه النمو</span>
+            </div>
+            <div className="dashboard-chart-content">
+              {renderStockChart(charts.users_registration_chart, 'تسجيلات المستخدمين')}
+            </div>
+          </div>
+
+          {/* Flow Chart */}
+          <div className="dashboard-chart-card dashboard-flow-chart-card">
+            <div className="dashboard-chart-header">
+              <h3>توزيع المزادات</h3>
+              <span className="dashboard-chart-subtitle">حسب الحالة</span>
+            </div>
+            <div className="dashboard-chart-content">
+              {renderFlowChart(charts.auctions_status_chart, 'حالة المزادات')}
+            </div>
+          </div>
+
+          {/* Modern Bar Chart */}
+          <div className="dashboard-chart-card dashboard-modern-chart-card">
+            <div className="dashboard-chart-header">
+              <h3>العقارات المضافة</h3>
               <span className="dashboard-chart-subtitle">آخر 7 أيام</span>
             </div>
             <div className="dashboard-chart-content">
-              {renderModernChart(charts.users_registration_chart)}
+              {renderModernChart(charts.users_registration_chart, 'العقارات المضافة')}
             </div>
           </div>
 
-          {/* Auctions Chart */}
-          <div className="dashboard-chart-card">
+          {/* Another Stock Chart */}
+          <div className="dashboard-chart-card dashboard-stock-chart-card">
             <div className="dashboard-chart-header">
-              <h3>حالة المزادات</h3>
-              <span className="dashboard-chart-subtitle">التوزيع الكلي</span>
+              <h3>الاهتمامات الشهرية</h3>
+              <span className="dashboard-chart-subtitle">مقارنة بالأشهر</span>
             </div>
             <div className="dashboard-chart-content">
-              {renderDonutChart(charts.auctions_status_chart, 'توزيع المزادات حسب الحالة')}
-            </div>
-          </div>
-        </div>
-
-        <div className="dashboard-charts-row">
-          {/* Properties Chart */}
-          <div className="dashboard-chart-card">
-            <div className="dashboard-chart-header">
-              <h3>حالة العقارات</h3>
-              <span className="dashboard-chart-subtitle">التوزيع الكلي</span>
-            </div>
-            <div className="dashboard-chart-content">
-              {renderDonutChart(charts.properties_status_chart, 'توزيع العقارات حسب الحالة')}
-            </div>
-          </div>
-
-          {/* Interests Chart */}
-          <div className="dashboard-chart-card">
-            <div className="dashboard-chart-header">
-              <h3>حالة الاهتمامات</h3>
-              <span className="dashboard-chart-subtitle">التوزيع الكلي</span>
-            </div>
-            <div className="dashboard-chart-content">
-              {renderDonutChart(charts.interests_status_chart, 'توزيع الاهتمامات حسب الحالة')}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Detailed Statistics */}
-      <div className="dashboard-detailed-stats">
-        <h2 className="dashboard-section-title">إحصائيات مفصلة</h2>
-        <div className="dashboard-detailed-grid">
-          <div className="dashboard-detailed-card">
-            <div className="dashboard-detailed-header">
-              <FiUsers className="dashboard-detailed-icon" />
-              <h4>المستخدمين</h4>
-            </div>
-            <div className="dashboard-detailed-list">
-              <div className="dashboard-detailed-item">
-                <span>المقبولون:</span>
-                <span className="dashboard-detailed-value">{formatNumber(users.approved)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>قيد المراجعة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(users.pending)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>المرفوضون:</span>
-                <span className="dashboard-detailed-value">{formatNumber(users.rejected)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>تسجيلات الأسبوع:</span>
-                <span className="dashboard-detailed-value">{formatNumber(users.weekly_registrations)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="dashboard-detailed-card">
-            <div className="dashboard-detailed-header">
-              <FiCalendar className="dashboard-detailed-icon" />
-              <h4>المزادات</h4>
-            </div>
-            <div className="dashboard-detailed-list">
-              <div className="dashboard-detailed-item">
-                <span>النشطة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(auctions.active)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>المكتملة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(auctions.completed)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>الملغاة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(auctions.cancelled)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>قيد المراجعة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(auctions.pending)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="dashboard-detailed-card">
-            <div className="dashboard-detailed-header">
-              <FiHeart className="dashboard-detailed-icon" />
-              <h4>الاهتمامات</h4>
-            </div>
-            <div className="dashboard-detailed-list">
-              <div className="dashboard-detailed-item">
-                <span>قيد المراجعة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(interests.pending)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>تمت المراجعة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(interests.reviewed)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>تم التواصل:</span>
-                <span className="dashboard-detailed-value">{formatNumber(interests.contacted)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>الملغاة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(interests.cancelled)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="dashboard-detailed-card">
-            <div className="dashboard-detailed-header">
-              <FiHome className="dashboard-detailed-icon" />
-              <h4>العقارات</h4>
-            </div>
-            <div className="dashboard-detailed-list">
-              <div className="dashboard-detailed-item">
-                <span>المعروضة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(properties.listed || 0)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>المباعة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(properties.sold || 0)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>قيد المراجعة:</span>
-                <span className="dashboard-detailed-value">{formatNumber(properties.pending || 0)}</span>
-              </div>
-              <div className="dashboard-detailed-item">
-                <span>إضافات هذا الشهر:</span>
-                <span className="dashboard-detailed-value">{formatNumber(properties.monthly_additions || 0)}</span>
-              </div>
+              {renderStockChart(charts.users_registration_chart, 'الاهتمامات', '#ff6b6b')}
             </div>
           </div>
         </div>
