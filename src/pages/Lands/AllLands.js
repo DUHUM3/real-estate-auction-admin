@@ -16,7 +16,8 @@ import {
   FiX,
   FiEdit,
   FiRefreshCw,
-  FiHome
+  FiHome,
+  FiEye
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
@@ -59,6 +60,12 @@ const AllLands = () => {
     show: false,
     landId: null,
     reason: ''
+  });
+
+  // حالة المودال لعرض تفاصيل المالك
+  const [ownerModal, setOwnerModal] = useState({
+    show: false,
+    owner: null
   });
 
   // حفظ الفلاتر والصفحة في localStorage عند تغييرها
@@ -175,6 +182,22 @@ const AllLands = () => {
       show: false,
       landId: null,
       reason: ''
+    });
+  };
+
+  // فتح مودال تفاصيل المالك
+  const openOwnerModal = (owner) => {
+    setOwnerModal({
+      show: true,
+      owner
+    });
+  };
+
+  // إغلاق مودال تفاصيل المالك
+  const closeOwnerModal = () => {
+    setOwnerModal({
+      show: false,
+      owner: null
     });
   };
 
@@ -377,6 +400,67 @@ const AllLands = () => {
     }
   };
 
+  // دالة لعرض تفاصيل المالك في الفورم
+  const renderOwnerDetails = (owner) => {
+    if (!owner) return null;
+
+    return (
+      <div className="owner-details-form">
+        <div className="form-section">
+          <h4>المعلومات الشخصية</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>الاسم الكامل</label>
+              <div className="form-value">{owner.full_name || 'غير متوفر'}</div>
+            </div>
+            <div className="form-group">
+              <label>البريد الإلكتروني</label>
+              <div className="form-value">{owner.email || 'غير متوفر'}</div>
+            </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>رقم الهاتف</label>
+              <div className="form-value">{owner.phone || 'غير متوفر'}</div>
+            </div>
+            {/* <div className="form-group">
+              <label>نوع المستخدم</label>
+              <div className="form-value">{owner.user_type || 'غير محدد'}</div>
+            </div> */}
+          </div>
+        </div>
+
+        {/* <div className="form-section">
+          <h4>المعلومات الإضافية</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>تاريخ التسجيل</label>
+              <div className="form-value">{owner.created_at ? formatDate(owner.created_at) : 'غير متوفر'}</div>
+            </div>
+            <div className="form-group">
+              <label>حالة الحساب</label>
+              <div className="form-value">
+                <span className={`status-badge ${owner.status === 'نشط' ? 'approved' : 'pending'}`}>
+                  {owner.status || 'غير محدد'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {owner.additional_info && (
+          <div className="form-section">
+            <h4>معلومات إضافية</h4>
+            <div className="form-group full-width">
+              <div className="form-value">{owner.additional_info}</div>
+            </div>
+          </div>
+        )} */}
+      </div>
+    );
+  };
+
   const renderLandDetails = (land) => {
     return (
       <div className="details-content">
@@ -393,8 +477,15 @@ const AllLands = () => {
             <FiUser />
             المالك
           </div>
-          <div className="detail-value">
-            {land.user?.full_name} ({land.user?.email}) - {land.user?.phone}
+          <div className="detail-value owner-info">
+            {/* <span>{land.user?.full_name} ({land.user?.email}) - {land.user?.phone}</span> */}
+            <button 
+              className="owner-view-btn"
+              onClick={() => openOwnerModal(land.user)}
+              title="عرض تفاصيل المالك"
+            >
+              <FiEye />
+            </button>
           </div>
         </div>
 
@@ -702,33 +793,164 @@ const AllLands = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>المنطقة:</label>
-            <select 
-              value={filters.region} 
-              onChange={(e) => handleFilterChange('region', e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">جميع المناطق</option>
-              <option value="الرياض">الرياض</option>
-              <option value="صنعا">صنعا</option>
-              {/* يمكن إضافة المزيد من المناطق */}
-            </select>
-          </div>
+         <div className="filter-group">
+  <label>المنطقة:</label>
+  <select 
+    value={filters.region} 
+    onChange={(e) => handleFilterChange('region', e.target.value)}
+    className="filter-select"
+  >
+    <option value="all">جميع المناطق</option>
+    <option value="الرياض">الرياض</option>
+    <option value="مكة المكرمة">مكة المكرمة</option>
+    <option value="المدينة المنورة">المدينة المنورة</option>
+    <option value="القصيم">القصيم</option>
+    <option value="الشرقية">الشرقية</option>
+    <option value="عسير">عسير</option>
+    <option value="تبوك">تبوك</option>
+    <option value="حائل">حائل</option>
+    <option value="الحدود الشمالية">الحدود الشمالية</option>
+    <option value="جازان">جازان</option>
+    <option value="نجران">نجران</option>
+    <option value="الباحة">الباحة</option>
+    <option value="الجوف">الجوف</option>
+  </select>
+</div>
 
-          <div className="filter-group">
-            <label>المدينة:</label>
-            <select 
-              value={filters.city} 
-              onChange={(e) => handleFilterChange('city', e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">جميع المدن</option>
-              <option value="الرياض">الرياض</option>
-              <option value="صنهاء">صنهاء</option>
-              {/* يمكن إضافة المزيد من المدن */}
-            </select>
-          </div>
+<div className="filter-group">
+  <label>المدينة:</label>
+  <select 
+    value={filters.city} 
+    onChange={(e) => handleFilterChange('city', e.target.value)}
+    className="filter-select"
+  >
+    <option value="all">جميع المدن</option>
+
+    {/* منطقة الرياض */}
+    <option value="الرياض">الرياض</option>
+    <option value="الدرعية">الدرعية</option>
+    <option value="الخرج">الخرج</option>
+    <option value="الدوادمي">الدوادمي</option>
+    <option value="المجمعة">المجمعة</option>
+    <option value="القويعية">القويعية</option>
+    <option value="الأفلاج">الأفلاج</option>
+    <option value="وادي الدواسر">وادي الدواسر</option>
+    <option value="الزلفي">الزلفي</option>
+    <option value="شقراء">شقراء</option>
+    <option value="حوطة بني تميم">حوطة بني تميم</option>
+    <option value="عفيف">عفيف</option>
+    <option value="الغاط">الغاط</option>
+    <option value="رماح">رماح</option>
+    <option value="الحريق">الحريق</option>
+    <option value="ثادق">ثادق</option>
+
+    {/* منطقة مكة المكرمة */}
+    <option value="مكة المكرمة">مكة المكرمة</option>
+    <option value="جدة">جدة</option>
+    <option value="الطائف">الطائف</option>
+    <option value="الليث">الليث</option>
+    <option value="القنفذة">القنفذة</option>
+    <option value="رابغ">رابغ</option>
+    <option value="خليص">خليص</option>
+    <option value="الجموم">الجموم</option>
+
+    {/* المدينة المنورة */}
+    <option value="المدينة المنورة">المدينة المنورة</option>
+    <option value="ينبع">ينبع</option>
+    <option value="العلا">العلا</option>
+    <option value="الحناكية">الحناكية</option>
+    <option value="بدر">بدر</option>
+    <option value="خيبر">خيبر</option>
+
+    {/* القصيم */}
+    <option value="بريدة">بريدة</option>
+    <option value="عنيزة">عنيزة</option>
+    <option value="الرس">الرس</option>
+    <option value="البكيرية">البكيرية</option>
+    <option value="المذنب">المذنب</option>
+    <option value="البدائع">البدائع</option>
+    <option value="رياض الخبراء">رياض الخبراء</option>
+    <option value="عقلة الصقور">عقلة الصقور</option>
+    <option value="النبهانية">النبهانية</option>
+
+    {/* الشرقية */}
+    <option value="الدمام">الدمام</option>
+    <option value="الخبر">الخبر</option>
+    <option value="الظهران">الظهران</option>
+    <option value="الجبيل">الجبيل</option>
+    <option value="الاحساء">الاحساء</option>
+    <option value="القطيف">القطيف</option>
+    <option value="بقيق">بقيق</option>
+    <option value="النعيرية">النعيرية</option>
+    <option value="قرية العليا">قرية العليا</option>
+    <option value="رأس تنورة">رأس تنورة</option>
+    <option value="الخفجي">الخفجي</option>
+    <option value="حفر الباطن">حفر الباطن</option>
+
+    {/* عسير */}
+    <option value="أبها">أبها</option>
+    <option value="خميس مشيط">خميس مشيط</option>
+    <option value="بيشة">بيشة</option>
+    <option value="النماص">النماص</option>
+    <option value="محايل عسير">محايل عسير</option>
+    <option value="ظهران الجنوب">ظهران الجنوب</option>
+    <option value="سراة عبيدة">سراة عبيدة</option>
+    <option value="تثليث">تثليث</option>
+
+    {/* تبوك */}
+    <option value="تبوك">تبوك</option>
+    <option value="الوجه">الوجه</option>
+    <option value="ضباء">ضباء</option>
+    <option value="أملج">أملج</option>
+    <option value="حقل">حقل</option>
+    <option value="تيماء">تيماء</option>
+
+    {/* حائل */}
+    <option value="حائل">حائل</option>
+    <option value="بقعاء">بقعاء</option>
+    <option value="الغزالة">الغزالة</option>
+    <option value="الشملي">الشملي</option>
+    <option value="الشنان">الشنان</option>
+    <option value="الحائط">الحائط</option>
+
+    {/* الحدود الشمالية */}
+    <option value="عرعر">عرعر</option>
+    <option value="رفحاء">رفحاء</option>
+    <option value="طريف">طريف</option>
+    <option value="العويقيلة">العويقيلة</option>
+
+    {/* جازان */}
+    <option value="جازان">جازان</option>
+    <option value="صبيا">صبيا</option>
+    <option value="صامطة">صامطة</option>
+    <option value="أبو عريش">أبو عريش</option>
+    <option value="بيش">بيش</option>
+    <option value="فرسان">فرسان</option>
+    <option value="الدرب">الدرب</option>
+    <option value="العارضة">العارضة</option>
+
+    {/* نجران */}
+    <option value="نجران">نجران</option>
+    <option value="شرورة">شرورة</option>
+    <option value="حبونا">حبونا</option>
+    <option value="بدر الجنوب">بدر الجنوب</option>
+
+    {/* الباحة */}
+    <option value="الباحة">الباحة</option>
+    <option value="بلجرشي">بلجرشي</option>
+    <option value="المندق">المندق</option>
+    <option value="العقيق">العقيق</option>
+    <option value="قلوة">قلوة</option>
+    <option value="المخواة">المخواة</option>
+
+    {/* الجوف */}
+    <option value="سكاكا">سكاكا</option>
+    <option value="القريات">القريات</option>
+    <option value="دومة الجندل">دومة الجندل</option>
+    <option value="طبرجل">طبرجل</option>
+  </select>
+</div>
+
 
           <div className="filter-group">
             <label>نوع الأرض:</label>
@@ -997,6 +1219,37 @@ const AllLands = () => {
               >
                 <FiX />
                 {loading ? 'جاري الحفظ...' : 'تأكيد الرفض'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال تفاصيل المالك */}
+      {ownerModal.show && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>
+                <FiUser />
+                تفاصيل المالك
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={closeOwnerModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              {renderOwnerDetails(ownerModal.owner)}
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-primary"
+                onClick={closeOwnerModal}
+              >
+                إغلاق
               </button>
             </div>
           </div>

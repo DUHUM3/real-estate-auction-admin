@@ -109,7 +109,7 @@ const Sidebar = () => {
 
         {/* طلبات التسويق */}
         <li>
-          <Link to="/marketing-requests" className={location.pathname === '/marketing-requests' ? 'active' : ''}>
+          <Link to="/auctions-requests" className={location.pathname === '/auctions-requests' ? 'active' : ''}>
             <FiSend className="menu-icon" />
             <span className="menu-text">طلبات التسويق</span>
           </Link>

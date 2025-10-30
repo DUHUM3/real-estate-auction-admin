@@ -12,6 +12,7 @@ import PendingAuctions from './pages/Auctions/PendingAuctions';
 import ClientsManagement from './pages/ClientsManagement';
 import Lands from './pages/Lands';
 import LandRequests from './pages/landRequests/landRequests';
+import AuctionsRequests from './pages/AuctionsRequest/AuctionsRequest';
 import Customers from './pages/Customers';
 import Orders from './pages/Orders';
 import Reports from './pages/Reports';
@@ -140,6 +141,11 @@ function App() {
                       <Route path="/land-requests" element={
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
                           <LandRequests />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/auctions-requests" element={
+                        <ProtectedRoute isAuthenticated={isLoggedIn}>
+                          <AuctionsRequests />
                         </ProtectedRoute>
                       } />
                       <Route path="/customers" element={

@@ -1,12 +1,45 @@
-import React, { useState, useEffect } from 'react';
-import { FiUser, FiClock, FiCheck, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiGlobe, FiImage, FiPlus, FiTrash2, FiRefreshCw } from 'react-icons/fi';
-import { useData } from '../contexts/DataContext';
+import React, { useState } from 'react';
+import { 
+  FiUser, 
+  FiClock, 
+  FiCheck, 
+  FiX, 
+  FiMail, 
+  FiPhone, 
+  FiCalendar, 
+  FiFileText, 
+  FiHash, 
+  FiGlobe, 
+  FiImage, 
+  FiPlus, 
+  FiTrash2, 
+  FiRefreshCw,
+  FiFilter,
+  FiSearch,
+  FiSlash
+} from 'react-icons/fi';
+import { useQueryClient, useQuery, useMutation } from 'react-query';
+import { useNavigate } from 'react-router-dom';
 import '../styles/PendingUsers.css';
 
 const ClientsManagement = () => {
-  const { state, dispatch } = useData();
-  const [localLoading, setLocalLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  
+  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
+  const getInitialFilters = () => {
+    const savedFilters = localStorage.getItem('clientsFilters');
+    if (savedFilters) {
+      return JSON.parse(savedFilters);
+    }
+    return {
+      search: '',
+      sort_by: 'created_at',
+      sort_order: 'desc'
+    };
+  };
+  
+  const [filters, setFilters] = useState(getInitialFilters());
   const [selectedClient, setSelectedClient] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -14,100 +47,74 @@ const ClientsManagement = () => {
     website: '',
     logo: null
   });
-  const [uploadLoading, setUploadLoading] = useState(false);
 
-  // استخدام البيانات من Context
-  const clients = state.clients.data || [];
-  const loading = state.clients.isLoading || localLoading;
+  // حفظ الفلاتر في localStorage عند تغييرها
+  React.useEffect(() => {
+    localStorage.setItem('clientsFilters', JSON.stringify(filters));
+  }, [filters]);
 
-  useEffect(() => {
-    // إذا البيانات غير موجودة أو قديمة، قم بجلبها
-    if (!state.clients.data || state.clients.data.length === 0 || isClientsDataStale()) {
-      fetchClients();
-    }
-  }, []);
-
-  const isClientsDataStale = () => {
-    if (!state.clients.lastUpdated) return true;
-    const now = new Date();
-    const lastUpdate = new Date(state.clients.lastUpdated);
-    const diffInMinutes = (now - lastUpdate) / (1000 * 60);
-    return diffInMinutes > 10; // تحديث إذا مرت أكثر من 10 دقائق
-  };
-
-  // جلب العملاء المميزين
-  const fetchClients = async (forceRefresh = false) => {
-    // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
-    if (state.clients.data && state.clients.data.length > 0 && !forceRefresh && !isClientsDataStale()) {
-      return;
-    }
-
-    try {
-      dispatch({ type: 'SET_CLIENTS_LOADING', payload: true });
-      setLocalLoading(true);
+  // استخدام React Query لجلب بيانات العملاء
+  const fetchClients = async () => {
+    const token = localStorage.getItem('access_token');
       
-      const response = await fetch('https://shahin-tqay.onrender.com/api/clients/Featured', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+    if (!token) {
+      navigate('/login');
+      throw new Error('لم يتم العثور على رمز الدخول');
+    }
 
-      console.log('حالة استجابة العملاء:', response.status);
+    const response = await fetch('https://shahin-tqay.onrender.com/api/admin/clients', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('بيانات العملاء المستلمة:', result);
-        
-        let clientsData = [];
-        // تحديث بناءً على شكل الرد الجديد
-        if (Array.isArray(result)) {
-          clientsData = result;
-        } else if (result.data && Array.isArray(result.data)) {
-          clientsData = result.data;
-        } else {
-          console.error('هيكل البيانات غير متوقع:', result);
-          clientsData = [];
-        }
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
+    }
 
-        dispatch({
-          type: 'SET_CLIENTS_DATA',
-          payload: {
-            data: clientsData,
-            pagination: {
-              total: clientsData.length,
-              current_page: 1,
-              last_page: 1,
-              per_page: clientsData.length
-            }
-          }
-        });
-      } else {
-        console.error('فشل في جلب العملاء:', response.status);
-        alert('فشل في جلب بيانات العملاء');
-        dispatch({ type: 'CLEAR_CLIENTS_DATA' });
-      }
-    } catch (error) {
-      console.error('خطأ في جلب العملاء:', error);
-      alert('حدث خطأ أثناء جلب البيانات');
-      dispatch({ type: 'CLEAR_CLIENTS_DATA' });
-    } finally {
-      dispatch({ type: 'SET_CLIENTS_LOADING', payload: false });
-      setLocalLoading(false);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`فشل في جلب العملاء: ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.success && Array.isArray(result.data)) {
+      return {
+        data: result.data,
+        count: result.count,
+        cache_info: result.cache_info
+      };
+    } else {
+      throw new Error(result.message || 'هيكل البيانات غير متوقع');
     }
   };
 
-  // إضافة عميل جديد
-  const handleAddClient = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.name.trim()) {
-      alert('يرجى إدخال اسم العميل');
-      return;
+  const { 
+    data: clientsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery(
+    ['clients', filters],
+    fetchClients,
+    {
+      staleTime: 5 * 60 * 1000, // 5 دقائق
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error('خطأ في جلب العملاء:', error);
+        alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
+      }
     }
+  );
 
-    setUploadLoading(true);
-    try {
+  // استخدام useMutation لإضافة عميل جديد
+  const addClientMutation = useMutation(
+    async (formData) => {
       const token = localStorage.getItem('access_token');
       const formDataToSend = new FormData();
       
@@ -127,43 +134,30 @@ const ClientsManagement = () => {
         body: formDataToSend,
       });
 
-      console.log('حالة إضافة العميل:', response.status);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'فشل في إضافة العميل');
+      }
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('نتيجة الإضافة:', result);
-        
-        // إضافة العميل الجديد إلى الـ context
-        if (result.data) {
-          dispatch({
-            type: 'ADD_CLIENT',
-            payload: result.data
-          });
-        }
-        
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
         alert('تم إضافة العميل بنجاح');
         setFormData({ name: '', website: '', logo: null });
         setShowAddForm(false);
-      } else {
-        const errorData = await response.json();
-        alert(errorData.message || 'فشل في إضافة العميل');
+        refetch();
+        queryClient.invalidateQueries(['clients']);
+      },
+      onError: (error) => {
+        alert(error.message);
       }
-    } catch (error) {
-      console.error('Error adding client:', error);
-      alert('حدث خطأ أثناء إضافة العميل');
-    } finally {
-      setUploadLoading(false);
     }
-  };
+  );
 
-  // حذف عميل
-  const handleDeleteClient = async (clientId) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا العميل؟')) {
-      return;
-    }
-
-    setActionLoading(true);
-    try {
+  // استخدام useMutation لحذف عميل
+  const deleteClientMutation = useMutation(
+    async (clientId) => {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/clients/${clientId}`, {
         method: 'DELETE',
@@ -173,27 +167,69 @@ const ClientsManagement = () => {
         },
       });
 
-      console.log('حالة حذف العميل:', response.status);
-
-      if (response.ok) {
-        // حذف العميل من الـ context
-        dispatch({
-          type: 'DELETE_CLIENT',
-          payload: clientId
-        });
-        
-        setSelectedClient(null);
-        alert('تم حذف العميل بنجاح');
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        alert(errorData.message || 'فشل في حذف العميل');
+        throw new Error(errorData.message || 'فشل في حذف العميل');
       }
-    } catch (error) {
-      console.error('Error deleting client:', error);
-      alert('حدث خطأ أثناء حذف العميل');
-    } finally {
-      setActionLoading(false);
+
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم حذف العميل بنجاح');
+        setSelectedClient(null);
+        refetch();
+        queryClient.invalidateQueries(['clients']);
+      },
+      onError: (error) => {
+        alert(error.message);
+      }
     }
+  );
+
+  const handleFilterChange = (key, value) => {
+    const newFilters = {
+      ...filters,
+      [key]: value
+    };
+    
+    setFilters(newFilters);
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    refetch();
+  };
+
+  const clearFilters = () => {
+    const defaultFilters = {
+      search: '',
+      sort_by: 'created_at',
+      sort_order: 'desc'
+    };
+    
+    setFilters(defaultFilters);
+  };
+
+  // إضافة عميل جديد
+  const handleAddClient = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      alert('يرجى إدخال اسم العميل');
+      return;
+    }
+
+    addClientMutation.mutate(formData);
+  };
+
+  // حذف عميل
+  const handleDeleteClient = async (clientId) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا العميل؟')) {
+      return;
+    }
+
+    deleteClientMutation.mutate(clientId);
   };
 
   // معالجة اختيار ملف اللوجو
@@ -306,16 +342,14 @@ const ClientsManagement = () => {
     );
   };
 
-  if (loading && clients.length === 0) {
-    return (
-      <div className="pending-users-container">
-        <div className="loading">
-          <FiClock className="loading-icon" />
-          جاري تحميل البيانات...
-        </div>
-      </div>
-    );
-  }
+  // التحقق إذا كان هناك أي فلتر نشط
+  const hasActiveFilters = filters.search;
+
+  // استخراج البيانات من نتيجة الاستعلام
+  const clients = clientsData?.data || [];
+  const count = clientsData?.count || 0;
+
+  const loading = isLoading || addClientMutation.isLoading || deleteClientMutation.isLoading;
 
   return (
     <div className="pending-users-container">
@@ -324,25 +358,80 @@ const ClientsManagement = () => {
           <FiUser className="header-icon" />
           إدارة العملاء المميزين
         </h1>
-        <p>إدارة قائمة العملاء المميزين - العدد الإجمالي: {clients.length}</p>
+        <p>إدارة قائمة العملاء المميزين - العدد الإجمالي: {count}</p>
+      </div>
+
+      {/* شريط البحث والتصفية */}
+      <div className="filter-section">
+        <div className="filter-header">
+          <FiFilter className="filter-icon" />
+          <span>أدوات البحث والتصفية:</span>
+          {hasActiveFilters && (
+            <button className="clear-filters-btn" onClick={clearFilters}>
+              <FiSlash />
+              مسح الفلاتر
+            </button>
+          )}
+        </div>
         
-        <div className="dashboard-header-actions">
-          <button 
-            className="dashboard-refresh-btn" 
-            onClick={() => fetchClients(true)}
-            disabled={loading}
-          >
-            <FiRefreshCw />
-            تحديث البيانات
-          </button>
-          
-          <button 
-            className="btn btn-success2"
-            onClick={() => setShowAddForm(true)}
-          >
-            <FiPlus />
-            إضافة عميل جديد
-          </button>
+        <form onSubmit={handleSearch} className="search-form">
+          <div className="search-input-group">
+            <FiSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="ابحث باسم العميل..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="search-input"
+            />
+            <button type="submit" className="search-btn">
+              بحث
+            </button>
+            <div className="dashboard-header-actions">
+              <button 
+                className="dashboard-refresh-btn" 
+                onClick={() => refetch()}
+                disabled={loading}
+              >
+                <FiRefreshCw />
+                تحديث البيانات
+              </button>
+              
+              <button 
+                className="btn btn-success"
+                onClick={() => setShowAddForm(true)}
+              >
+                <FiPlus />
+                إضافة عميل جديد
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <div className="filter-controls">
+          <div className="filter-group">
+            <label>ترتيب حسب:</label>
+            <select 
+              value={filters.sort_by} 
+              onChange={(e) => handleFilterChange('sort_by', e.target.value)}
+              className="filter-select"
+            >
+              <option value="created_at">تاريخ الإضافة</option>
+              <option value="name">اسم العميل</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>الاتجاه:</label>
+            <select 
+              value={filters.sort_order} 
+              onChange={(e) => handleFilterChange('sort_order', e.target.value)}
+              className="filter-select"
+            >
+              <option value="desc">تنازلي</option>
+              <option value="asc">تصاعدي</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -420,16 +509,16 @@ const ClientsManagement = () => {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowAddForm(false)}
-                  disabled={uploadLoading}
+                  disabled={addClientMutation.isLoading}
                 >
                   إلغاء
                 </button>
                 <button 
                   type="submit"
                   className="btn btn-primary"
-                  disabled={uploadLoading}
+                  disabled={addClientMutation.isLoading}
                 >
-                  {uploadLoading ? 'جاري الإضافة...' : 'إضافة العميل'}
+                  {addClientMutation.isLoading ? 'جاري الإضافة...' : 'إضافة العميل'}
                 </button>
               </div>
             </form>
@@ -446,14 +535,23 @@ const ClientsManagement = () => {
             </div>
             
             {loading ? (
-              <div className="list-loading">
-                <div className="loading-spinner"></div>
-                <p>جاري تحميل العملاء...</p>
+              <div className="dashboard-loading">
+                <div className="dashboard-loading-dots">
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                </div>
+                <p className="dashboard-loading-text">جاري تحميل العملاء...</p>
               </div>
             ) : clients.length === 0 ? (
               <div className="empty-state">
                 <FiUser className="empty-icon" />
                 <p>لا توجد عملاء مميزين</p>
+                {hasActiveFilters && (
+                  <button className="btn btn-primary" onClick={clearFilters}>
+                    مسح الفلاتر
+                  </button>
+                )}
               </div>
             ) : (
               <div className="users-cards">
@@ -553,10 +651,10 @@ const ClientsManagement = () => {
                   <button 
                     className="btn btn-danger"
                     onClick={() => handleDeleteClient(selectedClient.id)}
-                    disabled={actionLoading}
+                    disabled={deleteClientMutation.isLoading}
                   >
                     <FiTrash2 />
-                    {actionLoading ? 'جاري المعالجة...' : 'حذف العميل'}
+                    {deleteClientMutation.isLoading ? 'جاري المعالجة...' : 'حذف العميل'}
                   </button>
                 </div>
               </div>

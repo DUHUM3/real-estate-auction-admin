@@ -16,7 +16,12 @@ import {
   FiSlash,
   FiMessageSquare,
   FiEdit,
-  FiRefreshCw
+  FiRefreshCw,
+  FiEye,
+  FiMap,
+  FiMapPin,
+  FiLayers,
+  FiDollarSign
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
@@ -54,6 +59,13 @@ const AllInterests = () => {
     interestId: null,
     newStatus: '',
     adminNote: ''
+  });
+
+  // حالة المودال لعرض تفاصيل العقار
+  const [propertyModal, setPropertyModal] = useState({
+    show: false,
+    property: null,
+    loading: false
   });
 
   // حفظ الفلاتر والصفحة في localStorage عند تغييرها
@@ -170,6 +182,83 @@ const AllInterests = () => {
       }
     }
   );
+
+  // دالة لجلب تفاصيل العقار
+  const fetchPropertyDetails = async (propertyId) => {
+    const token = localStorage.getItem('access_token');
+      
+    if (!token) {
+      navigate('/login');
+      throw new Error('لم يتم العثور على رمز الدخول');
+    }
+
+    const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties/${propertyId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`فشل في جلب تفاصيل العقار: ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data;
+    } else {
+      throw new Error(result.message || 'هيكل البيانات غير متوقع');
+    }
+  };
+
+  // فتح مودال تفاصيل العقار
+  const openPropertyModal = async (propertyId) => {
+    if (!propertyId) {
+      alert('لا يوجد معرف للعقار');
+      return;
+    }
+
+    setPropertyModal({
+      show: true,
+      property: null,
+      loading: true
+    });
+
+    try {
+      const propertyDetails = await fetchPropertyDetails(propertyId);
+      setPropertyModal({
+        show: true,
+        property: propertyDetails,
+        loading: false
+      });
+    } catch (error) {
+      console.error('خطأ في جلب تفاصيل العقار:', error);
+      alert('حدث خطأ أثناء جلب تفاصيل العقار: ' + error.message);
+      setPropertyModal({
+        show: false,
+        property: null,
+        loading: false
+      });
+    }
+  };
+
+  // إغلاق مودال تفاصيل العقار
+  const closePropertyModal = () => {
+    setPropertyModal({
+      show: false,
+      property: null,
+      loading: false
+    });
+  };
 
   // استخدام useMutation لتحديث حالة الاهتمام
   const statusMutation = useMutation(
@@ -354,6 +443,154 @@ const AllInterests = () => {
     }
   };
 
+  // دالة لعرض تفاصيل العقار في المودال
+  const renderPropertyDetails = (property) => {
+    if (!property) return null;
+
+    return (
+      <div className="property-details-form">
+        <div className="form-section">
+          <h4>المعلومات الأساسية</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>عنوان العقار</label>
+              <div className="form-value">{property.title || 'غير متوفر'}</div>
+            </div>
+            <div className="form-group">
+              <label>رقم الإعلان</label>
+              <div className="form-value">{property.announcement_number || 'غير متوفر'}</div>
+            </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>نوع الأرض</label>
+              <div className="form-value">
+                <span className={`type-badge ${property.land_type === 'سكني' ? 'residential' : property.land_type === 'تجاري' ? 'commercial' : 'agricultural'}`}>
+                  {property.land_type || 'غير محدد'}
+                </span>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>الغرض</label>
+              <div className="form-value">
+                <span className={`purpose-badge ${property.purpose === 'بيع' ? 'sale' : 'investment'}`}>
+                  {property.purpose || 'غير محدد'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4>الموقع والمساحة</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>المنطقة</label>
+              <div className="form-value">{property.region || 'غير متوفر'}</div>
+            </div>
+            <div className="form-group">
+              <label>المدينة</label>
+              <div className="form-value">{property.city || 'غير متوفر'}</div>
+            </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>المساحة الكلية</label>
+              <div className="form-value">{property.total_area} م²</div>
+            </div>
+            <div className="form-group">
+              <label>الإحداثيات</label>
+              <div className="form-value">{property.geo_location_text || 'غير متوفر'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4>المعلومات المالية</h4>
+          <div className="form-row">
+            {property.price_per_sqm && (
+              <div className="form-group">
+                <label>سعر المتر</label>
+                <div className="form-value">{property.price_per_sqm} ريال/م²</div>
+              </div>
+            )}
+            {property.estimated_investment_value && (
+              <div className="form-group">
+                <label>القيمة الاستثمارية</label>
+                <div className="form-value">{property.estimated_investment_value} ريال</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4>المعلومات القانونية</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>رقم الصك</label>
+              <div className="form-value">{property.deed_number || 'غير متوفر'}</div>
+            </div>
+            {property.agency_number && (
+              <div className="form-group">
+                <label>رقم الوكالة</label>
+                <div className="form-value">{property.agency_number}</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {property.description && (
+          <div className="form-section">
+            <h4>الوصف</h4>
+            <div className="form-group full-width">
+              <div className="form-value description-text">{property.description}</div>
+            </div>
+          </div>
+        )}
+
+        {/* معلومات المالك */}
+        {property.user && (
+          <div className="form-section">
+            <h4>معلومات المالك</h4>
+            <div className="form-row">
+              <div className="form-group">
+                <label>اسم المالك</label>
+                <div className="form-value">{property.user.full_name || 'غير متوفر'}</div>
+              </div>
+              <div className="form-group">
+                <label>البريد الإلكتروني</label>
+                <div className="form-value">{property.user.email || 'غير متوفر'}</div>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>رقم الهاتف</label>
+                <div className="form-value">{property.user.phone || 'غير متوفر'}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* الصور */}
+        {property.images && property.images.length > 0 && (
+          <div className="form-section">
+            <h4>صور العقار ({property.images.length})</h4>
+            <div className="images-grid">
+              {property.images.map((image, index) => (
+                <div key={image.id} className="image-item">
+                  <FiMap className="image-icon" />
+                  <span className="image-name">صورة {index + 1}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderInterestDetails = (interest) => {
     return (
       <div className="details-content">
@@ -386,10 +623,19 @@ const AllInterests = () => {
             <FiHome />
             العقار المهتم به
           </div>
-          <div className="detail-value">
+          <div className="detail-value owner-info">
             <span className="property-badge">
               {interest.property?.title || 'غير محدد'}
             </span>
+            {interest.property_id && (
+              <button 
+                className="owner-view-btn"
+                onClick={() => openPropertyModal(interest.property_id)}
+                title="عرض تفاصيل العقار"
+              >
+                <FiEye />
+              </button>
+            )}
           </div>
         </div>
 
@@ -588,20 +834,6 @@ const AllInterests = () => {
           </div>
 
           <div className="filter-group">
-            <label>العقار:</label>
-            <select 
-              value={filters.property_id} 
-              onChange={(e) => handleFilterChange('property_id', e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">جميع العقارات</option>
-              {filtersData.properties.map(property => (
-                <option key={property.id} value={property.id}>{property.title}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-group">
             <label>من تاريخ:</label>
             <input
               type="date"
@@ -746,6 +978,15 @@ const AllInterests = () => {
                     </button>
                     
                     <button 
+                      className="btn btn-info"
+                      onClick={() => openStatusModal(selectedInterest.id, 'تم التواصل')}
+                      disabled={selectedInterest.status === 'تم التواصل' || loading}
+                    >
+                      <FiPhone />
+                      تم التواصل
+                    </button>
+                    
+                    <button 
                       className="btn btn-warning"
                       onClick={() => openStatusModal(selectedInterest.id, 'قيد المراجعة')}
                       disabled={selectedInterest.status === 'قيد المراجعة' || loading}
@@ -833,6 +1074,48 @@ const AllInterests = () => {
               >
                 <FiCheck />
                 {loading ? 'جاري الحفظ...' : 'تأكيد التغيير'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال تفاصيل العقار */}
+      {propertyModal.show && (
+        <div className="modal-overlay">
+          <div className="modal-content large-modal">
+            <div className="modal-header">
+              <h3>
+                <FiMap />
+                تفاصيل العقار
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={closePropertyModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              {propertyModal.loading ? (
+                <div className="dashboard-loading">
+                  <div className="dashboard-loading-dots">
+                    <div className="dashboard-loading-dot"></div>
+                    <div className="dashboard-loading-dot"></div>
+                    <div className="dashboard-loading-dot"></div>
+                  </div>
+                  <p className="dashboard-loading-text">جاري تحميل تفاصيل العقار...</p>
+                </div>
+              ) : (
+                renderPropertyDetails(propertyModal.property)
+              )}
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-primary"
+                onClick={closePropertyModal}
+              >
+                إغلاق
               </button>
             </div>
           </div>

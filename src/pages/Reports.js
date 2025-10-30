@@ -322,67 +322,90 @@ const exportToPdf = () => {
           body {
             font-family: 'Tajawal', 'Arial', sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 20px;
             direction: rtl;
-            background-color: #f8f9fa;
+            background-color: #fff;
             color: #333;
           }
           .container {
             max-width: 1000px;
             margin: 0 auto;
             background-color: #fff;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
             border-radius: 8px;
             overflow: hidden;
           }
           .header {
             background: linear-gradient(135deg, #16354d 0%, #1e5b8d 100%);
             color: white;
-            padding: 25px;
-            text-align: center;
+            padding: 15px 25px;
             position: relative;
-          }
-          .brand {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            min-height: 80px;
+            border-radius: 8px 8px 0 0;
           }
-          .brand-logo {
-            font-size: 35px;
+          .header-left {
+            flex: 1;
+            text-align: right;
+          }
+          .header-center {
+            flex: 1;
+            text-align: center;
+          }
+          .header-right {
+            flex: 1;
+            text-align: left;
+          }
+          .logo {
+            max-height: 60px;
+            max-width: 150px;
+            object-fit: contain;
+          }
+          .header-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+          }
+          .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            padding: 2px 0;
+          }
+          .stat-label {
+            color: rgba(255,255,255,0.8);
+            margin-left: 10px;
+          }
+          .stat-value {
             font-weight: bold;
-            letter-spacing: 1px;
             color: #fff;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            position: relative;
+            background: rgba(255,255,255,0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            min-width: 40px;
+            text-align: center;
           }
-          .brand-logo::before {
-            content: '';
-            position: absolute;
-            width: 40px;
-            height: 5px;
-            background-color: #ffc107;
-            bottom: -8px;
-            left: 50%;
-            transform: translateX(-50%);
+          .report-title {
+            text-align: center;
+            margin: 0;
           }
-          .brand-tagline {
-            font-size: 14px;
-            opacity: 0.9;
-            margin-top: 15px;
-          }
-          .header h1 {
-            margin: 0 0 10px;
-            font-size: 28px;
+          .report-title h1 {
+            margin: 0 0 5px;
+            font-size: 20px;
             font-weight: bold;
           }
-          .header .subtitle {
+          .report-title .subtitle {
             color: rgba(255,255,255,0.9);
-            font-size: 16px;
-            margin: 5px 0;
+            font-size: 14px;
+            margin: 0;
           }
           .content {
             padding: 30px;
+            border: 1px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
           }
           .report-info {
             background-color: #f8f9fa;
@@ -407,7 +430,6 @@ const exportToPdf = () => {
             border-radius: 8px;
             overflow: hidden;
             margin: 20px 0;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
           }
           th {
             background: linear-gradient(to bottom, #16354d 0%, #143c5a 100%);
@@ -427,9 +449,6 @@ const exportToPdf = () => {
           }
           tr:nth-child(even) {
             background-color: #f8f9fa;
-          }
-          tr:hover {
-            background-color: #f1f5f8;
           }
           .status-badge {
             display: inline-block;
@@ -454,6 +473,8 @@ const exportToPdf = () => {
             font-size: 13px;
             border-top: 1px solid #eee;
             background-color: #f8f9fa;
+            margin-top: 20px;
+            border-radius: 0 0 8px 8px;
           }
           .signature {
             margin-top: 10px;
@@ -461,7 +482,7 @@ const exportToPdf = () => {
             color: #16354d;
           }
           .watermark {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
@@ -471,6 +492,7 @@ const exportToPdf = () => {
             color: #000;
             white-space: nowrap;
             pointer-events: none;
+            z-index: -1;
           }
           .report-summary {
             margin: 30px 0;
@@ -504,63 +526,70 @@ const exportToPdf = () => {
             font-size: 14px;
             color: #6c757d;
           }
+          @media print {
+            body {
+              margin: 0;
+              padding: 0;
+            }
+            .container {
+              box-shadow: none;
+              margin: 0;
+            }
+          }
         </style>
       </head>
       <body>
         <div class="watermark">شاهين العقارية</div>
         <div class="container">
           <div class="header">
-            <div class="brand">
-              <div class="brand-logo">شاهين</div>
+            <div class="header-left">
+              <div class="header-stats">
+                <div class="stat-item">
+                  <span class="stat-label">إجمالي السجلات:</span>
+                  <span class="stat-value">${totalCount}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">مقبول:</span>
+                  <span class="stat-value">${reports.filter(item => item.status === 'approved' || item.status === 'مقبول').length}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">قيد المراجعة:</span>
+                  <span class="stat-value">${reports.filter(item => item.status === 'pending' || item.status === 'قيد المراجعة').length}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">مرفوض:</span>
+                  <span class="stat-value">${reports.filter(item => item.status === 'rejected' || item.status === 'مرفوض').length}</span>
+                </div>
+              </div>
             </div>
-            <div class="brand-tagline">منصة العقارات السعودية الأولى</div>
-            <h1>${reportTitle} - ${periodTitle}</h1>
-            <div class="subtitle">
-              تقرير تفصيلي للعمليات والإحصائيات
+            
+           <div class="header-center">
+                       <img src="images/logo2.png" alt="شاهين العقارية" class="logo" onerror="this.style.display='none'">
+                       <div class="report-title">
+                         <h1>${reportTitle} - ${periodTitle}</h1>
+                         <div class="subtitle">تقرير تفصيلي للعمليات والإحصائيات</div>
+                       </div>
+                     </div>
+            
+            <div class="header-right">
+              <div class="header-stats">
+                <div class="stat-item">
+                  <span class="stat-label">التاريخ:</span>
+                  <span class="stat-value">${new Date().toLocaleDateString('ar-SA')}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">من:</span>
+                  <span class="stat-value">${dateRange.from}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">إلى:</span>
+                  <span class="stat-value">${dateRange.to}</span>
+                </div>
+              </div>
             </div>
           </div>
           
-          <div class="content">
-            <div class="report-info">
-              <div class="report-info-item">
-                <span class="report-info-label">الفترة من:</span>
-                <span>${dateRange.from}</span>
-              </div>
-              <div class="report-info-item">
-                <span class="report-info-label">الفترة إلى:</span>
-                <span>${dateRange.to}</span>
-              </div>
-              <div class="report-info-item">
-                <span class="report-info-label">إجمالي النتائج:</span>
-                <span>${totalCount}</span>
-              </div>
-              <div class="report-info-item">
-                <span class="report-info-label">تاريخ إنشاء التقرير:</span>
-                <span>${new Date().toLocaleString('ar-SA')}</span>
-              </div>
-            </div>
-
-            <div class="report-summary">
-              <div class="summary-title">ملخص التقرير</div>
-              <div class="summary-data">
-                <div class="summary-item">
-                  <div class="summary-value">${totalCount}</div>
-                  <div class="summary-label">إجمالي السجلات</div>
-                </div>
-                <div class="summary-item">
-                  <div class="summary-value">${reports.filter(item => item.status === 'approved' || item.status === 'مقبول').length}</div>
-                  <div class="summary-label">مقبول</div>
-                </div>
-                <div class="summary-item">
-                  <div class="summary-value">${reports.filter(item => item.status === 'pending' || item.status === 'قيد المراجعة').length}</div>
-                  <div class="summary-label">قيد المراجعة</div>
-                </div>
-                <div class="summary-item">
-                  <div class="summary-value">${reports.filter(item => item.status === 'rejected' || item.status === 'مرفوض').length}</div>
-                  <div class="summary-label">مرفوض</div>
-                </div>
-              </div>
-            </div>
+        
     `;
 
     // إضافة الجدول
@@ -633,22 +662,39 @@ const exportToPdf = () => {
       </html>
     `;
 
-    // فتح نافذة جديدة للطباعة/الحفظ كPDF
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(htmlContent);
+    // إنشاء نافذة طباعة بدون عناوين
+    const printWindow = window.open('', '_blank', 'width=1000,height=700,toolbar=no,location=no,directories=no,status=no,menubar=no');
+    
+    // كتابة المحتوى مع إخفاء العناوين
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${reportTitle}</title>
+          <style>
+            @media print {
+              @page { margin: 0; }
+              body { margin: 1.6cm; }
+            }
+          </style>
+        </head>
+        <body onload="window.print();">
+          ${htmlContent}
+        </body>
+      </html>
+    `);
+    
     printWindow.document.close();
     
-    // الانتظار حتى يتم تحميل المحتوى ثم الطباعة
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+    // إغلاق النافذة بعد الطباعة
+    printWindow.onafterprint = function() {
+      printWindow.close();
+    };
     
   } catch (error) {
     console.error('خطأ في تصدير PDF:', error);
     alert('حدث خطأ أثناء تصدير PDF: ' + error.message);
   }
 };
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
   const hasActiveFilters = filters.status !== 'all' || filters.search || filters.region;
 
