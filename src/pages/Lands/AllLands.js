@@ -18,7 +18,8 @@ import {
   FiRefreshCw,
   FiHome,
   FiEye,
-  FiCopy
+  FiCopy,
+  FiShoppingCart
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
@@ -264,72 +265,155 @@ const AllLands = () => {
     });
   };
 
-  // استخدام useMutation لعمليات الموافقة والرفض
-  const approveMutation = useMutation(
-    async (landId) => {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties/${landId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+  // === التعديلات الجوهرية هنا ===
+  // استخدام useMutation لتحديث حالة الأرض باستخدام الرابط الموحد
+const updateLandStatusMutation = useMutation(
+  async ({ landId, status, rejection_reason }) => {
+    const token = localStorage.getItem('access_token');
+    
+    if (!token) {
+      throw new Error('لم يتم العثور على رمز الدخول');
+    }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'فشل في قبول الإعلان');
-      }
+    // تعديل هنا: إنشاء كائن طلب مختلف لكل حالة
+    let requestBody = {};
+    
+    // حالة مرفوض: أرسل الحالة وسبب الرفض
+    if (status === 'مرفوض') {
+      requestBody = {
+        status: status,
+        rejection_reason: rejection_reason || "سبب الرفض غير محدد"
+      };
+    } 
+    // باقي الحالات: أرسل الحالة فقط بدون سبب الرفض
+    else {
+      requestBody = {
+        status: status
+      };
+    }
 
-      return await response.json();
-    },
+    console.log('إرسال طلب تحديث الحالة:', {
+      landId,
+      requestBody
+    });
+
+    const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties/${landId}/status`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    // محاولة قراءة الاستجابة كـ JSON أولاً
+    let result;
+    try {
+      result = await response.json();
+    } catch (jsonError) {
+      console.error('خطأ في تحليل JSON:', jsonError);
+      throw new Error('استجابة غير صالحة من الخادم');
+    }
+
+    // التحقق إذا كانت الاستجابة ناجحة
+    if (!response.ok) {
+      throw new Error(result.message || `فشل في تحديث الحالة: ${response.status}`);
+    }
+
+    // التحقق من success flag في الاستجابة
+    if (!result.success) {
+      throw new Error(result.message || 'فشل في تحديث الحالة');
+    }
+
+    return result;
+  },
+  
     {
-      onSuccess: () => {
-        alert('تم قبول الإعلان بنجاح');
+      onSuccess: (data, variables) => {
+        const statusText = variables.status === 'مرفوض' ? 'الرفض' : 
+                          variables.status === 'مفتوح' ? 'القبول' : 
+                          variables.status === 'تم البيع' ? '标记 كمباعة' : 'تحديث الحالة';
+        
+        alert(`تم ${statusText} الإعلان بنجاح`);
         refetch();
         setSelectedLand(null);
+        if (variables.status === 'مرفوض') {
+          closeRejectModal();
+        }
         queryClient.invalidateQueries(['lands']);
       },
       onError: (error) => {
-        alert(error.message);
+        console.error('خطأ في تحديث الحالة:', error);
+        alert(`خطأ: ${error.message}`);
       }
     }
   );
 
-  const rejectMutation = useMutation(
-    async ({ landId, reason }) => {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties/${landId}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          reason: reason
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'فشل في رفض الإعلان');
-      }
-
-      return await response.json();
-    },
-    {
-      onSuccess: () => {
-        alert('تم رفض الإعلان بنجاح');
-        refetch();
-        setSelectedLand(null);
-        closeRejectModal();
-        queryClient.invalidateQueries(['lands']);
-      },
-      onError: (error) => {
-        alert(error.message);
-      }
+  // دالة معالجة القبول (تغيير إلى مفتوح)
+  const handleApprove = async (landId) => {
+    if (!window.confirm('هل أنت متأكد من قبول هذا الإعلان وتغيير حالته إلى "مفتوح"؟')) {
+      return;
     }
-  );
+    
+    updateLandStatusMutation.mutate({
+      landId: landId,
+      status: 'مفتوح'
+    });
+  };
+
+  // دالة معالجة الرفض
+  const handleReject = async () => {
+    if (!rejectModal.reason.trim()) {
+      alert('يرجى إدخال سبب الرفض');
+      return;
+    }
+
+    if (!window.confirm('هل أنت متأكد من رفض هذا الإعلان وتغيير حالته إلى "مرفوض"؟')) {
+      return;
+    }
+    
+    updateLandStatusMutation.mutate({
+      landId: rejectModal.landId,
+      status: 'مرفوض',
+      rejection_reason: rejectModal.reason
+    });
+  };
+
+  // دالة معالجة تغيير الحالة إلى "تم البيع"
+  const handleMarkAsSold = async (landId) => {
+    if (!window.confirm('هل أنت متأكد من تغيير حالة هذه الأرض إلى "تم البيع"؟')) {
+      return;
+    }
+    
+    updateLandStatusMutation.mutate({
+      landId: landId,
+      status: 'تم البيع'
+    });
+  };
+
+  // دالة معالجة إعادة فتح الإعلان (من مرفوض أو تم البيع إلى مفتوح)
+  const handleReopen = async (landId) => {
+    if (!window.confirm('هل أنت متأكد من إعادة فتح هذا الإعلان وتغيير حالته إلى "مفتوح"؟')) {
+      return;
+    }
+    
+    updateLandStatusMutation.mutate({
+      landId: landId,
+      status: 'مفتوح'
+    });
+  };
+
+  // دالة معالجة العودة إلى قيد المراجعة
+  const handleReturnToPending = async (landId) => {
+    if (!window.confirm('هل أنت متأكد من إعادة هذه الأرض إلى حالة "قيد المراجعة"؟')) {
+      return;
+    }
+    
+    updateLandStatusMutation.mutate({
+      landId: landId,
+      status: 'قيد المراجعة'
+    });
+  };
 
   const handleFilterChange = (key, value) => {
     const newFilters = {
@@ -366,29 +450,6 @@ const AllLands = () => {
     
     setFilters(defaultFilters);
     setCurrentPage(1);
-  };
-
-  const handleApprove = async (landId) => {
-    if (!window.confirm('هل أنت متأكد من قبول هذا الإعلان؟')) {
-      return;
-    }
-    approveMutation.mutate(landId);
-  };
-
-  const handleReject = async () => {
-    if (!rejectModal.reason.trim()) {
-      alert('يرجى إدخال سبب الرفض');
-      return;
-    }
-
-    if (!window.confirm('هل أنت متأكد من رفض هذا الإعلان؟')) {
-      return;
-    }
-    
-    rejectMutation.mutate({
-      landId: rejectModal.landId,
-      reason: rejectModal.reason
-    });
   };
 
   // تحديث الصفحة الحالية
@@ -537,14 +598,14 @@ const AllLands = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{land.title}</span>
-            <button 
+            {/* <button 
               className={`copy-btn ${copyStatus['land_title'] ? 'copied' : ''}`}
               onClick={() => copyToClipboard(land.title, 'land_title')}
               title="نسخ العنوان"
             >
               <FiCopy />
               {copyStatus['land_title'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -555,7 +616,6 @@ const AllLands = () => {
           </div>
           <div className="detail-value owner-info">
             <div className="detail-value-with-copy">
-              {/* <span>{land.user?.full_name} ({land.user?.email}) - {land.user?.phone}</span> */}
               <div className="owner-actions">
                 <button 
                   className="owner-view-btn"
@@ -601,14 +661,14 @@ const AllLands = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{land.region} - {land.city}</span>
-            <button 
+            {/* <button 
               className={`copy-btn ${copyStatus['location'] ? 'copied' : ''}`}
               onClick={() => copyToClipboard(`${land.region} - ${land.city}`, 'location')}
               title="نسخ الموقع"
             >
               <FiCopy />
               {copyStatus['location'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -639,6 +699,28 @@ const AllLands = () => {
           </div>
         </div>
 
+        {land.status === 'مرفوض' && land.rejection_reason && (
+          <div className="detail-item full-width">
+            <div className="detail-label">
+              <FiX style={{color: '#e74c3c'}} />
+              سبب الرفض
+            </div>
+            <div className="detail-value rejection-reason">
+              <div className="detail-value-with-copy">
+                <span>{land.rejection_reason}</span>
+                <button 
+                  className={`copy-btn ${copyStatus['rejection_reason'] ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(land.rejection_reason, 'rejection_reason')}
+                  title="نسخ سبب الرفض"
+                >
+                  <FiCopy />
+                  {copyStatus['rejection_reason'] && <span className="copy-tooltip">تم النسخ!</span>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="detail-item">
           <div className="detail-label">
             <FiLayers />
@@ -646,14 +728,14 @@ const AllLands = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{land.total_area} م²</span>
-            <button 
+            {/* <button 
               className={`copy-btn ${copyStatus['total_area'] ? 'copied' : ''}`}
               onClick={() => copyToClipboard(`${land.total_area} م²`, 'total_area')}
               title="نسخ المساحة الكلية"
             >
               <FiCopy />
               {copyStatus['total_area'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -665,14 +747,14 @@ const AllLands = () => {
             </div>
             <div className="detail-value-with-copy">
               <span>{land.price_per_sqm} ريال/م²</span>
-              <button 
+              {/* <button 
                 className={`copy-btn ${copyStatus['price_per_sqm'] ? 'copied' : ''}`}
                 onClick={() => copyToClipboard(`${land.price_per_sqm} ريال/م²`, 'price_per_sqm')}
                 title="نسخ سعر المتر"
               >
                 <FiCopy />
                 {copyStatus['price_per_sqm'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
+              </button> */}
             </div>
           </div>
         )}
@@ -739,14 +821,14 @@ const AllLands = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{land.geo_location_text}</span>
-            <button 
+            {/* <button 
               className={`copy-btn ${copyStatus['geo_location'] ? 'copied' : ''}`}
               onClick={() => copyToClipboard(land.geo_location_text, 'geo_location')}
               title="نسخ الإحداثيات"
             >
               <FiCopy />
               {copyStatus['geo_location'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -757,14 +839,14 @@ const AllLands = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{formatDate(land.created_at)}</span>
-            <button 
+            {/* <button 
               className={`copy-btn ${copyStatus['created_at'] ? 'copied' : ''}`}
               onClick={() => copyToClipboard(formatDate(land.created_at), 'created_at')}
               title="نسخ تاريخ الإضافة"
             >
               <FiCopy />
               {copyStatus['created_at'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -775,7 +857,7 @@ const AllLands = () => {
           <div className="detail-value description-text">
             <div className="detail-value-with-copy">
               <span>{land.description}</span>
-              {land.description && (
+              {/* {land.description && (
                 <button 
                   className={`copy-btn ${copyStatus['description'] ? 'copied' : ''}`}
                   onClick={() => copyToClipboard(land.description, 'description')}
@@ -784,7 +866,7 @@ const AllLands = () => {
                   <FiCopy />
                   {copyStatus['description'] && <span className="copy-tooltip">تم النسخ!</span>}
                 </button>
-              )}
+              )} */}
             </div>
           </div>
         </div>
@@ -797,56 +879,56 @@ const AllLands = () => {
               <span className="dimension-label">الشمال</span>
               <div className="detail-value-with-copy">
                 <span className="dimension-value">{land.length_north} م</span>
-                <button 
+                {/* <button 
                   className={`copy-btn small ${copyStatus['length_north'] ? 'copied' : ''}`}
                   onClick={() => copyToClipboard(`${land.length_north} م`, 'length_north')}
                   title="نسخ طول الشمال"
                 >
                   <FiCopy />
                   {copyStatus['length_north'] && <span className="copy-tooltip">تم النسخ!</span>}
-                </button>
+                </button> */}
               </div>
             </div>
             <div className="dimension-item">
               <span className="dimension-label">الجنوب</span>
               <div className="detail-value-with-copy">
                 <span className="dimension-value">{land.length_south} م</span>
-                <button 
+                {/* <button 
                   className={`copy-btn small ${copyStatus['length_south'] ? 'copied' : ''}`}
                   onClick={() => copyToClipboard(`${land.length_south} م`, 'length_south')}
                   title="نسخ طول الجنوب"
                 >
                   <FiCopy />
                   {copyStatus['length_south'] && <span className="copy-tooltip">تم النسخ!</span>}
-                </button>
+                </button> */}
               </div>
             </div>
             <div className="dimension-item">
               <span className="dimension-label">الشرق</span>
               <div className="detail-value-with-copy">
                 <span className="dimension-value">{land.length_east} م</span>
-                <button 
+                {/* <button 
                   className={`copy-btn small ${copyStatus['length_east'] ? 'copied' : ''}`}
                   onClick={() => copyToClipboard(`${land.length_east} م`, 'length_east')}
                   title="نسخ طول الشرق"
                 >
                   <FiCopy />
                   {copyStatus['length_east'] && <span className="copy-tooltip">تم النسخ!</span>}
-                </button>
+                </button> */}
               </div>
             </div>
             <div className="dimension-item">
               <span className="dimension-label">الغرب</span>
               <div className="detail-value-with-copy">
                 <span className="dimension-value">{land.length_west} م</span>
-                <button 
+                {/* <button 
                   className={`copy-btn small ${copyStatus['length_west'] ? 'copied' : ''}`}
                   onClick={() => copyToClipboard(`${land.length_west} م`, 'length_west')}
                   title="نسخ طول الغرب"
                 >
                   <FiCopy />
                   {copyStatus['length_west'] && <span className="copy-tooltip">تم النسخ!</span>}
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
@@ -955,7 +1037,7 @@ const AllLands = () => {
     to: 0
   };
 
-  const loading = isLoading || isRefreshing || approveMutation.isLoading || rejectMutation.isLoading;
+  const loading = isLoading || isRefreshing || updateLandStatusMutation.isLoading;
 
   return (
     <div className="pending-users-container">
@@ -1038,17 +1120,84 @@ const AllLands = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>المدينة:</label>
-            <select 
-              value={filters.city} 
-              onChange={(e) => handleFilterChange('city', e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">جميع المدن</option>
-              {/* المدن موجودة في الكود الأصلي */}
-            </select>
-          </div>
+         <div className="filter-group">
+  <label>المدينة:</label>
+  <select 
+    value={filters.city} 
+    onChange={(e) => handleFilterChange('city', e.target.value)}
+    className="filter-select"
+  >
+    <option value="all">جميع المدن</option>
+    <option value="الرياض">الرياض</option>
+    <option value="جدة">جدة</option>
+    <option value="مكة المكرمة">مكة المكرمة</option>
+    <option value="المدينة المنورة">المدينة المنورة</option>
+    <option value="الدمام">الدمام</option>
+    <option value="الخبر">الخبر</option>
+    <option value="الظهران">الظهران</option>
+    <option value="الجبيل">الجبيل</option>
+    <option value="القطيف">القطيف</option>
+    <option value="تبوك">تبوك</option>
+    <option value="حائل">حائل</option>
+    <option value="بريدة">بريدة</option>
+    <option value="عنيزة">عنيزة</option>
+    <option value="الرس">الرس</option>
+    <option value="خميس مشيط">خميس مشيط</option>
+    <option value="أبها">أبها</option>
+    <option value="نجران">نجران</option>
+    <option value="جازان">جازان</option>
+    <option value="بيشة">بيشة</option>
+    <option value="الباحة">الباحة</option>
+    <option value="سكاكا">سكاكا</option>
+    <option value="عرعر">عرعر</option>
+    <option value="القريات">القريات</option>
+    <option value="ينبع">ينبع</option>
+    <option value="رابغ">رابغ</option>
+    <option value="الطائف">الطائف</option>
+    <option value="محايل عسير">محايل عسير</option>
+    <option value="بلجرشي">بلجرشي</option>
+    <option value="صبيا">صبيا</option>
+    <option value="أحد رفيدة">أحد رفيدة</option>
+    <option value="تثليث">تثليث</option>
+    <option value="المجمعة">المجمعة</option>
+    <option value="الزلفي">الزلفي</option>
+    <option value="حوطة بني تميم">حوطة بني تميم</option>
+    <option value="الأحساء">الأحساء</option>
+    <option value="بقيق">بقيق</option>
+    <option value="رأس تنورة">رأس تنورة</option>
+    <option value="سيهات">سيهات</option>
+    <option value="صفوى">صفوى</option>
+    <option value="تاروت">تاروت</option>
+    <option value="النعيرية">النعيرية</option>
+    <option value="قرية العليا">قرية العليا</option>
+    <option value="الخرج">الخرج</option>
+    <option value="الدوادمي">الدوادمي</option>
+    <option value="القويعية">القويعية</option>
+    <option value="وادي الدواسر">وادي الدواسر</option>
+    <option value="الافلاج">الأفلاج</option>
+    <option value="رنية">رنية</option>
+    <option value="بيش">بيش</option>
+    <option value="الدرب">الدرب</option>
+    <option value="العارضة">العارضة</option>
+    <option value="أملج">أملج</option>
+    <option value="ضباء">ضباء</option>
+    <option value="الوجه">الوجه</option>
+    <option value="العلا">العلا</option>
+    <option value="خيبر">خيبر</option>
+    <option value="البدائع">البدائع</option>
+    <option value="الأسياح">الأسياح</option>
+    <option value="رياض الخبراء">رياض الخبراء</option>
+    <option value="النبهانية">النبهانية</option>
+    <option value="ضرما">ضرما</option>
+    <option value="حوطة سدير">حوطة سدير</option>
+    <option value="تمير">تمير</option>
+    <option value="الحوطة">الحوطة</option>
+    <option value="الحريق">الحريق</option>
+    <option value="شقراء">شقراء</option>
+    <option value="عفيف">عفيف</option>
+  </select>
+</div>
+
 
           <div className="filter-group">
             <label>نوع الأرض:</label>
@@ -1215,6 +1364,7 @@ const AllLands = () => {
                 {renderLandDetails(selectedLand)}
 
                 <div className="details-actions">
+                  {/* الأزرار بناءً على الحالة الحالية */}
                   {selectedLand.status === 'قيد المراجعة' && (
                     <>
                       <button 
@@ -1223,7 +1373,7 @@ const AllLands = () => {
                         disabled={loading}
                       >
                         <FiCheck />
-                        {loading ? 'جاري المعالجة...' : 'قبول الإعلان'}
+                        {loading ? 'جاري المعالجة...' : 'قبول (مفتوح)'}
                       </button>
                       
                       <button 
@@ -1232,29 +1382,84 @@ const AllLands = () => {
                         disabled={loading}
                       >
                         <FiX />
-                        {loading ? 'جاري المعالجة...' : 'رفض الإعلان'}
+                        {loading ? 'جاري المعالجة...' : 'رفض'}
                       </button>
                     </>
                   )}
-                  {(selectedLand.status === 'مرفوض') && (
-                    <button 
-                      className="btn btn-success"
-                      onClick={() => handleApprove(selectedLand.id)}
-                      disabled={loading}
-                    >
-                      <FiCheck />
-                      {loading ? 'جاري المعالجة...' : 'قبول الإعلان'}
-                    </button>
+                  
+                  {selectedLand.status === 'مرفوض' && (
+                    <>
+                      <button 
+                        className="btn btn-success"
+                        onClick={() => handleApprove(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiCheck />
+                        {loading ? 'جاري المعالجة...' : 'قبول (مفتوح)'}
+                      </button>
+                      
+                      <button 
+                        className="btn btn-warning"
+                        onClick={() => handleReturnToPending(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiRefreshCw />
+                        {loading ? 'جاري المعالجة...' : 'إعادة للمراجعة'}
+                      </button>
+                    </>
                   )}
-                  {(selectedLand.status === 'مفتوح' || selectedLand.status === 'مرفوض') && (
-                    <button 
-                      className="btn btn-danger"
-                      onClick={() => openRejectModal(selectedLand.id)}
-                      disabled={loading}
-                    >
-                      <FiX />
-                      {loading ? 'جاري المعالجة...' : 'رفض الإعلان'}
-                    </button>
+                  
+                  {selectedLand.status === 'مفتوح' && (
+                    <>
+                      <button 
+                        className="btn btn-danger"
+                        onClick={() => openRejectModal(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiX />
+                        {loading ? 'جاري المعالجة...' : 'رفض'}
+                      </button>
+                      
+                      <button 
+                        className="btn btn-info"
+                        onClick={() => handleMarkAsSold(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiShoppingCart />
+                        {loading ? 'جاري المعالجة...' : '标记 كمباعة'}
+                      </button>
+
+                      <button 
+                        className="btn btn-warning"
+                        onClick={() => handleReturnToPending(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiRefreshCw />
+                        {loading ? 'جاري المعالجة...' : 'إعادة للمراجعة'}
+                      </button>
+                    </>
+                  )}
+                  
+                  {selectedLand.status === 'تم البيع' && (
+                    <>
+                      <button 
+                        className="btn btn-success"
+                        onClick={() => handleApprove(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiCheck />
+                        {loading ? 'جاري المعالجة...' : 'إعادة فتح'}
+                      </button>
+                      
+                      <button 
+                        className="btn btn-warning"
+                        onClick={() => handleReturnToPending(selectedLand.id)}
+                        disabled={loading}
+                      >
+                        <FiRefreshCw />
+                        {loading ? 'جاري المعالجة...' : 'إعادة للمراجعة'}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

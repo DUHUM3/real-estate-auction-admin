@@ -820,14 +820,14 @@ const AllInterests = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{interest.full_name}</span>
-            <button 
+            {/* <button 
               className={`copy-btn ${copyStatus['full_name'] ? 'copied' : ''}`}
               onClick={() => copyToClipboard(interest.full_name, 'full_name')}
               title="نسخ الاسم"
             >
               <FiCopy />
               {copyStatus['full_name'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -918,14 +918,14 @@ const AllInterests = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{formatDate(interest.created_at)}</span>
-            <button 
+            {/* <button 
               className={`copy-btn ${copyStatus['created_at'] ? 'copied' : ''}`}
               onClick={() => copyToClipboard(formatDate(interest.created_at), 'created_at')}
               title="نسخ تاريخ الاهتمام"
             >
               <FiCopy />
               {copyStatus['created_at'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -936,14 +936,14 @@ const AllInterests = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{formatDate(interest.updated_at)}</span>
-            <button 
+            {/* <button 
               className={`copy-btn ${copyStatus['updated_at'] ? 'copied' : ''}`}
               onClick={() => copyToClipboard(formatDate(interest.updated_at), 'updated_at')}
               title="نسخ تاريخ التحديث"
             >
               <FiCopy />
               {copyStatus['updated_at'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -955,7 +955,7 @@ const AllInterests = () => {
           <div className="detail-value message-text">
             <div className="detail-value-with-copy">
               <span>{interest.message || 'لا توجد رسالة'}</span>
-              {interest.message && (
+              {/* {interest.message && (
                 <button 
                   className={`copy-btn ${copyStatus['message'] ? 'copied' : ''}`}
                   onClick={() => copyToClipboard(interest.message, 'message')}
@@ -964,7 +964,7 @@ const AllInterests = () => {
                   <FiCopy />
                   {copyStatus['message'] && <span className="copy-tooltip">تم النسخ!</span>}
                 </button>
-              )}
+              )} */}
             </div>
           </div>
         </div>

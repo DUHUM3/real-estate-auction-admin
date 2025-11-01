@@ -651,8 +651,20 @@ const MarketingRequests = () => {
               onChange={(e) => handleFilterChange('region', e.target.value)}
               className="filter-select"
             >
-              <option value="all">جميع المناطق</option>
-              {filtersData.regions.map(region => (
+ <option value="all">جميع المناطق</option>
+              <option value="الرياض">الرياض</option>
+              <option value="مكة المكرمة">مكة المكرمة</option>
+              <option value="المدينة المنورة">المدينة المنورة</option>
+              <option value="القصيم">القصيم</option>
+              <option value="الشرقية">الشرقية</option>
+              <option value="عسير">عسير</option>
+              <option value="تبوك">تبوك</option>
+              <option value="حائل">حائل</option>
+              <option value="الحدود الشمالية">الحدود الشمالية</option>
+              <option value="جازان">جازان</option>
+              <option value="نجران">نجران</option>
+              <option value="الباحة">الباحة</option>
+              <option value="الجوف">الجوف</option>                {filtersData.regions.map(region => (
                 <option key={region} value={region}>{region}</option>
               ))}
             </select>
@@ -665,8 +677,75 @@ const MarketingRequests = () => {
               onChange={(e) => handleFilterChange('city', e.target.value)}
               className="filter-select"
             >
-              <option value="all">جميع المدن</option>
-              {filtersData.cities.map(city => (
+ <option value="all">جميع المدن</option>
+    <option value="الرياض">الرياض</option>
+    <option value="جدة">جدة</option>
+    <option value="مكة المكرمة">مكة المكرمة</option>
+    <option value="المدينة المنورة">المدينة المنورة</option>
+    <option value="الدمام">الدمام</option>
+    <option value="الخبر">الخبر</option>
+    <option value="الظهران">الظهران</option>
+    <option value="الجبيل">الجبيل</option>
+    <option value="القطيف">القطيف</option>
+    <option value="تبوك">تبوك</option>
+    <option value="حائل">حائل</option>
+    <option value="بريدة">بريدة</option>
+    <option value="عنيزة">عنيزة</option>
+    <option value="الرس">الرس</option>
+    <option value="خميس مشيط">خميس مشيط</option>
+    <option value="أبها">أبها</option>
+    <option value="نجران">نجران</option>
+    <option value="جازان">جازان</option>
+    <option value="بيشة">بيشة</option>
+    <option value="الباحة">الباحة</option>
+    <option value="سكاكا">سكاكا</option>
+    <option value="عرعر">عرعر</option>
+    <option value="القريات">القريات</option>
+    <option value="ينبع">ينبع</option>
+    <option value="رابغ">رابغ</option>
+    <option value="الطائف">الطائف</option>
+    <option value="محايل عسير">محايل عسير</option>
+    <option value="بلجرشي">بلجرشي</option>
+    <option value="صبيا">صبيا</option>
+    <option value="أحد رفيدة">أحد رفيدة</option>
+    <option value="تثليث">تثليث</option>
+    <option value="المجمعة">المجمعة</option>
+    <option value="الزلفي">الزلفي</option>
+    <option value="حوطة بني تميم">حوطة بني تميم</option>
+    <option value="الأحساء">الأحساء</option>
+    <option value="بقيق">بقيق</option>
+    <option value="رأس تنورة">رأس تنورة</option>
+    <option value="سيهات">سيهات</option>
+    <option value="صفوى">صفوى</option>
+    <option value="تاروت">تاروت</option>
+    <option value="النعيرية">النعيرية</option>
+    <option value="قرية العليا">قرية العليا</option>
+    <option value="الخرج">الخرج</option>
+    <option value="الدوادمي">الدوادمي</option>
+    <option value="القويعية">القويعية</option>
+    <option value="وادي الدواسر">وادي الدواسر</option>
+    <option value="الافلاج">الأفلاج</option>
+    <option value="رنية">رنية</option>
+    <option value="بيش">بيش</option>
+    <option value="الدرب">الدرب</option>
+    <option value="العارضة">العارضة</option>
+    <option value="أملج">أملج</option>
+    <option value="ضباء">ضباء</option>
+    <option value="الوجه">الوجه</option>
+    <option value="العلا">العلا</option>
+    <option value="خيبر">خيبر</option>
+    <option value="البدائع">البدائع</option>
+    <option value="الأسياح">الأسياح</option>
+    <option value="رياض الخبراء">رياض الخبراء</option>
+    <option value="النبهانية">النبهانية</option>
+    <option value="ضرما">ضرما</option>
+    <option value="حوطة سدير">حوطة سدير</option>
+    <option value="تمير">تمير</option>
+    <option value="الحوطة">الحوطة</option>
+    <option value="الحريق">الحريق</option>
+    <option value="شقراء">شقراء</option>
+    <option value="عفيف">عفيف</option>   
+                  {filtersData.cities.map(city => (
                 <option key={city} value={city}>{city}</option>
               ))}
             </select>

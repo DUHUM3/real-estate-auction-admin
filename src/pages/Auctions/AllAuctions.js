@@ -571,7 +571,7 @@ const AllAuctions = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{auction.title || 'غير محدد'}</span>
-            {auction.title && (
+            {/* {auction.title && (
               <button 
                 className={`copy-btn ${copyStatus['auction_title'] ? 'copied' : ''}`}
                 onClick={() => copyToClipboard(auction.title, 'auction_title')}
@@ -580,7 +580,7 @@ const AllAuctions = () => {
                 <FiCopy />
                 {copyStatus['auction_title'] && <span className="copy-tooltip">تم النسخ!</span>}
               </button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -707,7 +707,7 @@ const AllAuctions = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{auction.address || 'غير محدد'}</span>
-            {auction.address && (
+            {/* {auction.address && (
               <button 
                 className={`copy-btn ${copyStatus['auction_address'] ? 'copied' : ''}`}
                 onClick={() => copyToClipboard(auction.address, 'auction_address')}
@@ -716,7 +716,7 @@ const AllAuctions = () => {
                 <FiCopy />
                 {copyStatus['auction_address'] && <span className="copy-tooltip">تم النسخ!</span>}
               </button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -726,7 +726,7 @@ const AllAuctions = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{auction.region || 'غير محدد'}</span>
-            {auction.region && (
+            {/* {auction.region && (
               <button 
                 className={`copy-btn ${copyStatus['auction_region'] ? 'copied' : ''}`}
                 onClick={() => copyToClipboard(auction.region, 'auction_region')}
@@ -735,7 +735,7 @@ const AllAuctions = () => {
                 <FiCopy />
                 {copyStatus['auction_region'] && <span className="copy-tooltip">تم النسخ!</span>}
               </button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -745,7 +745,7 @@ const AllAuctions = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{auction.city || 'غير محدد'}</span>
-            {auction.city && (
+            {/* {auction.city && (
               <button 
                 className={`copy-btn ${copyStatus['auction_city'] ? 'copied' : ''}`}
                 onClick={() => copyToClipboard(auction.city, 'auction_city')}
@@ -754,7 +754,7 @@ const AllAuctions = () => {
                 <FiCopy />
                 {copyStatus['auction_city'] && <span className="copy-tooltip">تم النسخ!</span>}
               </button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -825,7 +825,7 @@ const AllAuctions = () => {
           </div>
           <div className="detail-value-with-copy">
             <span>{formatDate(auction.created_at)}</span>
-            {auction.created_at && (
+            {/* {auction.created_at && (
               <button 
                 className={`copy-btn ${copyStatus['created_at'] ? 'copied' : ''}`}
                 onClick={() => copyToClipboard(formatDate(auction.created_at), 'created_at')}
@@ -834,7 +834,7 @@ const AllAuctions = () => {
                 <FiCopy />
                 {copyStatus['created_at'] && <span className="copy-tooltip">تم النسخ!</span>}
               </button>
-            )}
+            )} */}
           </div>
         </div>
 
@@ -845,7 +845,7 @@ const AllAuctions = () => {
           <div className="detail-value description-text">
             <div className="detail-value-with-copy">
               <span>{auction.description || 'لا يوجد وصف'}</span>
-              {auction.description && (
+              {/* {auction.description && (
                 <button 
                   className={`copy-btn ${copyStatus['description'] ? 'copied' : ''}`}
                   onClick={() => copyToClipboard(auction.description, 'description')}
@@ -854,7 +854,7 @@ const AllAuctions = () => {
                   <FiCopy />
                   {copyStatus['description'] && <span className="copy-tooltip">تم النسخ!</span>}
                 </button>
-              )}
+              )} */}
             </div>
           </div>
         </div>
@@ -1067,23 +1067,74 @@ const AllAuctions = () => {
               onChange={(e) => handleFilterChange('city', e.target.value)}
               className="filter-select"
             >
-              <option value="all">جميع المدن</option>
-              <option value="الرياض">الرياض</option>
-              <option value="جدة">جدة</option>
-              <option value="مكة المكرمة">مكة المكرمة</option>
-              <option value="الدمام">الدمام</option>
-              <option value="الخبر">الخبر</option>
-              <option value="الطائف">الطائف</option>
-              <option value="المدينة المنورة">المدينة المنورة</option>
-              <option value="بريدة">بريدة</option>
-              <option value="تبوك">تبوك</option>
-              <option value="أبها">أبها</option>
-              <option value="حائل">حائل</option>
-              <option value="جازان">جازان</option>
-              <option value="نجران">نجران</option>
-              <option value="الباحة">الباحة</option>
-              <option value="عرعر">عرعر</option>
-              <option value="سكاكا">سكاكا</option>
+               <option value="all">جميع المدن</option>
+    <option value="الرياض">الرياض</option>
+    <option value="جدة">جدة</option>
+    <option value="مكة المكرمة">مكة المكرمة</option>
+    <option value="المدينة المنورة">المدينة المنورة</option>
+    <option value="الدمام">الدمام</option>
+    <option value="الخبر">الخبر</option>
+    <option value="الظهران">الظهران</option>
+    <option value="الجبيل">الجبيل</option>
+    <option value="القطيف">القطيف</option>
+    <option value="تبوك">تبوك</option>
+    <option value="حائل">حائل</option>
+    <option value="بريدة">بريدة</option>
+    <option value="عنيزة">عنيزة</option>
+    <option value="الرس">الرس</option>
+    <option value="خميس مشيط">خميس مشيط</option>
+    <option value="أبها">أبها</option>
+    <option value="نجران">نجران</option>
+    <option value="جازان">جازان</option>
+    <option value="بيشة">بيشة</option>
+    <option value="الباحة">الباحة</option>
+    <option value="سكاكا">سكاكا</option>
+    <option value="عرعر">عرعر</option>
+    <option value="القريات">القريات</option>
+    <option value="ينبع">ينبع</option>
+    <option value="رابغ">رابغ</option>
+    <option value="الطائف">الطائف</option>
+    <option value="محايل عسير">محايل عسير</option>
+    <option value="بلجرشي">بلجرشي</option>
+    <option value="صبيا">صبيا</option>
+    <option value="أحد رفيدة">أحد رفيدة</option>
+    <option value="تثليث">تثليث</option>
+    <option value="المجمعة">المجمعة</option>
+    <option value="الزلفي">الزلفي</option>
+    <option value="حوطة بني تميم">حوطة بني تميم</option>
+    <option value="الأحساء">الأحساء</option>
+    <option value="بقيق">بقيق</option>
+    <option value="رأس تنورة">رأس تنورة</option>
+    <option value="سيهات">سيهات</option>
+    <option value="صفوى">صفوى</option>
+    <option value="تاروت">تاروت</option>
+    <option value="النعيرية">النعيرية</option>
+    <option value="قرية العليا">قرية العليا</option>
+    <option value="الخرج">الخرج</option>
+    <option value="الدوادمي">الدوادمي</option>
+    <option value="القويعية">القويعية</option>
+    <option value="وادي الدواسر">وادي الدواسر</option>
+    <option value="الافلاج">الأفلاج</option>
+    <option value="رنية">رنية</option>
+    <option value="بيش">بيش</option>
+    <option value="الدرب">الدرب</option>
+    <option value="العارضة">العارضة</option>
+    <option value="أملج">أملج</option>
+    <option value="ضباء">ضباء</option>
+    <option value="الوجه">الوجه</option>
+    <option value="العلا">العلا</option>
+    <option value="خيبر">خيبر</option>
+    <option value="البدائع">البدائع</option>
+    <option value="الأسياح">الأسياح</option>
+    <option value="رياض الخبراء">رياض الخبراء</option>
+    <option value="النبهانية">النبهانية</option>
+    <option value="ضرما">ضرما</option>
+    <option value="حوطة سدير">حوطة سدير</option>
+    <option value="تمير">تمير</option>
+    <option value="الحوطة">الحوطة</option>
+    <option value="الحريق">الحريق</option>
+    <option value="شقراء">شقراء</option>
+    <option value="عفيف">عفيف</option>
             </select>
           </div>
 

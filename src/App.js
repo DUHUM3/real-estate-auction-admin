@@ -1,26 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
+
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
-import PendingUsers from './pages/users/PendingUsers';
+import LoginPage from './pages/Login';
+import Reports from './pages/Reports';
+import ClientsManagement from './pages/ClientsManagement';
+
 import AllUsers from './pages/users/AllUsers';
 import AllLands from './pages/Lands/AllLands';
-import PendingLands from './pages/Lands/PendingLands'; // تم تصحيح اسم المكون PendindLands إلى PendingLands
 import AllAuctions from './pages/Auctions/AllAuctions';
-import PendingAuctions from './pages/Auctions/PendingAuctions';
-import ClientsManagement from './pages/ClientsManagement';
-import Lands from './pages/Lands';
-import LandRequests from './pages/landRequests/landRequests';
-import AuctionsRequests from './pages/AuctionsRequest/AuctionsRequest';
-import Customers from './pages/Customers';
-import Orders from './pages/Orders';
-import Reports from './pages/Reports';
 import Inventory from './pages/Interests/AllInterests';
-import LoginPage from './pages/Login';
+import AuctionsRequests from './pages/AuctionsRequest/AuctionsRequest';
+import LandRequests from './pages/landRequests/landRequests';
+
 import AuthController from './utils/authController';
 import './App.css';
 import { DataProvider } from './contexts/DataContext';
+
+// import PendingUsers from './pages/users/PendingUsers';
+// import PendingAuctions from './pages/Auctions/PendingAuctions';
+// import PendingLands from './pages/Lands/PendingLands';
 
 // مكون للتحقق من المصادقة - إضافة المكونات المفقودة
 const ProtectedRoute = ({ children, isAuthenticated }) => {
@@ -98,11 +99,11 @@ function App() {
                           <Dashboard />
                         </ProtectedRoute>
                       } />
-                      <Route path="/pending-users" element={ 
+                      {/* <Route path="/pending-users" element={ 
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
                           <PendingUsers />
                         </ProtectedRoute>
-                      } />
+                      } /> */}
                       <Route path="/all-users" element={
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
                           <AllUsers />
@@ -113,31 +114,27 @@ function App() {
                           <AllLands />
                         </ProtectedRoute>
                       } />
-                      <Route path="/pending-lands" element={
+                      {/* <Route path="/pending-lands" element={
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
-                          <PendingLands /> {/* تم التصحيح هنا */}
+                          <PendingLands />
                         </ProtectedRoute>
-                      } />
+                      } /> */}
                       <Route path="/all-auctions" element={
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
                           <AllAuctions />
                         </ProtectedRoute>
                       } />
-                      <Route path="/pending-auctions" element={
+                      {/* <Route path="/pending-auctions" element={
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
                           <PendingAuctions />
                         </ProtectedRoute>
-                      } />
+                      } /> */}
                       <Route path="/clients-management" element={
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
                           <ClientsManagement />
                         </ProtectedRoute>
                       } />
-                      <Route path="/lands" element={
-                        <ProtectedRoute isAuthenticated={isLoggedIn}>
-                          <Lands />
-                        </ProtectedRoute>
-                      } />
+                
                       <Route path="/land-requests" element={
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
                           <LandRequests />
@@ -148,16 +145,7 @@ function App() {
                           <AuctionsRequests />
                         </ProtectedRoute>
                       } />
-                      <Route path="/customers" element={
-                        <ProtectedRoute isAuthenticated={isLoggedIn}>
-                          <Customers />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/orders" element={
-                        <ProtectedRoute isAuthenticated={isLoggedIn}>
-                          <Orders />
-                        </ProtectedRoute>
-                      } />
+                    
                       <Route path="/reports" element={
                         <ProtectedRoute isAuthenticated={isLoggedIn}>
                           <Reports />
