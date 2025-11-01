@@ -14,7 +14,10 @@ import {
   FiSlash, 
   FiCheck, 
   FiX, 
-  FiRefreshCw 
+  FiRefreshCw,
+  FiEye,
+  FiEdit,
+  FiCopy
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
@@ -48,6 +51,64 @@ const AllAuctions = () => {
     return savedPage ? parseInt(savedPage) : 1;
   });
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copyStatus, setCopyStatus] = useState({}); // حالة نسخ البيانات
+  const [rejectModal, setRejectModal] = useState({
+    show: false,
+    auctionId: null,
+    reason: ''
+  });
+
+  const [ownerModal, setOwnerModal] = useState({
+    show: false,
+    owner: null
+  });
+
+  // دالة نسخ النص إلى الحافظة
+  const copyToClipboard = async (text, fieldName) => {
+    if (!text) return;
+    
+    try {
+      await navigator.clipboard.writeText(text.toString());
+      
+      // تحديث حالة النسخ
+      setCopyStatus(prev => ({
+        ...prev,
+        [fieldName]: true
+      }));
+      
+      // إخفاء رسالة النجاح بعد 2 ثانية
+      setTimeout(() => {
+        setCopyStatus(prev => ({
+          ...prev,
+          [fieldName]: false
+        }));
+      }, 2000);
+      
+    } catch (err) {
+      console.error('فشل في نسخ النص: ', err);
+      // استخدام الطريقة القديمة كبديل
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      setCopyStatus(prev => ({
+        ...prev,
+        [fieldName]: true
+      }));
+      
+      setTimeout(() => {
+        setCopyStatus(prev => ({
+          ...prev,
+          [fieldName]: false
+        }));
+      }, 2000);
+    }
+  };
+
   // حفظ الفلاتر والصفحة في localStorage عند تغييرها
   useEffect(() => {
     localStorage.setItem('auctionsFilters', JSON.stringify(filters));
@@ -73,6 +134,54 @@ const AllAuctions = () => {
       localStorage.removeItem('selectedAuction');
     }
   }, [selectedAuction]);
+
+  const handleRefresh = async () => {
+    console.log('بدء تحديث بيانات المزادات...');
+    setIsRefreshing(true);
+    
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('خطأ في التحديث:', error);
+      alert('حدث خطأ أثناء تحديث البيانات: ' + error.message);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // فتح مودال الرفض
+  const openRejectModal = (auctionId) => {
+    setRejectModal({
+      show: true,
+      auctionId,
+      reason: ''
+    });
+  };
+
+  // إغلاق مودال الرفض
+  const closeRejectModal = () => {
+    setRejectModal({
+      show: false,
+      auctionId: null,
+      reason: ''
+    });
+  };
+
+  // فتح مودال تفاصيل الشركة
+  const openOwnerModal = (owner) => {
+    setOwnerModal({
+      show: true,
+      owner
+    });
+  };
+
+  // إغلاق مودال تفاصيل الشركة
+  const closeOwnerModal = () => {
+    setOwnerModal({
+      show: false,
+      owner: null
+    });
+  };
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -181,7 +290,7 @@ const AllAuctions = () => {
     {
       onSuccess: () => {
         alert('تم قبول المزاد بنجاح');
-        refetch(); // إعادة تحميل البيانات
+        refetch();
         setSelectedAuction(null);
         queryClient.invalidateQueries(['auctions']);
       },
@@ -192,7 +301,7 @@ const AllAuctions = () => {
   );
 
   const rejectMutation = useMutation(
-    async (auctionId) => {
+    async ({ auctionId, reason }) => {
       const token = localStorage.getItem('access_token');
       const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/auctions/${auctionId}/reject`, {
         method: 'POST',
@@ -200,6 +309,9 @@ const AllAuctions = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          reason: reason || "التصريح غير مقبول او غير معتمد"
+        })
       });
 
       if (!response.ok) {
@@ -212,8 +324,9 @@ const AllAuctions = () => {
     {
       onSuccess: () => {
         alert('تم رفض المزاد بنجاح');
-        refetch(); // إعادة تحميل البيانات
+        refetch();
         setSelectedAuction(null);
+        closeRejectModal();
         queryClient.invalidateQueries(['auctions']);
       },
       onError: (error) => {
@@ -263,11 +376,20 @@ const AllAuctions = () => {
     approveMutation.mutate(auctionId);
   };
 
-  const handleReject = async (auctionId) => {
+  const handleReject = async () => {
+    if (!rejectModal.reason.trim()) {
+      alert('يرجى إدخال سبب الرفض');
+      return;
+    }
+
     if (!window.confirm('هل أنت متأكد من رفض هذا المزاد؟')) {
       return;
     }
-    rejectMutation.mutate(auctionId);
+    
+    rejectMutation.mutate({
+      auctionId: rejectModal.auctionId,
+      reason: rejectModal.reason
+    });
   };
 
   // تحديث الصفحة الحالية
@@ -293,11 +415,11 @@ const AllAuctions = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'مفتوح':
-        return <span className="status-badge open">مفتوح</span>;
+        return <span className="status-badge approved">مفتوح</span>;
       case 'مرفوض':
         return <span className="status-badge rejected">مرفوض</span>;
       case 'مغلق':
-        return <span className="status-badge closed">مغلق</span>;
+        return <span className="status-badge sold">مغلق</span>;
       case 'قيد المراجعة':
         return <span className="status-badge pending">قيد المراجعة</span>;
       default:
@@ -305,7 +427,7 @@ const AllAuctions = () => {
     }
   };
 
-  const getAuctionStatusText = (status) => {
+  const getStatusText = (status) => {
     switch (status) {
       case 'مفتوح':
         return 'مفتوح';
@@ -320,86 +442,124 @@ const AllAuctions = () => {
     }
   };
 
-  // دالة لتحديد الأزرار المعروضة بناءً على حالة المزاد
-  const renderActionButtons = (auction) => {
-    switch (auction.status) {
-      case 'قيد المراجعة':
-        return (
-          <>
-            <button 
-              className="btn btn-success"
-              onClick={() => handleApprove(auction.id)}
-              disabled={approveMutation.isLoading || rejectMutation.isLoading}
-            >
-              <FiCheck />
-              {approveMutation.isLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
-            </button>
-            
-            <button 
-              className="btn btn-danger"
-              onClick={() => handleReject(auction.id)}
-              disabled={approveMutation.isLoading || rejectMutation.isLoading}
-            >
-              <FiX />
-              {rejectMutation.isLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
-            </button>
-          </>
-        );
-      
-      case 'مرفوض':
-        return (
-          <button 
-            className="btn btn-success"
-            onClick={() => handleApprove(auction.id)}
-            disabled={approveMutation.isLoading || rejectMutation.isLoading}
-          >
-            <FiCheck />
-            {approveMutation.isLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
-          </button>
-        );
-      
-      case 'مفتوح':
-        return (
-          <button 
-            className="btn btn-danger"
-            onClick={() => handleReject(auction.id)}
-            disabled={approveMutation.isLoading || rejectMutation.isLoading}
-          >
-            <FiX />
-            {rejectMutation.isLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
-          </button>
-        );
-      
-      case 'مغلق':
-        return (
-          <div className="no-actions">
-            <p>لا يمكن تعديل حالة المزاد المغلق</p>
+  // دالة لعرض تفاصيل الشركة في الفورم مع إضافة نسخ البيانات
+  const renderOwnerDetails = (owner) => {
+    if (!owner) return null;
+
+    return (
+      <div className="owner-details-form">
+        <div className="form-section">
+          <h4>معلومات الشركة</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>اسم الشركة</label>
+              <div className="detail-value-with-copy">
+                <span>{owner.auction_name || 'غير متوفر'}</span>
+                {owner.auction_name && (
+                  <button 
+                    className={`copy-btn ${copyStatus['company_name'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(owner.auction_name, 'company_name')}
+                    title="نسخ اسم الشركة"
+                  >
+                    <FiCopy />
+                    {copyStatus['company_name'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="form-group">
+              <label>البريد الإلكتروني</label>
+              <div className="detail-value-with-copy">
+                <span>{owner.user?.email || 'غير متوفر'}</span>
+                {owner.user?.email && (
+                  <button 
+                    className={`copy-btn ${copyStatus['company_email'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(owner.user.email, 'company_email')}
+                    title="نسخ البريد الإلكتروني"
+                  >
+                    <FiCopy />
+                    {copyStatus['company_email'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        );
-      
-      default:
-        return (
-          <>
-            <button 
-              className="btn btn-success"
-              onClick={() => handleApprove(auction.id)}
-              disabled={approveMutation.isLoading || rejectMutation.isLoading}
-            >
-              <FiCheck />
-              {approveMutation.isLoading ? 'جاري المعالجة...' : 'قبول المزاد'}
-            </button>
-            
-            <button 
-              className="btn btn-danger"
-              onClick={() => handleReject(auction.id)}
-              disabled={approveMutation.isLoading || rejectMutation.isLoading}
-            >
-              <FiX />
-              {rejectMutation.isLoading ? 'جاري المعالجة...' : 'رفض المزاد'}
-            </button>
-          </>
-        );
-    }
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>رقم الهاتف</label>
+              <div className="detail-value-with-copy">
+                <span>{owner.user?.phone || 'غير متوفر'}</span>
+                {owner.user?.phone && (
+                  <button 
+                    className={`copy-btn ${copyStatus['company_phone'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(owner.user.phone, 'company_phone')}
+                    title="نسخ رقم الهاتف"
+                  >
+                    <FiCopy />
+                    {copyStatus['company_phone'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="form-group">
+              <label>اسم المسؤول</label>
+              <div className="detail-value-with-copy">
+                <span>{owner.user?.full_name || 'غير متوفر'}</span>
+                {owner.user?.full_name && (
+                  <button 
+                    className={`copy-btn ${copyStatus['company_contact'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(owner.user.full_name, 'company_contact')}
+                    title="نسخ اسم المسؤول"
+                  >
+                    <FiCopy />
+                    {copyStatus['company_contact'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {owner.commercial_register && (
+          <div className="form-section">
+            <h4>المعلومات التجارية</h4>
+            <div className="form-row">
+              <div className="form-group">
+                <label>السجل التجاري</label>
+                <div className="detail-value-with-copy">
+                  <span>{owner.commercial_register}</span>
+                  <button 
+                    className={`copy-btn ${copyStatus['commercial_register'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(owner.commercial_register, 'commercial_register')}
+                    title="نسخ السجل التجاري"
+                  >
+                    <FiCopy />
+                    {copyStatus['commercial_register'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                </div>
+              </div>
+              {owner.license_number && (
+                <div className="form-group">
+                  <label>رقم الترخيص</label>
+                  <div className="detail-value-with-copy">
+                    <span>{owner.license_number}</span>
+                    <button 
+                      className={`copy-btn ${copyStatus['license_number'] ? 'copied' : ''}`}
+                      onClick={() => copyToClipboard(owner.license_number, 'license_number')}
+                      title="نسخ رقم الترخيص"
+                    >
+                      <FiCopy />
+                      {copyStatus['license_number'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderAuctionDetails = (auction) => {
@@ -409,7 +569,19 @@ const AllAuctions = () => {
           <div className="detail-label">
             العنوان
           </div>
-          <div className="detail-value">{auction.title || 'غير محدد'}</div>
+          <div className="detail-value-with-copy">
+            <span>{auction.title || 'غير محدد'}</span>
+            {auction.title && (
+              <button 
+                className={`copy-btn ${copyStatus['auction_title'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.title, 'auction_title')}
+                title="نسخ العنوان"
+              >
+                <FiCopy />
+                {copyStatus['auction_title'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="detail-item">
@@ -417,8 +589,27 @@ const AllAuctions = () => {
             <FiUser />
             الشركة المنظمة
           </div>
-          <div className="detail-value">
-            {auction.company?.auction_name || auction.company?.user?.full_name || 'غير محدد'}
+          <div className="detail-value owner-info">
+            <div className="detail-value-with-copy">
+              <span>{auction.company?.auction_name || auction.company?.user?.full_name || 'غير محدد'}</span>
+              <div className="owner-actions">
+                <button 
+                  className="owner-view-btn"
+                  onClick={() => openOwnerModal(auction.company)}
+                  title="عرض تفاصيل الشركة"
+                >
+                  <FiEye />
+                </button>
+                <button 
+                  className={`copy-btn ${copyStatus['company_info'] ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(auction.company?.auction_name || auction.company?.user?.full_name, 'company_info')}
+                  title="نسخ اسم الشركة"
+                >
+                  <FiCopy />
+                  {copyStatus['company_info'] && <span className="copy-tooltip">تم النسخ!</span>}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -426,14 +617,38 @@ const AllAuctions = () => {
           <div className="detail-label">
             البريد الإلكتروني
           </div>
-          <div className="detail-value">{auction.company?.user?.email || 'غير محدد'}</div>
+          <div className="detail-value-with-copy">
+            <span>{auction.company?.user?.email || 'غير محدد'}</span>
+            {auction.company?.user?.email && (
+              <button 
+                className={`copy-btn ${copyStatus['auction_email'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.company.user.email, 'auction_email')}
+                title="نسخ البريد الإلكتروني"
+              >
+                <FiCopy />
+                {copyStatus['auction_email'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="detail-item">
           <div className="detail-label">
             الهاتف
           </div>
-          <div className="detail-value">{auction.company?.user?.phone || 'غير محدد'}</div>
+          <div className="detail-value-with-copy">
+            <span>{auction.company?.user?.phone || 'غير محدد'}</span>
+            {auction.company?.user?.phone && (
+              <button 
+                className={`copy-btn ${copyStatus['auction_phone'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.company.user.phone, 'auction_phone')}
+                title="نسخ رقم الهاتف"
+              >
+                <FiCopy />
+                {copyStatus['auction_phone'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="detail-item">
@@ -450,7 +665,19 @@ const AllAuctions = () => {
             <FiCalendar />
             تاريخ المزاد
           </div>
-          <div className="detail-value">{formatDate(auction.auction_date)}</div>
+          <div className="detail-value-with-copy">
+            <span>{formatDate(auction.auction_date)}</span>
+            {auction.auction_date && (
+              <button 
+                className={`copy-btn ${copyStatus['auction_date'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(formatDate(auction.auction_date), 'auction_date')}
+                title="نسخ تاريخ المزاد"
+              >
+                <FiCopy />
+                {copyStatus['auction_date'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="detail-item">
@@ -458,7 +685,19 @@ const AllAuctions = () => {
             <FiClock />
             وقت البدء
           </div>
-          <div className="detail-value">{formatTime(auction.start_time)}</div>
+          <div className="detail-value-with-copy">
+            <span>{formatTime(auction.start_time)}</span>
+            {auction.start_time && (
+              <button 
+                className={`copy-btn ${copyStatus['start_time'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.start_time, 'start_time')}
+                title="نسخ وقت البدء"
+              >
+                <FiCopy />
+                {copyStatus['start_time'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="detail-item">
@@ -466,21 +705,57 @@ const AllAuctions = () => {
             <FiMapPin />
             العنوان
           </div>
-          <div className="detail-value">{auction.address || 'غير محدد'}</div>
+          <div className="detail-value-with-copy">
+            <span>{auction.address || 'غير محدد'}</span>
+            {auction.address && (
+              <button 
+                className={`copy-btn ${copyStatus['auction_address'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.address, 'auction_address')}
+                title="نسخ العنوان"
+              >
+                <FiCopy />
+                {copyStatus['auction_address'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="detail-item">
           <div className="detail-label">
             المنطقة
           </div>
-          <div className="detail-value">{auction.region || 'غير محدد'}</div>
+          <div className="detail-value-with-copy">
+            <span>{auction.region || 'غير محدد'}</span>
+            {auction.region && (
+              <button 
+                className={`copy-btn ${copyStatus['auction_region'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.region, 'auction_region')}
+                title="نسخ المنطقة"
+              >
+                <FiCopy />
+                {copyStatus['auction_region'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="detail-item">
           <div className="detail-label">
             المدينة
           </div>
-          <div className="detail-value">{auction.city || 'غير محدد'}</div>
+          <div className="detail-value-with-copy">
+            <span>{auction.city || 'غير محدد'}</span>
+            {auction.city && (
+              <button 
+                className={`copy-btn ${copyStatus['auction_city'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.city, 'auction_city')}
+                title="نسخ المدينة"
+              >
+                <FiCopy />
+                {copyStatus['auction_city'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         {auction.latitude && auction.longitude && (
@@ -488,8 +763,16 @@ const AllAuctions = () => {
             <div className="detail-label">
               الإحداثيات
             </div>
-            <div className="detail-value">
-              {auction.latitude}, {auction.longitude}
+            <div className="detail-value-with-copy">
+              <span>{auction.latitude}, {auction.longitude}</span>
+              <button 
+                className={`copy-btn ${copyStatus['coordinates'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(`${auction.latitude}, ${auction.longitude}`, 'coordinates')}
+                title="نسخ الإحداثيات"
+              >
+                <FiCopy />
+                {copyStatus['coordinates'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
             </div>
           </div>
         )}
@@ -500,10 +783,18 @@ const AllAuctions = () => {
               <FiExternalLink />
               رابط التعريف
             </div>
-            <div className="detail-value">
+            <div className="detail-value-with-copy">
               <a href={auction.intro_link} target="_blank" rel="noopener noreferrer" className="link">
                 {auction.intro_link}
               </a>
+              <button 
+                className={`copy-btn ${copyStatus['intro_link'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.intro_link, 'intro_link')}
+                title="نسخ رابط التعريف"
+              >
+                <FiCopy />
+                {copyStatus['intro_link'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
             </div>
           </div>
         )}
@@ -513,7 +804,17 @@ const AllAuctions = () => {
             <div className="detail-label">
               سبب الرفض
             </div>
-            <div className="detail-value rejection-reason">{auction.rejection_reason}</div>
+            <div className="detail-value-with-copy rejection-reason">
+              <span>{auction.rejection_reason}</span>
+              <button 
+                className={`copy-btn ${copyStatus['rejection_reason'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(auction.rejection_reason, 'rejection_reason')}
+                title="نسخ سبب الرفض"
+              >
+                <FiCopy />
+                {copyStatus['rejection_reason'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            </div>
           </div>
         )}
 
@@ -522,14 +823,40 @@ const AllAuctions = () => {
             <FiCalendar />
             تاريخ الإنشاء
           </div>
-          <div className="detail-value">{formatDate(auction.created_at)}</div>
+          <div className="detail-value-with-copy">
+            <span>{formatDate(auction.created_at)}</span>
+            {auction.created_at && (
+              <button 
+                className={`copy-btn ${copyStatus['created_at'] ? 'copied' : ''}`}
+                onClick={() => copyToClipboard(formatDate(auction.created_at), 'created_at')}
+                title="نسخ تاريخ الإنشاء"
+              >
+                <FiCopy />
+                {copyStatus['created_at'] && <span className="copy-tooltip">تم النسخ!</span>}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="detail-item full-width">
           <div className="detail-label">
             الوصف
           </div>
-          <div className="detail-value description-text">{auction.description || 'لا يوجد وصف'}</div>
+          <div className="detail-value description-text">
+            <div className="detail-value-with-copy">
+              <span>{auction.description || 'لا يوجد وصف'}</span>
+              {auction.description && (
+                <button 
+                  className={`copy-btn ${copyStatus['description'] ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(auction.description, 'description')}
+                  title="نسخ الوصف"
+                >
+                  <FiCopy />
+                  {copyStatus['description'] && <span className="copy-tooltip">تم النسخ!</span>}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* الصور */}
@@ -651,7 +978,7 @@ const AllAuctions = () => {
     to: 0
   };
 
-  const loading = isLoading || approveMutation.isLoading || rejectMutation.isLoading;
+  const loading = isLoading || isRefreshing || approveMutation.isLoading || rejectMutation.isLoading;
 
   return (
     <div className="pending-users-container">
@@ -681,16 +1008,15 @@ const AllAuctions = () => {
             <button type="submit" className="search-btn">
               بحث
             </button>
-            <div className="dashboard-header-actions">
-              <button 
-                className="dashboard-refresh-btn" 
-                onClick={() => refetch()}
-                disabled={loading}
-              >
-                <FiRefreshCw />
-                تحديث البيانات
-              </button>
-            </div>
+            <button 
+              type="button"
+              className="dashboard-refresh-btn" 
+              onClick={handleRefresh}
+              disabled={isRefreshing || loading}
+            >
+              <FiRefreshCw className={isRefreshing ? 'spinning' : ''} />
+              {isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}
+            </button>
           </div>
         </form>
 
@@ -718,9 +1044,19 @@ const AllAuctions = () => {
               className="filter-select"
             >
               <option value="all">جميع المناطق</option>
-              <option value="عدن">عدن</option>
-              <option value="صنعاء">صنعاء</option>
-              {/* ... باقي المناطق */}
+              <option value="الرياض">الرياض</option>
+              <option value="مكة المكرمة">مكة المكرمة</option>
+              <option value="المدينة المنورة">المدينة المنورة</option>
+              <option value="القصيم">القصيم</option>
+              <option value="الشرقية">الشرقية</option>
+              <option value="عسير">عسير</option>
+              <option value="تبوك">تبوك</option>
+              <option value="حائل">حائل</option>
+              <option value="الحدود الشمالية">الحدود الشمالية</option>
+              <option value="جازان">جازان</option>
+              <option value="نجران">نجران</option>
+              <option value="الباحة">الباحة</option>
+              <option value="الجوف">الجوف</option>
             </select>
           </div>
 
@@ -732,9 +1068,22 @@ const AllAuctions = () => {
               className="filter-select"
             >
               <option value="all">جميع المدن</option>
-              <option value="عدن">عدن</option>
-              <option value="صنعاء">صنعاء</option>
-              {/* ... باقي المدن */}
+              <option value="الرياض">الرياض</option>
+              <option value="جدة">جدة</option>
+              <option value="مكة المكرمة">مكة المكرمة</option>
+              <option value="الدمام">الدمام</option>
+              <option value="الخبر">الخبر</option>
+              <option value="الطائف">الطائف</option>
+              <option value="المدينة المنورة">المدينة المنورة</option>
+              <option value="بريدة">بريدة</option>
+              <option value="تبوك">تبوك</option>
+              <option value="أبها">أبها</option>
+              <option value="حائل">حائل</option>
+              <option value="جازان">جازان</option>
+              <option value="نجران">نجران</option>
+              <option value="الباحة">الباحة</option>
+              <option value="عرعر">عرعر</option>
+              <option value="سكاكا">سكاكا</option>
             </select>
           </div>
 
@@ -818,7 +1167,7 @@ const AllAuctions = () => {
                       className={`user-card ${selectedAuction?.id === auction.id ? 'active' : ''}`}
                       onClick={() => setSelectedAuction(auction)}
                     >
-                      <div className="user-avatar auction-avatar">
+                      <div className="user-avatar">
                         <FiCalendar />
                       </div>
                       <div className="user-info">
@@ -839,14 +1188,8 @@ const AllAuctions = () => {
                           </div>
                         )}
                       </div>
-                      <div className="user-status-container">
-                        <div className={`user-status ${auction.status?.replace(/\s+/g, '-') || 'unknown'}`}>
-                          {getAuctionStatusText(auction.status)}
-                        </div>
-                        <div className="media-count">
-                          <FiImage /> {auction.images?.length || 0}
-                          <FiVideo /> {auction.videos?.length || 0}
-                        </div>
+                      <div className={`user-status ${auction.status?.replace(/\s+/g, '-') || 'unknown'}`}>
+                        {getStatusText(auction.status)}
                       </div>
                     </div>
                   ))}
@@ -874,7 +1217,47 @@ const AllAuctions = () => {
                 {renderAuctionDetails(selectedAuction)}
 
                 <div className="details-actions">
-                  {renderActionButtons(selectedAuction)}
+                  {selectedAuction.status === 'قيد المراجعة' && (
+                    <>
+                      <button 
+                        className="btn btn-success"
+                        onClick={() => handleApprove(selectedAuction.id)}
+                        disabled={loading}
+                      >
+                        <FiCheck />
+                        {loading ? 'جاري المعالجة...' : 'قبول المزاد'}
+                      </button>
+                      
+                      <button 
+                        className="btn btn-danger"
+                        onClick={() => openRejectModal(selectedAuction.id)}
+                        disabled={loading}
+                      >
+                        <FiX />
+                        {loading ? 'جاري المعالجة...' : 'رفض المزاد'}
+                      </button>
+                    </>
+                  )}
+                  {selectedAuction.status === 'مرفوض' && (
+                    <button 
+                      className="btn btn-success"
+                      onClick={() => handleApprove(selectedAuction.id)}
+                      disabled={loading}
+                    >
+                      <FiCheck />
+                      {loading ? 'جاري المعالجة...' : 'قبول المزاد'}
+                    </button>
+                  )}
+                  {selectedAuction.status === 'مفتوح' && (
+                    <button 
+                      className="btn btn-danger"
+                      onClick={() => openRejectModal(selectedAuction.id)}
+                      disabled={loading}
+                    >
+                      <FiX />
+                      {loading ? 'جاري المعالجة...' : 'رفض المزاد'}
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -886,6 +1269,92 @@ const AllAuctions = () => {
           </div>
         </div>
       </div>
+
+      {/* مودال الرفض */}
+      {rejectModal.show && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>
+                <FiEdit />
+                رفض المزاد
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={closeRejectModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>سبب الرفض</label>
+                <textarea
+                  value={rejectModal.reason}
+                  onChange={(e) => setRejectModal(prev => ({
+                    ...prev,
+                    reason: e.target.value
+                  }))}
+                  className="form-input"
+                  rows="4"
+                  placeholder="اكتب سبب رفض المزاد هنا..."
+                />
+                <div className="form-hint">
+                  هذا السبب سيظهر للشركة كتفسير لرفض مزادها
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-secondary"
+                onClick={closeRejectModal}
+                disabled={loading}
+              >
+                إلغاء
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={handleReject}
+                disabled={loading}
+              >
+                <FiX />
+                {loading ? 'جاري الحفظ...' : 'تأكيد الرفض'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال تفاصيل الشركة */}
+      {ownerModal.show && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>
+                <FiUser />
+                تفاصيل الشركة
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={closeOwnerModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              {renderOwnerDetails(ownerModal.owner)}
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-primary"
+                onClick={closeOwnerModal}
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

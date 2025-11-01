@@ -21,7 +21,8 @@ import {
   FiMap,
   FiMapPin,
   FiLayers,
-  FiDollarSign
+  FiDollarSign,
+  FiCopy
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
@@ -54,6 +55,7 @@ const AllInterests = () => {
     const savedPage = localStorage.getItem('interestsCurrentPage');
     return savedPage ? parseInt(savedPage) : 1;
   });
+  
   const [statusModal, setStatusModal] = useState({
     show: false,
     interestId: null,
@@ -61,12 +63,72 @@ const AllInterests = () => {
     adminNote: ''
   });
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copyStatus, setCopyStatus] = useState({}); // حالة نسخ البيانات
+
   // حالة المودال لعرض تفاصيل العقار
   const [propertyModal, setPropertyModal] = useState({
     show: false,
     property: null,
     loading: false
   });
+
+  // دالة نسخ النص إلى الحافظة
+  const copyToClipboard = async (text, fieldName) => {
+    if (!text) return;
+    
+    try {
+      await navigator.clipboard.writeText(text.toString());
+      
+      // تحديث حالة النسخ
+      setCopyStatus(prev => ({
+        ...prev,
+        [fieldName]: true
+      }));
+      
+      // إخفاء رسالة النجاح بعد 2 ثانية
+      setTimeout(() => {
+        setCopyStatus(prev => ({
+          ...prev,
+          [fieldName]: false
+        }));
+      }, 2000);
+      
+    } catch (err) {
+      console.error('فشل في نسخ النص: ', err);
+      // استخدام الطريقة القديمة كبديل
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      setCopyStatus(prev => ({
+        ...prev,
+        [fieldName]: true
+      }));
+      
+      setTimeout(() => {
+        setCopyStatus(prev => ({
+          ...prev,
+          [fieldName]: false
+        }));
+      }, 2000);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('خطأ في التحديث:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // حفظ الفلاتر والصفحة في localStorage عند تغييرها
   useEffect(() => {
@@ -286,7 +348,7 @@ const AllInterests = () => {
     {
       onSuccess: () => {
         alert('تم تحديث حالة الاهتمام بنجاح');
-        refetch(); // إعادة تحميل البيانات
+        refetch();
         setSelectedInterest(null);
         closeStatusModal();
         queryClient.invalidateQueries(['interests']);
@@ -305,7 +367,6 @@ const AllInterests = () => {
     
     setFilters(newFilters);
     
-    // إعادة ضبط الصفحة عند تغيير الفلاتر
     if (key !== 'page' && currentPage !== 1) {
       setCurrentPage(1);
     }
@@ -443,7 +504,7 @@ const AllInterests = () => {
     }
   };
 
-  // دالة لعرض تفاصيل العقار في المودال
+  // دالة لعرض تفاصيل العقار في المودال مع إضافة نسخ البيانات
   const renderPropertyDetails = (property) => {
     if (!property) return null;
 
@@ -454,11 +515,35 @@ const AllInterests = () => {
           <div className="form-row">
             <div className="form-group">
               <label>عنوان العقار</label>
-              <div className="form-value">{property.title || 'غير متوفر'}</div>
+              <div className="detail-value-with-copy">
+                <span>{property.title || 'غير متوفر'}</span>
+                {property.title && (
+                  <button 
+                    className={`copy-btn ${copyStatus['property_title'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(property.title, 'property_title')}
+                    title="نسخ عنوان العقار"
+                  >
+                    <FiCopy />
+                    {copyStatus['property_title'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="form-group">
               <label>رقم الإعلان</label>
-              <div className="form-value">{property.announcement_number || 'غير متوفر'}</div>
+              <div className="detail-value-with-copy">
+                <span>{property.announcement_number || 'غير متوفر'}</span>
+                {property.announcement_number && (
+                  <button 
+                    className={`copy-btn ${copyStatus['announcement_number'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(property.announcement_number, 'announcement_number')}
+                    title="نسخ رقم الإعلان"
+                  >
+                    <FiCopy />
+                    {copyStatus['announcement_number'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           
@@ -487,22 +572,68 @@ const AllInterests = () => {
           <div className="form-row">
             <div className="form-group">
               <label>المنطقة</label>
-              <div className="form-value">{property.region || 'غير متوفر'}</div>
+              <div className="detail-value-with-copy">
+                <span>{property.region || 'غير متوفر'}</span>
+                {property.region && (
+                  <button 
+                    className={`copy-btn ${copyStatus['property_region'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(property.region, 'property_region')}
+                    title="نسخ المنطقة"
+                  >
+                    <FiCopy />
+                    {copyStatus['property_region'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="form-group">
               <label>المدينة</label>
-              <div className="form-value">{property.city || 'غير متوفر'}</div>
+              <div className="detail-value-with-copy">
+                <span>{property.city || 'غير متوفر'}</span>
+                {property.city && (
+                  <button 
+                    className={`copy-btn ${copyStatus['property_city'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(property.city, 'property_city')}
+                    title="نسخ المدينة"
+                  >
+                    <FiCopy />
+                    {copyStatus['property_city'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           
           <div className="form-row">
             <div className="form-group">
               <label>المساحة الكلية</label>
-              <div className="form-value">{property.total_area} م²</div>
+              <div className="detail-value-with-copy">
+                <span>{property.total_area} م²</span>
+                <button 
+                  className={`copy-btn ${copyStatus['property_area'] ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(`${property.total_area} م²`, 'property_area')}
+                  title="نسخ المساحة الكلية"
+                >
+                  <FiCopy />
+                  {copyStatus['property_area'] && <span className="copy-tooltip">تم النسخ!</span>}
+                </button>
+              </div>
             </div>
             <div className="form-group">
               <label>الإحداثيات</label>
-              <div className="form-value">{property.geo_location_text || 'غير متوفر'}</div>
+              <div className="detail-value-with-copy">
+                <span>{property.geo_location_text || 'غير متوفر'}</span>
+                {property.geo_location_text && (
+                  <button 
+                    className={`copy-btn ${copyStatus['geo_location'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(property.geo_location_text, 'geo_location')}
+                    title="نسخ الإحداثيات"
+                  >
+                    <FiCopy />
+                    {copyStatus['geo_location'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -513,13 +644,33 @@ const AllInterests = () => {
             {property.price_per_sqm && (
               <div className="form-group">
                 <label>سعر المتر</label>
-                <div className="form-value">{property.price_per_sqm} ريال/م²</div>
+                <div className="detail-value-with-copy">
+                  <span>{property.price_per_sqm} ريال/م²</span>
+                  <button 
+                    className={`copy-btn ${copyStatus['price_per_sqm'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(`${property.price_per_sqm} ريال/م²`, 'price_per_sqm')}
+                    title="نسخ سعر المتر"
+                  >
+                    <FiCopy />
+                    {copyStatus['price_per_sqm'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                </div>
               </div>
             )}
             {property.estimated_investment_value && (
               <div className="form-group">
                 <label>القيمة الاستثمارية</label>
-                <div className="form-value">{property.estimated_investment_value} ريال</div>
+                <div className="detail-value-with-copy">
+                  <span>{property.estimated_investment_value} ريال</span>
+                  <button 
+                    className={`copy-btn ${copyStatus['investment_value'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(`${property.estimated_investment_value} ريال`, 'investment_value')}
+                    title="نسخ القيمة الاستثمارية"
+                  >
+                    <FiCopy />
+                    {copyStatus['investment_value'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -530,12 +681,34 @@ const AllInterests = () => {
           <div className="form-row">
             <div className="form-group">
               <label>رقم الصك</label>
-              <div className="form-value">{property.deed_number || 'غير متوفر'}</div>
+              <div className="detail-value-with-copy">
+                <span>{property.deed_number || 'غير متوفر'}</span>
+                {property.deed_number && (
+                  <button 
+                    className={`copy-btn ${copyStatus['deed_number'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(property.deed_number, 'deed_number')}
+                    title="نسخ رقم الصك"
+                  >
+                    <FiCopy />
+                    {copyStatus['deed_number'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
             {property.agency_number && (
               <div className="form-group">
                 <label>رقم الوكالة</label>
-                <div className="form-value">{property.agency_number}</div>
+                <div className="detail-value-with-copy">
+                  <span>{property.agency_number}</span>
+                  <button 
+                    className={`copy-btn ${copyStatus['agency_number'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(property.agency_number, 'agency_number')}
+                    title="نسخ رقم الوكالة"
+                  >
+                    <FiCopy />
+                    {copyStatus['agency_number'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -545,7 +718,17 @@ const AllInterests = () => {
           <div className="form-section">
             <h4>الوصف</h4>
             <div className="form-group full-width">
-              <div className="form-value description-text">{property.description}</div>
+              <div className="detail-value-with-copy">
+                <span className="description-text">{property.description}</span>
+                <button 
+                  className={`copy-btn ${copyStatus['property_description'] ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(property.description, 'property_description')}
+                  title="نسخ الوصف"
+                >
+                  <FiCopy />
+                  {copyStatus['property_description'] && <span className="copy-tooltip">تم النسخ!</span>}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -557,17 +740,53 @@ const AllInterests = () => {
             <div className="form-row">
               <div className="form-group">
                 <label>اسم المالك</label>
-                <div className="form-value">{property.user.full_name || 'غير متوفر'}</div>
+                <div className="detail-value-with-copy">
+                  <span>{property.user.full_name || 'غير متوفر'}</span>
+                  {property.user.full_name && (
+                    <button 
+                      className={`copy-btn ${copyStatus['owner_name'] ? 'copied' : ''}`}
+                      onClick={() => copyToClipboard(property.user.full_name, 'owner_name')}
+                      title="نسخ اسم المالك"
+                    >
+                      <FiCopy />
+                      {copyStatus['owner_name'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="form-group">
                 <label>البريد الإلكتروني</label>
-                <div className="form-value">{property.user.email || 'غير متوفر'}</div>
+                <div className="detail-value-with-copy">
+                  <span>{property.user.email || 'غير متوفر'}</span>
+                  {property.user.email && (
+                    <button 
+                      className={`copy-btn ${copyStatus['owner_email'] ? 'copied' : ''}`}
+                      onClick={() => copyToClipboard(property.user.email, 'owner_email')}
+                      title="نسخ البريد الإلكتروني"
+                    >
+                      <FiCopy />
+                      {copyStatus['owner_email'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label>رقم الهاتف</label>
-                <div className="form-value">{property.user.phone || 'غير متوفر'}</div>
+                <div className="detail-value-with-copy">
+                  <span>{property.user.phone || 'غير متوفر'}</span>
+                  {property.user.phone && (
+                    <button 
+                      className={`copy-btn ${copyStatus['owner_phone'] ? 'copied' : ''}`}
+                      onClick={() => copyToClipboard(property.user.phone, 'owner_phone')}
+                      title="نسخ رقم الهاتف"
+                    >
+                      <FiCopy />
+                      {copyStatus['owner_phone'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -599,7 +818,17 @@ const AllInterests = () => {
             <FiUser />
             اسم المهتم
           </div>
-          <div className="detail-value">{interest.full_name}</div>
+          <div className="detail-value-with-copy">
+            <span>{interest.full_name}</span>
+            <button 
+              className={`copy-btn ${copyStatus['full_name'] ? 'copied' : ''}`}
+              onClick={() => copyToClipboard(interest.full_name, 'full_name')}
+              title="نسخ الاسم"
+            >
+              <FiCopy />
+              {copyStatus['full_name'] && <span className="copy-tooltip">تم النسخ!</span>}
+            </button>
+          </div>
         </div>
 
         <div className="detail-item">
@@ -607,7 +836,17 @@ const AllInterests = () => {
             <FiMail />
             البريد الإلكتروني
           </div>
-          <div className="detail-value">{interest.email}</div>
+          <div className="detail-value-with-copy">
+            <span>{interest.email}</span>
+            <button 
+              className={`copy-btn ${copyStatus['email'] ? 'copied' : ''}`}
+              onClick={() => copyToClipboard(interest.email, 'email')}
+              title="نسخ البريد الإلكتروني"
+            >
+              <FiCopy />
+              {copyStatus['email'] && <span className="copy-tooltip">تم النسخ!</span>}
+            </button>
+          </div>
         </div>
 
         <div className="detail-item">
@@ -615,7 +854,17 @@ const AllInterests = () => {
             <FiPhone />
             رقم الهاتف
           </div>
-          <div className="detail-value">{interest.phone}</div>
+          <div className="detail-value-with-copy">
+            <span>{interest.phone}</span>
+            <button 
+              className={`copy-btn ${copyStatus['phone'] ? 'copied' : ''}`}
+              onClick={() => copyToClipboard(interest.phone, 'phone')}
+              title="نسخ رقم الهاتف"
+            >
+              <FiCopy />
+              {copyStatus['phone'] && <span className="copy-tooltip">تم النسخ!</span>}
+            </button>
+          </div>
         </div>
 
         <div className="detail-item">
@@ -624,18 +873,32 @@ const AllInterests = () => {
             العقار المهتم به
           </div>
           <div className="detail-value owner-info">
-            <span className="property-badge">
-              {interest.property?.title || 'غير محدد'}
-            </span>
-            {interest.property_id && (
-              <button 
-                className="owner-view-btn"
-                onClick={() => openPropertyModal(interest.property_id)}
-                title="عرض تفاصيل العقار"
-              >
-                <FiEye />
-              </button>
-            )}
+            <div className="detail-value-with-copy">
+              <span className="property-badge">
+                {interest.property?.title || 'غير محدد'}
+              </span>
+              <div className="owner-actions">
+                {interest.property_id && (
+                  <button 
+                    className="owner-view-btn"
+                    onClick={() => openPropertyModal(interest.property_id)}
+                    title="عرض تفاصيل العقار"
+                  >
+                    <FiEye />
+                  </button>
+                )}
+                {interest.property?.title && (
+                  <button 
+                    className={`copy-btn ${copyStatus['property_title'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(interest.property.title, 'property_title')}
+                    title="نسخ اسم العقار"
+                  >
+                    <FiCopy />
+                    {copyStatus['property_title'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -653,7 +916,17 @@ const AllInterests = () => {
             <FiCalendar />
             تاريخ الاهتمام
           </div>
-          <div className="detail-value">{formatDate(interest.created_at)}</div>
+          <div className="detail-value-with-copy">
+            <span>{formatDate(interest.created_at)}</span>
+            <button 
+              className={`copy-btn ${copyStatus['created_at'] ? 'copied' : ''}`}
+              onClick={() => copyToClipboard(formatDate(interest.created_at), 'created_at')}
+              title="نسخ تاريخ الاهتمام"
+            >
+              <FiCopy />
+              {copyStatus['created_at'] && <span className="copy-tooltip">تم النسخ!</span>}
+            </button>
+          </div>
         </div>
 
         <div className="detail-item">
@@ -661,7 +934,17 @@ const AllInterests = () => {
             <FiCalendar />
             آخر تحديث
           </div>
-          <div className="detail-value">{formatDate(interest.updated_at)}</div>
+          <div className="detail-value-with-copy">
+            <span>{formatDate(interest.updated_at)}</span>
+            <button 
+              className={`copy-btn ${copyStatus['updated_at'] ? 'copied' : ''}`}
+              onClick={() => copyToClipboard(formatDate(interest.updated_at), 'updated_at')}
+              title="نسخ تاريخ التحديث"
+            >
+              <FiCopy />
+              {copyStatus['updated_at'] && <span className="copy-tooltip">تم النسخ!</span>}
+            </button>
+          </div>
         </div>
 
         <div className="detail-item full-width">
@@ -669,7 +952,21 @@ const AllInterests = () => {
             <FiMessageSquare />
             رسالة المهتم
           </div>
-          <div className="detail-value message-text">{interest.message || 'لا توجد رسالة'}</div>
+          <div className="detail-value message-text">
+            <div className="detail-value-with-copy">
+              <span>{interest.message || 'لا توجد رسالة'}</span>
+              {interest.message && (
+                <button 
+                  className={`copy-btn ${copyStatus['message'] ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(interest.message, 'message')}
+                  title="نسخ الرسالة"
+                >
+                  <FiCopy />
+                  {copyStatus['message'] && <span className="copy-tooltip">تم النسخ!</span>}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {interest.admin_notes && (
@@ -678,7 +975,19 @@ const AllInterests = () => {
               <FiEdit />
               ملاحظات المسؤول
             </div>
-            <div className="detail-value admin-notes">{interest.admin_notes}</div>
+            <div className="detail-value admin-notes">
+              <div className="detail-value-with-copy">
+                <span>{interest.admin_notes}</span>
+                <button 
+                  className={`copy-btn ${copyStatus['admin_notes'] ? 'copied' : ''}`}
+                  onClick={() => copyToClipboard(interest.admin_notes, 'admin_notes')}
+                  title="نسخ ملاحظات المسؤول"
+                >
+                  <FiCopy />
+                  {copyStatus['admin_notes'] && <span className="copy-tooltip">تم النسخ!</span>}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -703,7 +1012,6 @@ const AllInterests = () => {
       </button>
     );
 
-    // أزرار الصفحات
     const showPages = [];
     showPages.push(1);
     
@@ -741,7 +1049,6 @@ const AllInterests = () => {
       }
     });
 
-    // زر الصفحة التالية
     pages.push(
       <button
         key="next"
@@ -775,7 +1082,7 @@ const AllInterests = () => {
     properties: []
   };
 
-  const loading = isLoading || statusMutation.isLoading;
+  const loading = isLoading || isRefreshing || statusMutation.isLoading;
 
   return (
     <div className="pending-users-container">
@@ -808,11 +1115,11 @@ const AllInterests = () => {
             <div className="dashboard-header-actions">
               <button 
                 className="dashboard-refresh-btn" 
-                onClick={() => refetch()}
-                disabled={loading}
+                onClick={handleRefresh}
+                disabled={isRefreshing || loading}
               >
-                <FiRefreshCw />
-                تحديث البيانات
+                <FiRefreshCw className={isRefreshing ? 'spinning' : ''} />
+                {isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}
               </button>
             </div>
           </div>

@@ -17,161 +17,335 @@ import {
   FiMessageSquare,
   FiEdit,
   FiRefreshCw,
+  FiEye,
   FiNavigation,
   FiTarget,
-  FiLayers
+  FiLayers,
+  FiDollarSign,
+  FiUsers,
+  FiGitPullRequest,
+  FiBriefcase,
+  FiAward,
+  FiInfo
 } from 'react-icons/fi';
-import { useData } from '../../contexts/DataContext';
+import { useQueryClient, useQuery, useMutation } from 'react-query';
+import { useNavigate } from 'react-router-dom';
 import '../../styles/PendingUsers.css';
 
+// مكونات أيقونات إضافية
+const FiGift = ({ className }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-2h14a2 2 0 110 2M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+  </svg>
+);
+
 const LandRequests = () => {
-  const { state, dispatch } = useData();
-  const [localLoading, setLocalLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  
+  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
+  const getInitialFilters = () => {
+    const savedFilters = localStorage.getItem('landRequestsFilters');
+    if (savedFilters) {
+      return JSON.parse(savedFilters);
+    }
+    return {
+      search: '',
+      status: 'all',
+      region: 'all',
+      city: 'all',
+      purpose: 'all',
+      type: 'all',
+      area_min: '',
+      area_max: '',
+      date_from: '',
+      date_to: '',
+      sort_by: 'created_at',
+      sort_order: 'desc'
+    };
+  };
+  
+  const [filters, setFilters] = useState(getInitialFilters());
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const savedPage = localStorage.getItem('landRequestsCurrentPage');
+    return savedPage ? parseInt(savedPage) : 1;
+  });
   const [statusModal, setStatusModal] = useState({
     show: false,
     requestId: null,
-    newStatus: ''
+    newStatus: '',
+    adminNote: ''
   });
-  
-  // استخدام البيانات من Context
-  const landRequestsData = state.landRequests.data || [];
-  const pagination = state.landRequests.pagination || {
-    current_page: 1,
-    last_page: 1,
-    per_page: 10,
-    total: 0,
-    from: 0,
-    to: 0
-  };
-  const filters = state.landRequests.filters;
-  const filtersData = state.landRequests.filtersData;
 
+  // حالة المودال لعرض تفاصيل المستخدم
+  const [userModal, setUserModal] = useState({
+    show: false,
+    user: null,
+    loading: false
+  });
+
+  // حالة المودال لعرض العروض
+  const [offersModal, setOffersModal] = useState({
+    show: false,
+    offers: [],
+    loading: false
+  });
+
+  // حفظ الفلاتر والصفحة في localStorage عند تغييرها
   useEffect(() => {
-    // إذا البيانات غير موجودة أو قديمة، قم بجلبها
-    if (!state.landRequests.data || state.landRequests.data.length === 0 || isLandRequestsDataStale()) {
-      fetchLandRequests();
+    localStorage.setItem('landRequestsFilters', JSON.stringify(filters));
+  }, [filters]);
+  
+  useEffect(() => {
+    localStorage.setItem('landRequestsCurrentPage', currentPage.toString());
+  }, [currentPage]);
+  
+  // استعادة الطلب المحدد من localStorage إذا كان موجوداً
+  useEffect(() => {
+    const savedSelectedRequest = localStorage.getItem('selectedLandRequest');
+    if (savedSelectedRequest) {
+      setSelectedRequest(JSON.parse(savedSelectedRequest));
     }
-  }, [filters, pagination.current_page]);
-
-  const isLandRequestsDataStale = () => {
-    if (!state.landRequests.lastUpdated) return true;
-    const now = new Date();
-    const lastUpdate = new Date(state.landRequests.lastUpdated);
-    const diffInMinutes = (now - lastUpdate) / (1000 * 60);
-    return diffInMinutes > 10; // تحديث إذا مرت أكثر من 10 دقائق
-  };
+  }, []);
+  
+  // حفظ الطلب المحدد في localStorage
+  useEffect(() => {
+    if (selectedRequest) {
+      localStorage.setItem('selectedLandRequest', JSON.stringify(selectedRequest));
+    } else {
+      localStorage.removeItem('selectedLandRequest');
+    }
+  }, [selectedRequest]);
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
     
-    // إضافة معاملات البحث والتصفية فقط إذا كانت محددة
     if (filters.search.trim()) params.append('search', filters.search.trim());
+    if (filters.status !== 'all') params.append('status', filters.status);
     if (filters.region !== 'all') params.append('region', filters.region);
     if (filters.city !== 'all') params.append('city', filters.city);
     if (filters.purpose !== 'all') params.append('purpose', filters.purpose);
     if (filters.type !== 'all') params.append('type', filters.type);
-    if (filters.status !== 'all') params.append('status', filters.status);
     if (filters.area_min) params.append('area_min', filters.area_min);
     if (filters.area_max) params.append('area_max', filters.area_max);
-    if (filters.start_date) params.append('start_date', filters.start_date);
-    if (filters.end_date) params.append('end_date', filters.end_date);
+    if (filters.date_from) params.append('start_date', filters.date_from);
+    if (filters.date_to) params.append('end_date', filters.date_to);
     if (filters.sort_by) params.append('sort_by', filters.sort_by);
     if (filters.sort_order) params.append('sort_order', filters.sort_order);
     
-    // إضافة معاملات الباجينيشن
-    params.append('page', pagination.current_page);
-    params.append('per_page', filters.per_page);
+    params.append('page', currentPage);
+    params.append('per_page', 10);
     
-    const queryString = params.toString();
-    return queryString ? `?${queryString}` : '';
+    return params.toString();
   };
 
-  const fetchLandRequests = async (forceRefresh = false) => {
-    // إذا البيانات موجودة وليست forced refresh، لا تعيد الجلب
-    if (state.landRequests.data && state.landRequests.data.length > 0 && !forceRefresh && !isLandRequestsDataStale()) {
+  // استخدام React Query لجلب بيانات طلبات الأراضي
+  const fetchLandRequests = async () => {
+    const token = localStorage.getItem('access_token');
+      
+    if (!token) {
+      navigate('/login');
+      throw new Error('لم يتم العثور على رمز الدخول');
+    }
+
+    const queryString = buildQueryString();
+    const url = `https://shahin-tqay.onrender.com/api/admin/land-requests?${queryString}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`فشل في جلب طلبات الأراضي: ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return {
+        data: result.data,
+        pagination: result.meta || {
+          current_page: currentPage,
+          last_page: 1,
+          per_page: 10,
+          total: result.data.length,
+          from: 1,
+          to: result.data.length
+        },
+        filtersData: {
+          regions: result.meta?.filters?.regions || [],
+          cities: result.meta?.filters?.cities || [],
+          purposes: ['sale', 'rent', 'investment'],
+          types: ['residential', 'commercial', 'industrial', 'agricultural'],
+          statuses: ['open', 'in_progress', 'completed', 'cancelled']
+        }
+      };
+    } else {
+      throw new Error(result.message || 'هيكل البيانات غير متوقع');
+    }
+  };
+
+  const { 
+    data: landRequestsData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery(
+    ['landRequests', filters, currentPage],
+    fetchLandRequests,
+    {
+      staleTime: 5 * 60 * 1000, // 5 دقائق
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error('خطأ في جلب طلبات الأراضي:', error);
+        alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
+      }
+    }
+  );
+
+  // دالة لجلب تفاصيل المستخدم
+  const fetchUserDetails = async (userId) => {
+    const token = localStorage.getItem('access_token');
+      
+    if (!token) {
+      navigate('/login');
+      throw new Error('لم يتم العثور على رمز الدخول');
+    }
+
+    const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/users/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      navigate('/login');
+      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`فشل في جلب تفاصيل المستخدم: ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data;
+    } else {
+      throw new Error(result.message || 'هيكل البيانات غير متوقع');
+    }
+  };
+
+  // فتح مودال تفاصيل المستخدم
+  const openUserModal = async (userId) => {
+    if (!userId) {
+      alert('لا يوجد معرف للمستخدم');
       return;
     }
 
+    setUserModal({
+      show: true,
+      user: null,
+      loading: true
+    });
+
     try {
-      dispatch({ type: 'SET_LAND_REQUESTS_LOADING', payload: true });
-      setLocalLoading(true);
-      
+      const userDetails = await fetchUserDetails(userId);
+      setUserModal({
+        show: true,
+        user: userDetails,
+        loading: false
+      });
+    } catch (error) {
+      console.error('خطأ في جلب تفاصيل المستخدم:', error);
+      alert('حدث خطأ أثناء جلب تفاصيل المستخدم: ' + error.message);
+      setUserModal({
+        show: false,
+        user: null,
+        loading: false
+      });
+    }
+  };
+
+  // إغلاق مودال تفاصيل المستخدم
+  const closeUserModal = () => {
+    setUserModal({
+      show: false,
+      user: null,
+      loading: false
+    });
+  };
+
+  // فتح مودال عرض العروض
+  const openOffersModal = (offers) => {
+    setOffersModal({
+      show: true,
+      offers: offers || [],
+      loading: false
+    });
+  };
+
+  // إغلاق مودال العروض
+  const closeOffersModal = () => {
+    setOffersModal({
+      show: false,
+      offers: [],
+      loading: false
+    });
+  };
+
+  // استخدام useMutation لتحديث حالة طلب الأرض
+  const statusMutation = useMutation(
+    async ({ requestId, status, adminNote }) => {
       const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        alert('لم يتم العثور على رمز الدخول. يرجى تسجيل الدخول مرة أخرى.');
-        window.location.href = '/login';
-        return;
-      }
-
-      const queryString = buildQueryString();
-      const url = `https://shahin-tqay.onrender.com/api/admin/land-requests${queryString}`;
-
-      console.log('جلب البيانات من:', url);
-
-      const response = await fetch(url, {
-        method: 'GET',
+      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/land-requests/${requestId}/status`, {
+        method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          status: status,
+          admin_note: adminNote.trim() || undefined
+        })
       });
 
-      if (response.status === 401) {
-        alert('انتهت جلسة الدخول أو التوكن غير صالح');
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'فشل في تحديث حالة الطلب');
       }
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('بيانات الاستجابة:', result);
-        
-        if (result.success && result.data) {
-          dispatch({
-            type: 'SET_LAND_REQUESTS_DATA',
-            payload: {
-              data: result.data,
-              pagination: result.meta || {
-                current_page: 1,
-                last_page: 1,
-                per_page: 10,
-                total: result.data.length,
-                from: 1,
-                to: result.data.length
-              },
-              filters: filters,
-              filtersData: {
-                regions: result.meta?.filters?.regions || [],
-                cities: result.meta?.filters?.cities || [],
-                purposes: result.meta?.filters?.purposes || [],
-                types: result.meta?.filters?.types || [],
-                statuses: result.meta?.filters?.statuses || []
-              }
-            }
-          });
-        } else {
-          console.error('هيكل البيانات غير متوقع:', result);
-          dispatch({ type: 'CLEAR_LAND_REQUESTS_DATA' });
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('فشل في جلب طلبات الأراضي:', errorText);
-        alert('فشل في جلب بيانات طلبات الأراضي');
-        dispatch({ type: 'CLEAR_LAND_REQUESTS_DATA' });
+      return await response.json();
+    },
+    {
+      onSuccess: () => {
+        alert('تم تحديث حالة الطلب بنجاح');
+        refetch(); // إعادة تحميل البيانات
+        setSelectedRequest(null);
+        closeStatusModal();
+        queryClient.invalidateQueries(['landRequests']);
+      },
+      onError: (error) => {
+        alert(error.message);
       }
-    } catch (error) {
-      console.error('خطأ في جلب طلبات الأراضي:', error);
-      alert('حدث خطأ أثناء جلب البيانات: ' + error.message);
-      dispatch({ type: 'CLEAR_LAND_REQUESTS_DATA' });
-    } finally {
-      dispatch({ type: 'SET_LAND_REQUESTS_LOADING', payload: false });
-      setLocalLoading(false);
     }
-  };
+  );
 
   const handleFilterChange = (key, value) => {
     const newFilters = {
@@ -179,46 +353,45 @@ const LandRequests = () => {
       [key]: value
     };
     
-    dispatch({
-      type: 'UPDATE_LAND_REQUESTS_FILTERS',
-      payload: newFilters
-    });
+    setFilters(newFilters);
+    
+    // إعادة ضبط الصفحة عند تغيير الفلاتر
+    if (key !== 'page' && currentPage !== 1) {
+      setCurrentPage(1);
+    }
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchLandRequests();
+    refetch();
   };
 
   const clearFilters = () => {
     const defaultFilters = {
       search: '',
+      status: 'all',
       region: 'all',
       city: 'all',
       purpose: 'all',
       type: 'all',
-      status: 'all',
       area_min: '',
       area_max: '',
-      start_date: '',
-      end_date: '',
+      date_from: '',
+      date_to: '',
       sort_by: 'created_at',
-      sort_order: 'desc',
-      page: 1,
-      per_page: 10
+      sort_order: 'desc'
     };
     
-    dispatch({
-      type: 'UPDATE_LAND_REQUESTS_FILTERS',
-      payload: defaultFilters
-    });
+    setFilters(defaultFilters);
+    setCurrentPage(1);
   };
 
   const openStatusModal = (requestId, newStatus) => {
     setStatusModal({
       show: true,
       requestId,
-      newStatus
+      newStatus,
+      adminNote: ''
     });
   };
 
@@ -226,7 +399,8 @@ const LandRequests = () => {
     setStatusModal({
       show: false,
       requestId: null,
-      newStatus: ''
+      newStatus: '',
+      adminNote: ''
     });
   };
 
@@ -236,51 +410,20 @@ const LandRequests = () => {
       return;
     }
 
-    setActionLoading(true);
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/land-requests/${statusModal.requestId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: statusModal.newStatus
-        })
-      });
-
-      if (response.ok) {
-        // تحديث الحالة في الـ context مباشرة
-        dispatch({
-          type: 'UPDATE_LAND_REQUESTS_STATUS',
-          payload: {
-            requestId: statusModal.requestId,
-            status: statusModal.newStatus
-          }
-        });
-        
-        setSelectedRequest(null);
-        closeStatusModal();
-        alert('تم تحديث حالة الطلب بنجاح');
-      } else {
-        const errorData = await response.json();
-        alert(errorData.message || 'فشل في تحديث حالة الطلب');
-      }
-    } catch (error) {
-      console.error('Error updating request status:', error);
-      alert('حدث خطأ أثناء تحديث حالة الطلب');
-    } finally {
-      setActionLoading(false);
-    }
+    statusMutation.mutate({
+      requestId: statusModal.requestId,
+      status: statusModal.newStatus,
+      adminNote: statusModal.adminNote
+    });
   };
 
-  // دالة لتحديث الباجينيشن
+  // تحديث الصفحة الحالية
   const updatePagination = (newPage) => {
-    handleFilterChange('page', newPage);
+    setCurrentPage(newPage);
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
     return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
@@ -303,6 +446,36 @@ const LandRequests = () => {
         return <span className="status-badge rejected">ملغي</span>;
       default:
         return <span className="status-badge unknown">{status}</span>;
+    }
+  };
+
+  const getUserStatusBadge = (status) => {
+    switch (status) {
+      case 'active':
+        return <span className="status-badge approved">نشط</span>;
+      case 'pending':
+        return <span className="status-badge pending">قيد المراجعة</span>;
+      case 'suspended':
+        return <span className="status-badge rejected">موقوف</span>;
+      default:
+        return <span className="status-badge unknown">{status}</span>;
+    }
+  };
+
+  const getUserTypeBadge = (userType) => {
+    switch (userType) {
+      case 'مالك':
+        return <span className="type-badge owner">مالك</span>;
+      case 'وكيل شرعي':
+        return <span className="type-badge legal-agent">وكيل شرعي</span>;
+      case 'شركة':
+        return <span className="type-badge company">شركة</span>;
+      case 'وسيط عقاري':
+        return <span className="type-badge broker">وسيط عقاري</span>;
+      case 'شركة مزاد':
+        return <span className="type-badge auction">شركة مزاد</span>;
+      default:
+        return <span className="type-badge unknown">{userType}</span>;
     }
   };
 
@@ -364,15 +537,365 @@ const LandRequests = () => {
     }
   };
 
+  const getStatusMessagePlaceholder = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'اكتب رسالة للمستخدم توضح إتمام الطلب...';
+      case 'in_progress':
+        return 'اكتب ملاحظات حول عملية المعالجة...';
+      case 'cancelled':
+        return 'اكتب سبب إلغاء الطلب...';
+      case 'open':
+        return 'اكتب ملاحظات إضافية حول الطلب...';
+      default:
+        return 'اكتب ملاحظات إضافية...';
+    }
+  };
+
+  // دالة لترجمة أسماء الحقول في تفاصيل المستخدم
+  const getUserDetailFieldLabel = (fieldName) => {
+    const labels = {
+      'id': 'رقم المعرف',
+      'user_id': 'رقم المستخدم',
+      'national_id': 'رقم الهوية',
+      'commercial_registration': 'السجل التجاري',
+      'license_number': 'رقم الترخيص',
+      'agency_number': 'رقم الوكالة',
+      'deed_number': 'رقم الصك',
+      'bank_account': 'الحساب البنكي',
+      'address': 'العنوان',
+      'city': 'المدينة',
+      'region': 'المنطقة',
+      'created_at': 'تاريخ الإنشاء',
+      'updated_at': 'تاريخ التحديث'
+    };
+    
+    return labels[fieldName] || fieldName;
+  };
+
+  // دالة لعرض تفاصيل المستخدم في المودال بناءً على الهيكل الجديد
+  const renderUserDetails = (user) => {
+    if (!user) return null;
+
+    // تحديد نوع المستخدم والتفاصيل المرتبطة به
+    const getUserTypeDetails = () => {
+      const userType = user.user_type;
+      const details = user.details || {};
+      
+      switch (userType) {
+        case 'مالك':
+          return {
+            icon: <FiUser className="detail-icon" />,
+            title: 'معلومات المالك',
+            data: details.land_owner
+          };
+        case 'وكيل شرعي':
+          return {
+            icon: <FiBriefcase className="detail-icon" />,
+            title: 'معلومات الوكيل الشرعي',
+            data: details.legal_agent
+          };
+        case 'شركة':
+          return {
+            icon: <FiAward className="detail-icon" />,
+            title: 'معلومات الشركة',
+            data: details.business_entity
+          };
+        case 'وسيط عقاري':
+          return {
+            icon: <FiAward className="detail-icon" />,
+            title: 'معلومات الوسيط العقاري',
+            data: details.real_estate_broker
+          };
+        case 'شركة مزاد':
+          return {
+            icon: <FiGift className="detail-icon" />,
+            title: 'معلومات شركة المزاد',
+            data: details.auction_company
+          };
+        default:
+          return {
+            icon: <FiUser className="detail-icon" />,
+            title: 'معلومات المستخدم',
+            data: null
+          };
+      }
+    };
+
+    const userTypeDetails = getUserTypeDetails();
+
+    return (
+      <div className="user-details-form">
+        <div className="form-section">
+          <h4>المعلومات الأساسية</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>الاسم الكامل</label>
+              <div className="form-value">{user.full_name || 'غير متوفر'}</div>
+            </div>
+            <div className="form-group">
+              <label>البريد الإلكتروني</label>
+              <div className="form-value">{user.email || 'غير متوفر'}</div>
+            </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>رقم الهاتف</label>
+              <div className="form-value">{user.phone || 'غير متوفر'}</div>
+            </div>
+            <div className="form-group">
+              <label>حالة المستخدم</label>
+              <div className="form-value">
+                {getUserStatusBadge(user.status)}
+              </div>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>نوع المستخدم</label>
+              <div className="form-value">
+                {getUserTypeBadge(user.user_type)}
+              </div>
+            </div>
+            <div className="form-group">
+              <label>رقم المستخدم</label>
+              <div className="form-value">#{user.id}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4>معلومات التسجيل</h4>
+          <div className="form-row">
+            <div className="form-group">
+              <label>تاريخ التسجيل</label>
+              <div className="form-value">{formatDate(user.created_at)}</div>
+            </div>
+            <div className="form-group">
+              <label>آخر تحديث</label>
+              <div className="form-value">{formatDate(user.updated_at)}</div>
+            </div>
+          </div>
+        </div>
+
+        {user.admin_message && (
+          <div className="form-section">
+            <h4>رسالة المسؤول</h4>
+            <div className="form-group full-width">
+              <div className="form-value admin-message">{user.admin_message}</div>
+            </div>
+          </div>
+        )}
+
+        {/* عرض التفاصيل الخاصة بنوع المستخدم */}
+        {userTypeDetails.data && (
+          <div className="form-section">
+            <h4>
+              {userTypeDetails.icon}
+              {userTypeDetails.title}
+            </h4>
+            {Object.entries(userTypeDetails.data).map(([key, value]) => (
+              value && (
+                <div key={key} className="form-row">
+                  <div className="form-group">
+                    <label>{getUserDetailFieldLabel(key)}</label>
+                    <div className="form-value">{value}</div>
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+        )}
+
+        {/* إذا لم تكن هناك تفاصيل إضافية */}
+        {!userTypeDetails.data && user.user_type && (
+          <div className="form-section">
+            <h4>
+              {userTypeDetails.icon}
+              {userTypeDetails.title}
+            </h4>
+            <div className="no-details">
+              <FiInfo className="no-details-icon" />
+              <p>لا توجد تفاصيل إضافية متاحة</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // دالة لعرض العروض في المودال
+  const renderOffers = (offers) => {
+    if (!offers || offers.length === 0) {
+      return (
+        <div className="empty-state">
+          <FiUsers className="empty-icon" />
+          <p>لا توجد عروض لهذا الطلب</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="offers-list">
+        {offers.map((offer, index) => (
+          <div key={offer.offer_id || index} className="offer-item">
+            <div className="offer-header">
+              <div className="offer-user">
+                <FiUser className="offer-user-icon" />
+                <span className="offer-user-name">{offer.offer_user?.name || 'مستخدم غير معروف'}</span>
+              </div>
+              <span className="offer-date">{formatDate(offer.created_at)}</span>
+            </div>
+            <div className="offer-message">
+              <FiMessageSquare className="offer-message-icon" />
+              <p>{offer.message}</p>
+            </div>
+            <div className="offer-contact">
+              <span className="offer-email">
+                <FiMail /> {offer.offer_user?.email || 'غير متوفر'}
+              </span>
+              <span className="offer-phone">
+                <FiPhone /> {offer.offer_user?.phone || 'غير متوفر'}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderRequestDetails = (request) => {
+    return (
+      <div className="details-content">
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiUser />
+            اسم مقدم الطلب
+          </div>
+          <div className="detail-value owner-info">
+            <span>{request.user?.name || request.user?.full_name || 'غير معروف'}</span>
+            {request.user?.id && (
+              <button 
+                className="owner-view-btn"
+                onClick={() => openUserModal(request.user.id)}
+                title="عرض تفاصيل المستخدم"
+              >
+                <FiEye />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiMail />
+            البريد الإلكتروني
+          </div>
+          <div className="detail-value">{request.user?.email || 'غير متوفر'}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiPhone />
+            رقم الهاتف
+          </div>
+          <div className="detail-value">{request.user?.phone || 'غير متوفر'}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiNavigation />
+            المنطقة
+          </div>
+          <div className="detail-value">{request.region}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiHome />
+            المدينة
+          </div>
+          <div className="detail-value">{request.city}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiTarget />
+            الغرض
+          </div>
+          <div className="detail-value">{getPurposeText(request.purpose)}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiLayers />
+            النوع
+          </div>
+          <div className="detail-value">{getTypeText(request.type)}</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            المساحة
+          </div>
+          <div className="detail-value">{request.area} م²</div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            عدد العروض
+          </div>
+          <div className="detail-value owner-info">
+            <span>{request.offers?.length || 0} عرض</span>
+            {request.offers && request.offers.length > 0 && (
+              <button 
+                className="owner-view-btn"
+                onClick={() => openOffersModal(request.offers)}
+                title="عرض العروض"
+              >
+                <FiGitPullRequest />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            الحالة
+          </div>
+          <div className="detail-value">
+            {getStatusBadge(request.status)}
+          </div>
+        </div>
+
+        <div className="detail-item">
+          <div className="detail-label">
+            <FiCalendar />
+            تاريخ الطلب
+          </div>
+          <div className="detail-value">{formatDate(request.created_at)}</div>
+        </div>
+
+        <div className="detail-item full-width">
+          <div className="detail-label">
+            <FiMessageSquare />
+            الوصف
+          </div>
+          <div className="detail-value message-text">{request.description || 'لا يوجد وصف'}</div>
+        </div>
+      </div>
+    );
+  };
+
   // إنشاء أزرار الباجينيشن
   const renderPagination = () => {
-    if (pagination.last_page <= 1) return null;
+    if (!landRequestsData || !landRequestsData.pagination || landRequestsData.pagination.last_page <= 1) return null;
 
     const pages = [];
-    const currentPage = pagination.current_page;
-    const lastPage = pagination.last_page;
+    const pagination = landRequestsData.pagination;
     
-    // زر الصفحة السابقة
     pages.push(
       <button
         key="prev"
@@ -386,31 +909,24 @@ const LandRequests = () => {
 
     // أزرار الصفحات
     const showPages = [];
-    
-    // دائما نعرض الصفحة الأولى
     showPages.push(1);
     
-    // نقاط إذا كانت الصفحة الحالية بعيدة عن البداية
     if (currentPage > 3) {
       showPages.push('ellipsis-start');
     }
     
-    // الصفحات حول الصفحة الحالية
-    for (let i = Math.max(2, currentPage - 1); i <= Math.min(lastPage - 1, currentPage + 1); i++) {
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(pagination.last_page - 1, currentPage + 1); i++) {
       showPages.push(i);
     }
     
-    // نقاط إذا كانت الصفحة الحالية بعيدة عن النهاية
-    if (currentPage < lastPage - 2) {
+    if (currentPage < pagination.last_page - 2) {
       showPages.push('ellipsis-end');
     }
     
-    // دائما نعرض الصفحة الأخيرة إذا كانت أكثر من 1
-    if (lastPage > 1) {
-      showPages.push(lastPage);
+    if (pagination.last_page > 1) {
+      showPages.push(pagination.last_page);
     }
     
-    // إزالة التكرارات
     const uniquePages = [...new Set(showPages)];
     
     uniquePages.forEach(page => {
@@ -433,9 +949,9 @@ const LandRequests = () => {
     pages.push(
       <button
         key="next"
-        className={`pagination-btn ${currentPage === lastPage ? 'disabled' : ''}`}
-        onClick={() => currentPage < lastPage && updatePagination(currentPage + 1)}
-        disabled={currentPage === lastPage}
+        className={`pagination-btn ${currentPage === pagination.last_page ? 'disabled' : ''}`}
+        onClick={() => currentPage < pagination.last_page && updatePagination(currentPage + 1)}
+        disabled={currentPage === pagination.last_page}
       >
         <FiChevronLeft />
       </button>
@@ -445,18 +961,29 @@ const LandRequests = () => {
   };
 
   // التحقق إذا كان هناك أي فلتر نشط
-  const hasActiveFilters = filters.search || 
-    filters.region !== 'all' || 
-    filters.city !== 'all' || 
-    filters.purpose !== 'all' || 
-    filters.type !== 'all' || 
-    filters.status !== 'all' || 
-    filters.area_min || 
-    filters.area_max || 
-    filters.start_date || 
-    filters.end_date;
+  const hasActiveFilters = filters.search || filters.status !== 'all' || filters.region !== 'all' || 
+                          filters.city !== 'all' || filters.purpose !== 'all' || filters.type !== 'all' || 
+                          filters.area_min || filters.area_max || filters.date_from || filters.date_to;
 
-  const loading = state.landRequests.isLoading || localLoading;
+  // استخراج البيانات من نتيجة الاستعلام
+  const requests = landRequestsData?.data || [];
+  const pagination = landRequestsData?.pagination || {
+    current_page: currentPage,
+    last_page: 1,
+    per_page: 10,
+    total: 0,
+    from: 0,
+    to: 0
+  };
+  const filtersData = landRequestsData?.filtersData || {
+    regions: [],
+    cities: [],
+    purposes: ['sale', 'rent', 'investment'],
+    types: ['residential', 'commercial', 'industrial', 'agricultural'],
+    statuses: ['open', 'in_progress', 'completed', 'cancelled']
+  };
+
+  const loading = isLoading || statusMutation.isLoading;
 
   return (
     <div className="pending-users-container">
@@ -466,16 +993,6 @@ const LandRequests = () => {
           إدارة طلبات الأراضي
         </h1>
         <p>عرض وإدارة جميع طلبات الأراضي - العدد الإجمالي: {pagination.total}</p>
-        <div className="dashboard-header-actions">
-          <button 
-            className="dashboard-refresh-btn" 
-            onClick={() => fetchLandRequests(true)}
-            disabled={loading}
-          >
-            <FiRefreshCw />
-            تحديث البيانات
-          </button>
-        </div>
       </div>
 
       {/* شريط البحث والتصفية */}
@@ -504,6 +1021,16 @@ const LandRequests = () => {
             <button type="submit" className="search-btn">
               بحث
             </button>
+            <div className="dashboard-header-actions">
+              <button 
+                className="dashboard-refresh-btn" 
+                onClick={() => refetch()}
+                disabled={loading}
+              >
+                <FiRefreshCw />
+                تحديث البيانات
+              </button>
+            </div>
           </div>
         </form>
 
@@ -544,9 +1071,9 @@ const LandRequests = () => {
               className="filter-select"
             >
               <option value="all">جميع الأغراض</option>
-              <option value="sale">بيع</option>
-              <option value="rent">إيجار</option>
-              <option value="investment">استثمار</option>
+              {filtersData.purposes.map(purpose => (
+                <option key={purpose} value={purpose}>{getPurposeText(purpose)}</option>
+              ))}
             </select>
           </div>
 
@@ -558,10 +1085,9 @@ const LandRequests = () => {
               className="filter-select"
             >
               <option value="all">جميع الأنواع</option>
-              <option value="residential">سكني</option>
-              <option value="commercial">تجاري</option>
-              <option value="industrial">صناعي</option>
-              <option value="agricultural">زراعي</option>
+              {filtersData.types.map(type => (
+                <option key={type} value={type}>{getTypeText(type)}</option>
+              ))}
             </select>
           </div>
 
@@ -573,10 +1099,9 @@ const LandRequests = () => {
               className="filter-select"
             >
               <option value="all">جميع الحالات</option>
-              <option value="open">مفتوح</option>
-              <option value="in_progress">قيد المعالجة</option>
-              <option value="completed">مكتمل</option>
-              <option value="cancelled">ملغي</option>
+              {filtersData.statuses.map(status => (
+                <option key={status} value={status}>{getStatusText(status)}</option>
+              ))}
             </select>
           </div>
 
@@ -606,8 +1131,8 @@ const LandRequests = () => {
             <label>من تاريخ:</label>
             <input
               type="date"
-              value={filters.start_date}
-              onChange={(e) => handleFilterChange('start_date', e.target.value)}
+              value={filters.date_from}
+              onChange={(e) => handleFilterChange('date_from', e.target.value)}
               className="filter-select"
             />
           </div>
@@ -616,8 +1141,8 @@ const LandRequests = () => {
             <label>إلى تاريخ:</label>
             <input
               type="date"
-              value={filters.end_date}
-              onChange={(e) => handleFilterChange('end_date', e.target.value)}
+              value={filters.date_to}
+              onChange={(e) => handleFilterChange('date_to', e.target.value)}
               className="filter-select"
             />
           </div>
@@ -654,7 +1179,7 @@ const LandRequests = () => {
           {/* Land Requests List */}
           <div className="users-list">
             <div className="list-header">
-              <h3>قائمة طلبات الأراضي ({landRequestsData.length})</h3>
+              <h3>قائمة طلبات الأراضي ({requests.length})</h3>
               <span className="page-info">
                 {pagination.total > 0 ? (
                   <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
@@ -665,11 +1190,15 @@ const LandRequests = () => {
             </div>
             
             {loading ? (
-              <div className="list-loading">
-                <div className="loading-spinner"></div>
-                <p>جاري تحميل طلبات الأراضي...</p>
+              <div className="dashboard-loading">
+                <div className="dashboard-loading-dots">
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                  <div className="dashboard-loading-dot"></div>
+                </div>
+                <p className="dashboard-loading-text">جاري تحميل البيانات...</p>
               </div>
-            ) : landRequestsData.length === 0 ? (
+            ) : requests.length === 0 ? (
               <div className="empty-state">
                 <FiMap className="empty-icon" />
                 <p>لا توجد نتائج</p>
@@ -682,7 +1211,7 @@ const LandRequests = () => {
             ) : (
               <>
                 <div className="users-cards">
-                  {landRequestsData.map((request) => (
+                  {requests.map((request) => (
                     <div 
                       key={request.id} 
                       className={`user-card ${selectedRequest?.id === request.id ? 'active' : ''}`}
@@ -692,7 +1221,7 @@ const LandRequests = () => {
                         <FiUser />
                       </div>
                       <div className="user-info">
-                        <h4>{request.user?.full_name}</h4>
+                        <h4>{request.user?.name || request.user?.full_name || 'مستخدم غير معروف'}</h4>
                         <span className="user-type">
                           <FiNavigation />
                           {request.region} - {request.city}
@@ -709,6 +1238,12 @@ const LandRequests = () => {
                           <FiMessageSquare />
                           {request.description?.substring(0, 50)}...
                         </div>
+                        {request.offers && request.offers.length > 0 && (
+                          <div className="user-offers-count">
+                            <FiGitPullRequest />
+                            {request.offers.length} عرض
+                          </div>
+                        )}
                       </div>
                       <div className={`user-status ${getStatusColor(request.status)}`}>
                         {getStatusText(request.status)}
@@ -736,102 +1271,14 @@ const LandRequests = () => {
                   <span className="user-id">ID: {selectedRequest.id}</span>
                 </div>
                 
-                <div className="details-content">
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiUser />
-                      اسم مقدم الطلب
-                    </div>
-                    <div className="detail-value">{selectedRequest.user?.full_name}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiMail />
-                      البريد الإلكتروني
-                    </div>
-                    <div className="detail-value">{selectedRequest.user?.email}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiPhone />
-                      رقم الهاتف
-                    </div>
-                    <div className="detail-value">{selectedRequest.user?.phone}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiNavigation />
-                      المنطقة
-                    </div>
-                    <div className="detail-value">{selectedRequest.region}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiHome />
-                      المدينة
-                    </div>
-                    <div className="detail-value">{selectedRequest.city}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiTarget />
-                      الغرض
-                    </div>
-                    <div className="detail-value">{getPurposeText(selectedRequest.purpose)}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiLayers />
-                      النوع
-                    </div>
-                    <div className="detail-value">{getTypeText(selectedRequest.type)}</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      المساحة
-                    </div>
-                    <div className="detail-value">{selectedRequest.area} م²</div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      الحالة
-                    </div>
-                    <div className="detail-value">
-                      {getStatusBadge(selectedRequest.status)}
-                    </div>
-                  </div>
-
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiCalendar />
-                      تاريخ الطلب
-                    </div>
-                    <div className="detail-value">{formatDate(selectedRequest.created_at)}</div>
-                  </div>
-
-                  <div className="detail-item full-width">
-                    <div className="detail-label">
-                      <FiMessageSquare />
-                      الوصف
-                    </div>
-                    <div className="detail-value message-text">{selectedRequest.description}</div>
-                  </div>
-                </div>
+                {renderRequestDetails(selectedRequest)}
 
                 <div className="details-actions">
                   <div className="status-actions">
                     <button 
                       className="btn btn-success"
                       onClick={() => openStatusModal(selectedRequest.id, 'completed')}
-                      disabled={selectedRequest.status === 'completed'}
+                      disabled={selectedRequest.status === 'completed' || loading}
                     >
                       <FiCheck />
                       إكمال
@@ -840,7 +1287,7 @@ const LandRequests = () => {
                     <button 
                       className="btn btn-warning"
                       onClick={() => openStatusModal(selectedRequest.id, 'in_progress')}
-                      disabled={selectedRequest.status === 'in_progress'}
+                      disabled={selectedRequest.status === 'in_progress' || loading}
                     >
                       <FiFileText />
                       قيد المعالجة
@@ -849,10 +1296,19 @@ const LandRequests = () => {
                     <button 
                       className="btn btn-danger"
                       onClick={() => openStatusModal(selectedRequest.id, 'cancelled')}
-                      disabled={selectedRequest.status === 'cancelled'}
+                      disabled={selectedRequest.status === 'cancelled' || loading}
                     >
                       <FiX />
                       إلغاء
+                    </button>
+
+                    <button 
+                      className="btn btn-info"
+                      onClick={() => openStatusModal(selectedRequest.id, 'open')}
+                      disabled={selectedRequest.status === 'open' || loading}
+                    >
+                      <FiRefreshCw />
+                      إعادة فتح
                     </button>
                   </div>
                 </div>
@@ -894,26 +1350,110 @@ const LandRequests = () => {
               </div>
               
               <div className="form-group">
-                <p className="confirmation-message">
-                  هل أنت متأكد من تغيير حالة هذا الطلب إلى <strong>{getStatusText(statusModal.newStatus)}</strong>؟
-                </p>
+                <label>رسالة / ملاحظات إضافية</label>
+                <textarea
+                  value={statusModal.adminNote}
+                  onChange={(e) => setStatusModal(prev => ({
+                    ...prev,
+                    adminNote: e.target.value
+                  }))}
+                  className="form-input"
+                  rows="4"
+                  placeholder={getStatusMessagePlaceholder(statusModal.newStatus)}
+                />
+                <div className="form-hint">
+                  هذه الرسالة ستظهر للمستخدم كتفسير لتغيير الحالة
+                </div>
               </div>
             </div>
             <div className="modal-actions">
               <button 
                 className="btn btn-secondary"
                 onClick={closeStatusModal}
-                disabled={actionLoading}
+                disabled={loading}
               >
                 إلغاء
               </button>
               <button 
                 className="btn btn-primary"
                 onClick={handleStatusUpdate}
-                disabled={actionLoading}
+                disabled={loading}
               >
                 <FiCheck />
-                {actionLoading ? 'جاري الحفظ...' : 'تأكيد التغيير'}
+                {loading ? 'جاري الحفظ...' : 'تأكيد التغيير'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال تفاصيل المستخدم */}
+      {userModal.show && (
+        <div className="modal-overlay">
+          <div className="modal-content large-modal">
+            <div className="modal-header">
+              <h3>
+                <FiUser />
+                تفاصيل المستخدم
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={closeUserModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              {userModal.loading ? (
+                <div className="dashboard-loading">
+                  <div className="dashboard-loading-dots">
+                    <div className="dashboard-loading-dot"></div>
+                    <div className="dashboard-loading-dot"></div>
+                    <div className="dashboard-loading-dot"></div>
+                  </div>
+                  <p className="dashboard-loading-text">جاري تحميل تفاصيل المستخدم...</p>
+                </div>
+              ) : (
+                renderUserDetails(userModal.user)
+              )}
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-primary"
+                onClick={closeUserModal}
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال عرض العروض */}
+      {offersModal.show && (
+        <div className="modal-overlay">
+          <div className="modal-content large-modal">
+            <div className="modal-header">
+              <h3>
+                <FiGitPullRequest />
+                العروض المقدمة للطلب
+              </h3>
+              <button 
+                className="close-btn"
+                onClick={closeOffersModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              {renderOffers(offersModal.offers)}
+            </div>
+            <div className="modal-actions">
+              <button 
+                className="btn btn-primary"
+                onClick={closeOffersModal}
+              >
+                إغلاق
               </button>
             </div>
           </div>

@@ -1219,3 +1219,78 @@
     justify-content: center;
   }
 }
+/* أنماط نسخ البيانات */
+.detail-value-with-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /* width: 100%; */
+}
+
+.copy-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-btn:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.copy-btn.copied {
+  color: #28a745;
+}
+
+.copy-btn.copied:hover {
+  background-color: #e8f5e8;
+}
+
+.copy-tooltip {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+.copy-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+}
+
+/* تحسين عرض القيم النصية */
+.detail-value-with-copy > span {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* تحسين عرض الرسائل الإدارية */
+.admin-message .detail-value-with-copy {
+  align-items: flex-start;
+}
+
+.admin-message .copy-btn {
+  margin-top: 2px;
+}

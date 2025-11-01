@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiUsers, FiCheck, FiRefreshCw, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiFilter, FiChevronRight, FiChevronLeft, FiSearch, FiSlash, FiEdit } from 'react-icons/fi';
+import { FiUser, FiUsers, FiCheck, FiRefreshCw, FiX, FiMail, FiPhone, FiCalendar, FiFileText, FiHash, FiFilter, FiChevronRight, FiChevronLeft, FiSearch, FiSlash, FiEdit, FiCopy } from 'react-icons/fi';
 import '../../styles/PendingUsers.css';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -32,6 +32,9 @@ const AllUsers = () => {
     return savedPage ? parseInt(savedPage) : 1;
   });
   
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copyStatus, setCopyStatus] = useState({}); // حالة نسخ البيانات
+
   // حالة المودال للرفض
   const [rejectModal, setRejectModal] = useState({
     show: false,
@@ -64,6 +67,51 @@ const AllUsers = () => {
       localStorage.removeItem('selectedUser');
     }
   }, [selectedUser]);
+
+  // دالة نسخ النص إلى الحافظة
+  const copyToClipboard = async (text, fieldName) => {
+    if (!text) return;
+    
+    try {
+      await navigator.clipboard.writeText(text.toString());
+      
+      // تحديث حالة النسخ
+      setCopyStatus(prev => ({
+        ...prev,
+        [fieldName]: true
+      }));
+      
+      // إخفاء رسالة النجاح بعد 2 ثانية
+      setTimeout(() => {
+        setCopyStatus(prev => ({
+          ...prev,
+          [fieldName]: false
+        }));
+      }, 2000);
+      
+    } catch (err) {
+      console.error('فشل في نسخ النص: ', err);
+      // استخدام الطريقة القديمة كبديل
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      setCopyStatus(prev => ({
+        ...prev,
+        [fieldName]: true
+      }));
+      
+      setTimeout(() => {
+        setCopyStatus(prev => ({
+          ...prev,
+          [fieldName]: false
+        }));
+      }, 2000);
+    }
+  };
 
   const buildQueryString = () => {
     const params = new URLSearchParams();
@@ -126,6 +174,22 @@ const AllUsers = () => {
       }
     }
   );
+
+  const handleRefresh = async () => {
+    console.log('بدء تحديث البيانات...');
+    setIsRefreshing(true);
+    setActionLoading(true);
+    
+    try {
+      await refetch();
+    } catch (error) {
+      console.error('خطأ في التحديث:', error);
+      alert('حدث خطأ أثناء تحديث البيانات: ' + error.message);
+    } finally {
+      setIsRefreshing(false);
+      setActionLoading(false);
+    }
+  };
 
   // فتح مودال الرفض
   const openRejectModal = (userId) => {
@@ -226,7 +290,6 @@ const AllUsers = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    // القيام بعملية البحث
     refetch();
   };
 
@@ -308,8 +371,37 @@ const AllUsers = () => {
     }
   };
 
+  // دالة محسنة لاستخراج نوع المستخدم من البيانات
+  const getUserTypeName = (user) => {
+    return user.user_type?.type_name || 'مستخدم عام';
+  };
+
+  // دالة محسنة لاستخراج التفاصيل الإضافية بناءً على نوع المستخدم
+  const getUserDetails = (user) => {
+    if (user.user_type_id === 2 && user.land_owner) {
+      return user.land_owner;
+    }
+    if (user.user_type_id === 3 && user.auction_company) {
+      return user.auction_company;
+    }
+    if (user.user_type_id === 4 && user.real_estate_broker) {
+      return user.real_estate_broker;
+    }
+    if (user.user_type_id === 5 && user.legal_agent) {
+      return user.legal_agent;
+    }
+    if (user.user_type_id === 6 && user.business_entity) {
+      return user.business_entity;
+    }
+    return null;
+  };
+
+  // دالة محسنة لعرض تفاصيل المستخدم مع إضافة أيقونات النسخ
   const renderUserDetails = (user) => {
-    if (!user.details) {
+    const userDetails = getUserDetails(user);
+    const userTypeName = getUserTypeName(user);
+
+    if (!userDetails) {
       return (
         <div className="no-details">
           <FiFileText className="no-details-icon" />
@@ -318,50 +410,8 @@ const AllUsers = () => {
       );
     }
 
-    switch (user.user_type) {
-      case 'وكيل شرعي':
-        return (
-          <div className="additional-details">
-            <h4>تفاصيل الوكيل الشرعي</h4>
-            <div className="detail-item">
-              <div className="detail-label">
-                <FiHash />
-                رقم الوكالة
-              </div>
-              <div className="detail-value">{user.details.agency_number || 'غير محدد'}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">
-                <FiFileText />
-                رقم الهوية
-              </div>
-              <div className="detail-value">{user.details.national_id || 'غير محدد'}</div>
-            </div>
-          </div>
-        );
-
-      case 'وسيط عقاري':
-        return (
-          <div className="additional-details">
-            <h4>تفاصيل الوسيط العقاري</h4>
-            <div className="detail-item">
-              <div className="detail-label">
-                <FiHash />
-                رقم الرخصة
-              </div>
-              <div className="detail-value">{user.details.license_number || 'غير محدد'}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">
-                <FiFileText />
-                رقم الهوية
-              </div>
-              <div className="detail-value">{user.details.national_id || 'غير محدد'}</div>
-            </div>
-          </div>
-        );
-
-      case 'مالك أرض':
+    switch (user.user_type_id) {
+      case 2: // مالك أرض
         return (
           <div className="additional-details">
             <h4>تفاصيل مالك الأرض</h4>
@@ -370,33 +420,24 @@ const AllUsers = () => {
                 <FiFileText />
                 رقم الهوية
               </div>
-              <div className="detail-value">{user.details.national_id || 'غير محدد'}</div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.national_id || 'غير محدد'}</span>
+                {userDetails.national_id && (
+                  <button 
+                    className={`copy-btn ${copyStatus['land_owner_national_id'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.national_id, 'land_owner_national_id')}
+                    title="نسخ رقم الهوية"
+                  >
+                    <FiCopy />
+                    {copyStatus['land_owner_national_id'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
 
-      case 'جهة تجارية':
-        return (
-          <div className="additional-details">
-            <h4>تفاصيل الجهة التجارية</h4>
-            <div className="detail-item">
-              <div className="detail-label">
-                <FiHash />
-                السجل التجاري
-              </div>
-              <div className="detail-value">{user.details.commercial_register || 'غير محدد'}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">
-                <FiFileText />
-                اسم المنشأة
-              </div>
-              <div className="detail-value">{user.details.business_name || 'غير محدد'}</div>
-            </div>
-          </div>
-        );
-
-      case 'شركة مزادات':
+      case 3: // شركة مزادات
         return (
           <div className="additional-details">
             <h4>تفاصيل شركة المزادات</h4>
@@ -405,21 +446,192 @@ const AllUsers = () => {
                 <FiHash />
                 السجل التجاري
               </div>
-              <div className="detail-value">{user.details.commercial_register || 'غير محدد'}</div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.commercial_register || 'غير محدد'}</span>
+                {userDetails.commercial_register && (
+                  <button 
+                    className={`copy-btn ${copyStatus['auction_commercial_register'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.commercial_register, 'auction_commercial_register')}
+                    title="نسخ السجل التجاري"
+                  >
+                    <FiCopy />
+                    {copyStatus['auction_commercial_register'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="detail-item">
               <div className="detail-label">
                 <FiFileText />
                 اسم المزاد
               </div>
-              <div className="detail-value">{user.details.auction_name || 'غير محدد'}</div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.auction_name || 'غير محدد'}</span>
+                {userDetails.auction_name && (
+                  <button 
+                    className={`copy-btn ${copyStatus['auction_name'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.auction_name, 'auction_name')}
+                    title="نسخ اسم المزاد"
+                  >
+                    <FiCopy />
+                    {copyStatus['auction_name'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="detail-item">
               <div className="detail-label">
                 <FiHash />
                 رقم الرخصة
               </div>
-              <div className="detail-value">{user.details.license_number || 'غير محدد'}</div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.license_number || 'غير محدد'}</span>
+                {userDetails.license_number && (
+                  <button 
+                    className={`copy-btn ${copyStatus['auction_license'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.license_number, 'auction_license')}
+                    title="نسخ رقم الرخصة"
+                  >
+                    <FiCopy />
+                    {copyStatus['auction_license'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 4: // وسيط عقاري
+        return (
+          <div className="additional-details">
+            <h4>تفاصيل الوسيط العقاري</h4>
+            <div className="detail-item">
+              <div className="detail-label">
+                <FiHash />
+                رقم الرخصة
+              </div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.license_number || 'غير محدد'}</span>
+                {userDetails.license_number && (
+                  <button 
+                    className={`copy-btn ${copyStatus['broker_license'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.license_number, 'broker_license')}
+                    title="نسخ رقم الرخصة"
+                  >
+                    <FiCopy />
+                    {copyStatus['broker_license'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-label">
+                <FiFileText />
+                رقم الهوية
+              </div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.national_id || 'غير محدد'}</span>
+                {userDetails.national_id && (
+                  <button 
+                    className={`copy-btn ${copyStatus['broker_national_id'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.national_id, 'broker_national_id')}
+                    title="نسخ رقم الهوية"
+                  >
+                    <FiCopy />
+                    {copyStatus['broker_national_id'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 5: // وكيل شرعي
+        return (
+          <div className="additional-details">
+            <h4>تفاصيل الوكيل الشرعي</h4>
+            <div className="detail-item">
+              <div className="detail-label">
+                <FiHash />
+                رقم الوكالة
+              </div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.agency_number || 'غير محدد'}</span>
+                {userDetails.agency_number && (
+                  <button 
+                    className={`copy-btn ${copyStatus['agent_agency'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.agency_number, 'agent_agency')}
+                    title="نسخ رقم الوكالة"
+                  >
+                    <FiCopy />
+                    {copyStatus['agent_agency'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-label">
+                <FiFileText />
+                رقم الهوية
+              </div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.national_id || 'غير محدد'}</span>
+                {userDetails.national_id && (
+                  <button 
+                    className={`copy-btn ${copyStatus['agent_national_id'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.national_id, 'agent_national_id')}
+                    title="نسخ رقم الهوية"
+                  >
+                    <FiCopy />
+                    {copyStatus['agent_national_id'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 6: // جهة تجارية
+        return (
+          <div className="additional-details">
+            <h4>تفاصيل الجهة التجارية</h4>
+            <div className="detail-item">
+              <div className="detail-label">
+                <FiHash />
+                السجل التجاري
+              </div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.commercial_register || 'غير محدد'}</span>
+                {userDetails.commercial_register && (
+                  <button 
+                    className={`copy-btn ${copyStatus['business_commercial_register'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.commercial_register, 'business_commercial_register')}
+                    title="نسخ السجل التجاري"
+                  >
+                    <FiCopy />
+                    {copyStatus['business_commercial_register'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="detail-item">
+              <div className="detail-label">
+                <FiFileText />
+                اسم المنشأة
+              </div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.business_name || 'غير محدد'}</span>
+                {userDetails.business_name && (
+                  <button 
+                    className={`copy-btn ${copyStatus['business_name'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.business_name, 'business_name')}
+                    title="نسخ اسم المنشأة"
+                  >
+                    <FiCopy />
+                    {copyStatus['business_name'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -433,7 +645,19 @@ const AllUsers = () => {
                 <FiFileText />
                 رقم الهوية
               </div>
-              <div className="detail-value">{user.details.national_id || 'غير محدد'}</div>
+              <div className="detail-value-with-copy">
+                <span>{userDetails.national_id || 'غير محدد'}</span>
+                {userDetails.national_id && (
+                  <button 
+                    className={`copy-btn ${copyStatus['default_national_id'] ? 'copied' : ''}`}
+                    onClick={() => copyToClipboard(userDetails.national_id, 'default_national_id')}
+                    title="نسخ رقم الهوية"
+                  >
+                    <FiCopy />
+                    {copyStatus['default_national_id'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -441,7 +665,7 @@ const AllUsers = () => {
   };
 
   // إنشاء أزرار الباجينيشن
- const renderPagination = () => {
+  const renderPagination = () => {
     if (!usersData || !usersData.pagination || usersData.pagination.last_page <= 1) return null;
 
     const pages = [];
@@ -513,7 +737,7 @@ const AllUsers = () => {
 
   // التحقق إذا كان هناك أي فلتر نشط
   const hasActiveFilters = filters.search || filters.status !== 'all' || filters.user_type_id !== 'all';
-  const loading = isLoading || approveMutation.isLoading || rejectMutation.isLoading;
+  const loading = isLoading || actionLoading || approveMutation.isLoading || rejectMutation.isLoading;
   
   // استخراج البيانات من نتيجة الاستعلام
   const users = usersData?.data || [];
@@ -554,16 +778,15 @@ const AllUsers = () => {
             <button type="submit" className="search-btn">
               بحث
             </button>
-            <div className="dashboard-header-actions">
-              <button 
-                className="dashboard-refresh-btn" 
-                onClick={() => refetch()}
-                disabled={loading}
-              >
-                <FiRefreshCw />
-                تحديث البيانات
-              </button>
-            </div>
+            <button 
+              type="button"
+              className="dashboard-refresh-btn" 
+              onClick={handleRefresh}
+              disabled={isLoading || isRefreshing}
+            >
+              <FiRefreshCw className={isRefreshing ? 'spinning' : ''} />
+              {isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}
+            </button>
           </div>
         </form>
 
@@ -631,7 +854,7 @@ const AllUsers = () => {
           {/* Users List */}
           <div className="users-list">
             <div className="list-header">
-              <h3>قائمة المستخدمين ({users.length})</h3>
+              <h3>قائمة المستخدمين ({pagination.total || users.length})</h3>
               <span className="page-info">
                 {pagination.total > 0 ? (
                   <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
@@ -674,7 +897,7 @@ const AllUsers = () => {
                       </div>
                       <div className="user-info">
                         <h4>{user.full_name}</h4>
-                        <span className="user-type">{user.user_type}</span>
+                        <span className="user-type">{getUserTypeName(user)}</span>
                         <span className="user-date">
                           <FiCalendar />
                           {formatDate(user.created_at)}
@@ -712,7 +935,17 @@ const AllUsers = () => {
                       <FiUser />
                       الاسم الكامل
                     </div>
-                    <div className="detail-value">{selectedUser.full_name}</div>
+                    <div className="detail-value-with-copy">
+                      <span>{selectedUser.full_name}</span>
+                      <button 
+                        className={`copy-btn ${copyStatus['full_name'] ? 'copied' : ''}`}
+                        onClick={() => copyToClipboard(selectedUser.full_name, 'full_name')}
+                        title="نسخ الاسم الكامل"
+                      >
+                        <FiCopy />
+                        {copyStatus['full_name'] && <span className="copy-tooltip">تم النسخ!</span>}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="detail-item">
@@ -720,7 +953,17 @@ const AllUsers = () => {
                       <FiMail />
                       البريد الإلكتروني
                     </div>
-                    <div className="detail-value">{selectedUser.email}</div>
+                    <div className="detail-value-with-copy">
+                      <span>{selectedUser.email}</span>
+                      <button 
+                        className={`copy-btn ${copyStatus['email'] ? 'copied' : ''}`}
+                        onClick={() => copyToClipboard(selectedUser.email, 'email')}
+                        title="نسخ البريد الإلكتروني"
+                      >
+                        <FiCopy />
+                        {copyStatus['email'] && <span className="copy-tooltip">تم النسخ!</span>}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="detail-item">
@@ -728,7 +971,17 @@ const AllUsers = () => {
                       <FiPhone />
                       رقم الهاتف
                     </div>
-                    <div className="detail-value">{selectedUser.phone}</div>
+                    <div className="detail-value-with-copy">
+                      <span>{selectedUser.phone}</span>
+                      <button 
+                        className={`copy-btn ${copyStatus['phone'] ? 'copied' : ''}`}
+                        onClick={() => copyToClipboard(selectedUser.phone, 'phone')}
+                        title="نسخ رقم الهاتف"
+                      >
+                        <FiCopy />
+                        {copyStatus['phone'] && <span className="copy-tooltip">تم النسخ!</span>}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="detail-item">
@@ -736,8 +989,8 @@ const AllUsers = () => {
                       نوع المستخدم
                     </div>
                     <div className="detail-value">
-                      <span className={`user-type-badge ${selectedUser.user_type.replace(/\s+/g, '-')}`}>
-                        {selectedUser.user_type}
+                      <span className={`user-type-badge ${getUserTypeName(selectedUser).replace(/\s+/g, '-')}`}>
+                        {getUserTypeName(selectedUser)}
                       </span>
                     </div>
                   </div>
@@ -747,7 +1000,17 @@ const AllUsers = () => {
                       <FiCalendar />
                       تاريخ التسجيل
                     </div>
-                    <div className="detail-value">{formatDate(selectedUser.created_at)}</div>
+                    <div className="detail-value-with-copy">
+                      <span>{formatDate(selectedUser.created_at)}</span>
+                      <button 
+                        className={`copy-btn ${copyStatus['created_at'] ? 'copied' : ''}`}
+                        onClick={() => copyToClipboard(formatDate(selectedUser.created_at), 'created_at')}
+                        title="نسخ تاريخ التسجيل"
+                      >
+                        <FiCopy />
+                        {copyStatus['created_at'] && <span className="copy-tooltip">تم النسخ!</span>}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="detail-item">
@@ -758,6 +1021,26 @@ const AllUsers = () => {
                       {getStatusBadge(selectedUser.status)}
                     </div>
                   </div>
+
+                  {selectedUser.admin_message && selectedUser.status === 'rejected' && (
+                    <div className="detail-item">
+                      <div className="detail-label">
+                        <FiFileText />
+                        سبب الرفض
+                      </div>
+                      <div className="detail-value-with-copy admin-message">
+                        <span>{selectedUser.admin_message}</span>
+                        <button 
+                          className={`copy-btn ${copyStatus['admin_message'] ? 'copied' : ''}`}
+                          onClick={() => copyToClipboard(selectedUser.admin_message, 'admin_message')}
+                          title="نسخ سبب الرفض"
+                        >
+                          <FiCopy />
+                          {copyStatus['admin_message'] && <span className="copy-tooltip">تم النسخ!</span>}
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Additional Details Based on User Type */}
                   {renderUserDetails(selectedUser)}
