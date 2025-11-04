@@ -26,11 +26,12 @@ import {
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/PendingUsers.css';
 
 const AllInterests = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  
+  // ========== الحالات والمتغيرات ==========
   
   // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
   const getInitialFilters = () => {
@@ -64,7 +65,7 @@ const AllInterests = () => {
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [copyStatus, setCopyStatus] = useState({}); // حالة نسخ البيانات
+  const [copyStatus, setCopyStatus] = useState({});
 
   // حالة المودال لعرض تفاصيل العقار
   const [propertyModal, setPropertyModal] = useState({
@@ -73,6 +74,8 @@ const AllInterests = () => {
     loading: false
   });
 
+  // ========== الدوال الأساسية ==========
+  
   // دالة نسخ النص إلى الحافظة
   const copyToClipboard = async (text, fieldName) => {
     if (!text) return;
@@ -80,13 +83,11 @@ const AllInterests = () => {
     try {
       await navigator.clipboard.writeText(text.toString());
       
-      // تحديث حالة النسخ
       setCopyStatus(prev => ({
         ...prev,
         [fieldName]: true
       }));
       
-      // إخفاء رسالة النجاح بعد 2 ثانية
       setTimeout(() => {
         setCopyStatus(prev => ({
           ...prev,
@@ -156,6 +157,8 @@ const AllInterests = () => {
     }
   }, [selectedInterest]);
 
+  // ========== الاستعلامات والبيانات ==========
+  
   const buildQueryString = () => {
     const params = new URLSearchParams();
     
@@ -282,6 +285,8 @@ const AllInterests = () => {
     }
   };
 
+  // ========== دوال التحكم ==========
+  
   // فتح مودال تفاصيل العقار
   const openPropertyModal = async (propertyId) => {
     if (!propertyId) {
@@ -432,6 +437,8 @@ const AllInterests = () => {
     setCurrentPage(newPage);
   };
 
+  // ========== دوال المساعدة ==========
+  
   const formatDate = (dateString) => {
     if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
@@ -445,17 +452,19 @@ const AllInterests = () => {
   };
 
   const getStatusBadge = (status) => {
+    const baseClasses = "px-3 py-1 rounded-full text-sm font-medium";
+    
     switch (status) {
       case 'قيد المراجعة':
-        return <span className="status-badge pending">قيد المراجعة</span>;
+        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800 border border-yellow-200`}>قيد المراجعة</span>;
       case 'تمت المراجعة':
-        return <span className="status-badge approved">تمت المراجعة</span>;
+        return <span className={`${baseClasses} bg-green-100 text-green-800 border border-green-200`}>تمت المراجعة</span>;
       case 'تم التواصل':
-        return <span className="status-badge contacted">تم التواصل</span>;
+        return <span className={`${baseClasses} bg-blue-100 text-blue-800 border border-blue-200`}>تم التواصل</span>;
       case 'ملغي':
-        return <span className="status-badge rejected">ملغي</span>;
+        return <span className={`${baseClasses} bg-red-100 text-red-800 border border-red-200`}>ملغي</span>;
       default:
-        return <span className="status-badge unknown">{status}</span>;
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800 border border-gray-200`}>{status}</span>;
     }
   };
 
@@ -477,15 +486,15 @@ const AllInterests = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'قيد المراجعة':
-        return 'pending';
+        return 'yellow';
       case 'تمت المراجعة':
-        return 'approved';
+        return 'green';
       case 'تم التواصل':
-        return 'contacted';
+        return 'blue';
       case 'ملغي':
-        return 'rejected';
+        return 'red';
       default:
-        return 'unknown';
+        return 'gray';
     }
   };
 
@@ -504,133 +513,133 @@ const AllInterests = () => {
     }
   };
 
-  // دالة لعرض تفاصيل العقار في المودال مع إضافة نسخ البيانات
+  // ========== دوال العرض ==========
+  
+  // دالة لعرض تفاصيل العقار في المودال
   const renderPropertyDetails = (property) => {
     if (!property) return null;
 
     return (
-      <div className="property-details-form">
-        <div className="form-section">
-          <h4>المعلومات الأساسية</h4>
-          <div className="form-row">
-            <div className="form-group">
-              <label>عنوان العقار</label>
-              <div className="detail-value-with-copy">
-                <span>{property.title || 'غير متوفر'}</span>
+      <div className="space-y-6">
+        {/* المعلومات الأساسية */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">المعلومات الأساسية</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">عنوان العقار</label>
+              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                <span className="text-gray-800">{property.title || 'غير متوفر'}</span>
                 {property.title && (
                   <button 
-                    className={`copy-btn ${copyStatus['property_title'] ? 'copied' : ''}`}
+                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['property_title'] ? 'text-green-600' : 'text-gray-500'}`}
                     onClick={() => copyToClipboard(property.title, 'property_title')}
                     title="نسخ عنوان العقار"
                   >
-                    <FiCopy />
-                    {copyStatus['property_title'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
             </div>
-            <div className="form-group">
-              <label>رقم الإعلان</label>
-              <div className="detail-value-with-copy">
-                <span>{property.announcement_number || 'غير متوفر'}</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">رقم الإعلان</label>
+              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                <span className="text-gray-800">{property.announcement_number || 'غير متوفر'}</span>
                 {property.announcement_number && (
                   <button 
-                    className={`copy-btn ${copyStatus['announcement_number'] ? 'copied' : ''}`}
+                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['announcement_number'] ? 'text-green-600' : 'text-gray-500'}`}
                     onClick={() => copyToClipboard(property.announcement_number, 'announcement_number')}
                     title="نسخ رقم الإعلان"
                   >
-                    <FiCopy />
-                    {copyStatus['announcement_number'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
             </div>
           </div>
           
-          <div className="form-row">
-            <div className="form-group">
-              <label>نوع الأرض</label>
-              <div className="form-value">
-                <span className={`type-badge ${property.land_type === 'سكني' ? 'residential' : property.land_type === 'تجاري' ? 'commercial' : 'agricultural'}`}>
-                  {property.land_type || 'غير محدد'}
-                </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">نوع الأرض</label>
+              <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                property.land_type === 'سكني' ? 'bg-blue-100 text-blue-800' : 
+                property.land_type === 'تجاري' ? 'bg-purple-100 text-purple-800' : 
+                'bg-green-100 text-green-800'
+              }`}>
+                {property.land_type || 'غير محدد'}
               </div>
             </div>
-            <div className="form-group">
-              <label>الغرض</label>
-              <div className="form-value">
-                <span className={`purpose-badge ${property.purpose === 'بيع' ? 'sale' : 'investment'}`}>
-                  {property.purpose || 'غير محدد'}
-                </span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">الغرض</label>
+              <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                property.purpose === 'بيع' ? 'bg-red-100 text-red-800' : 'bg-indigo-100 text-indigo-800'
+              }`}>
+                {property.purpose || 'غير محدد'}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="form-section">
-          <h4>الموقع والمساحة</h4>
-          <div className="form-row">
-            <div className="form-group">
-              <label>المنطقة</label>
-              <div className="detail-value-with-copy">
-                <span>{property.region || 'غير متوفر'}</span>
+        {/* الموقع والمساحة */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">الموقع والمساحة</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">المنطقة</label>
+              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                <span className="text-gray-800">{property.region || 'غير متوفر'}</span>
                 {property.region && (
                   <button 
-                    className={`copy-btn ${copyStatus['property_region'] ? 'copied' : ''}`}
+                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['property_region'] ? 'text-green-600' : 'text-gray-500'}`}
                     onClick={() => copyToClipboard(property.region, 'property_region')}
                     title="نسخ المنطقة"
                   >
-                    <FiCopy />
-                    {copyStatus['property_region'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
             </div>
-            <div className="form-group">
-              <label>المدينة</label>
-              <div className="detail-value-with-copy">
-                <span>{property.city || 'غير متوفر'}</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">المدينة</label>
+              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                <span className="text-gray-800">{property.city || 'غير متوفر'}</span>
                 {property.city && (
                   <button 
-                    className={`copy-btn ${copyStatus['property_city'] ? 'copied' : ''}`}
+                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['property_city'] ? 'text-green-600' : 'text-gray-500'}`}
                     onClick={() => copyToClipboard(property.city, 'property_city')}
                     title="نسخ المدينة"
                   >
-                    <FiCopy />
-                    {copyStatus['property_city'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
             </div>
           </div>
           
-          <div className="form-row">
-            <div className="form-group">
-              <label>المساحة الكلية</label>
-              <div className="detail-value-with-copy">
-                <span>{property.total_area} م²</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">المساحة الكلية</label>
+              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                <span className="text-gray-800">{property.total_area} م²</span>
                 <button 
-                  className={`copy-btn ${copyStatus['property_area'] ? 'copied' : ''}`}
+                  className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['property_area'] ? 'text-green-600' : 'text-gray-500'}`}
                   onClick={() => copyToClipboard(`${property.total_area} م²`, 'property_area')}
                   title="نسخ المساحة الكلية"
                 >
-                  <FiCopy />
-                  {copyStatus['property_area'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  <FiCopy size={16} />
                 </button>
               </div>
             </div>
-            <div className="form-group">
-              <label>الإحداثيات</label>
-              <div className="detail-value-with-copy">
-                <span>{property.geo_location_text || 'غير متوفر'}</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">الإحداثيات</label>
+              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                <span className="text-gray-800">{property.geo_location_text || 'غير متوفر'}</span>
                 {property.geo_location_text && (
                   <button 
-                    className={`copy-btn ${copyStatus['geo_location'] ? 'copied' : ''}`}
+                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['geo_location'] ? 'text-green-600' : 'text-gray-500'}`}
                     onClick={() => copyToClipboard(property.geo_location_text, 'geo_location')}
                     title="نسخ الإحداثيات"
                   >
-                    <FiCopy />
-                    {copyStatus['geo_location'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -638,75 +647,75 @@ const AllInterests = () => {
           </div>
         </div>
 
-        <div className="form-section">
-          <h4>المعلومات المالية</h4>
-          <div className="form-row">
-            {property.price_per_sqm && (
-              <div className="form-group">
-                <label>سعر المتر</label>
-                <div className="detail-value-with-copy">
-                  <span>{property.price_per_sqm} ريال/م²</span>
-                  <button 
-                    className={`copy-btn ${copyStatus['price_per_sqm'] ? 'copied' : ''}`}
-                    onClick={() => copyToClipboard(`${property.price_per_sqm} ريال/م²`, 'price_per_sqm')}
-                    title="نسخ سعر المتر"
-                  >
-                    <FiCopy />
-                    {copyStatus['price_per_sqm'] && <span className="copy-tooltip">تم النسخ!</span>}
-                  </button>
+        {/* المعلومات المالية */}
+        {(property.price_per_sqm || property.estimated_investment_value) && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">المعلومات المالية</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {property.price_per_sqm && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">سعر المتر</label>
+                  <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                    <span className="text-gray-800">{property.price_per_sqm} ريال/م²</span>
+                    <button 
+                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['price_per_sqm'] ? 'text-green-600' : 'text-gray-500'}`}
+                      onClick={() => copyToClipboard(`${property.price_per_sqm} ريال/م²`, 'price_per_sqm')}
+                      title="نسخ سعر المتر"
+                    >
+                      <FiCopy size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-            {property.estimated_investment_value && (
-              <div className="form-group">
-                <label>القيمة الاستثمارية</label>
-                <div className="detail-value-with-copy">
-                  <span>{property.estimated_investment_value} ريال</span>
-                  <button 
-                    className={`copy-btn ${copyStatus['investment_value'] ? 'copied' : ''}`}
-                    onClick={() => copyToClipboard(`${property.estimated_investment_value} ريال`, 'investment_value')}
-                    title="نسخ القيمة الاستثمارية"
-                  >
-                    <FiCopy />
-                    {copyStatus['investment_value'] && <span className="copy-tooltip">تم النسخ!</span>}
-                  </button>
+              )}
+              {property.estimated_investment_value && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">القيمة الاستثمارية</label>
+                  <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                    <span className="text-gray-800">{property.estimated_investment_value} ريال</span>
+                    <button 
+                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['investment_value'] ? 'text-green-600' : 'text-gray-500'}`}
+                      onClick={() => copyToClipboard(`${property.estimated_investment_value} ريال`, 'investment_value')}
+                      title="نسخ القيمة الاستثمارية"
+                    >
+                      <FiCopy size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="form-section">
-          <h4>المعلومات القانونية</h4>
-          <div className="form-row">
-            <div className="form-group">
-              <label>رقم الصك</label>
-              <div className="detail-value-with-copy">
-                <span>{property.deed_number || 'غير متوفر'}</span>
+        {/* المعلومات القانونية */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">المعلومات القانونية</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">رقم الصك</label>
+              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                <span className="text-gray-800">{property.deed_number || 'غير متوفر'}</span>
                 {property.deed_number && (
                   <button 
-                    className={`copy-btn ${copyStatus['deed_number'] ? 'copied' : ''}`}
+                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['deed_number'] ? 'text-green-600' : 'text-gray-500'}`}
                     onClick={() => copyToClipboard(property.deed_number, 'deed_number')}
                     title="نسخ رقم الصك"
                   >
-                    <FiCopy />
-                    {copyStatus['deed_number'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
             </div>
             {property.agency_number && (
-              <div className="form-group">
-                <label>رقم الوكالة</label>
-                <div className="detail-value-with-copy">
-                  <span>{property.agency_number}</span>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">رقم الوكالة</label>
+                <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                  <span className="text-gray-800">{property.agency_number}</span>
                   <button 
-                    className={`copy-btn ${copyStatus['agency_number'] ? 'copied' : ''}`}
+                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['agency_number'] ? 'text-green-600' : 'text-gray-500'}`}
                     onClick={() => copyToClipboard(property.agency_number, 'agency_number')}
                     title="نسخ رقم الوكالة"
                   >
-                    <FiCopy />
-                    {copyStatus['agency_number'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 </div>
               </div>
@@ -714,79 +723,72 @@ const AllInterests = () => {
           </div>
         </div>
 
+        {/* الوصف */}
         {property.description && (
-          <div className="form-section">
-            <h4>الوصف</h4>
-            <div className="form-group full-width">
-              <div className="detail-value-with-copy">
-                <span className="description-text">{property.description}</span>
-                <button 
-                  className={`copy-btn ${copyStatus['property_description'] ? 'copied' : ''}`}
-                  onClick={() => copyToClipboard(property.description, 'property_description')}
-                  title="نسخ الوصف"
-                >
-                  <FiCopy />
-                  {copyStatus['property_description'] && <span className="copy-tooltip">تم النسخ!</span>}
-                </button>
-              </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">الوصف</h4>
+            <div className="flex items-start justify-between bg-gray-50 rounded-md p-4">
+              <p className="text-gray-800 flex-1">{property.description}</p>
+              <button 
+                className={`p-1 rounded hover:bg-gray-200 transition-colors ml-2 ${copyStatus['property_description'] ? 'text-green-600' : 'text-gray-500'}`}
+                onClick={() => copyToClipboard(property.description, 'property_description')}
+                title="نسخ الوصف"
+              >
+                <FiCopy size={16} />
+              </button>
             </div>
           </div>
         )}
 
         {/* معلومات المالك */}
         {property.user && (
-          <div className="form-section">
-            <h4>معلومات المالك</h4>
-            <div className="form-row">
-              <div className="form-group">
-                <label>اسم المالك</label>
-                <div className="detail-value-with-copy">
-                  <span>{property.user.full_name || 'غير متوفر'}</span>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">معلومات المالك</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">اسم المالك</label>
+                <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                  <span className="text-gray-800">{property.user.full_name || 'غير متوفر'}</span>
                   {property.user.full_name && (
                     <button 
-                      className={`copy-btn ${copyStatus['owner_name'] ? 'copied' : ''}`}
+                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['owner_name'] ? 'text-green-600' : 'text-gray-500'}`}
                       onClick={() => copyToClipboard(property.user.full_name, 'owner_name')}
                       title="نسخ اسم المالك"
                     >
-                      <FiCopy />
-                      {copyStatus['owner_name'] && <span className="copy-tooltip">تم النسخ!</span>}
+                      <FiCopy size={16} />
                     </button>
                   )}
                 </div>
               </div>
-              <div className="form-group">
-                <label>البريد الإلكتروني</label>
-                <div className="detail-value-with-copy">
-                  <span>{property.user.email || 'غير متوفر'}</span>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                  <span className="text-gray-800">{property.user.email || 'غير متوفر'}</span>
                   {property.user.email && (
                     <button 
-                      className={`copy-btn ${copyStatus['owner_email'] ? 'copied' : ''}`}
+                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['owner_email'] ? 'text-green-600' : 'text-gray-500'}`}
                       onClick={() => copyToClipboard(property.user.email, 'owner_email')}
                       title="نسخ البريد الإلكتروني"
                     >
-                      <FiCopy />
-                      {copyStatus['owner_email'] && <span className="copy-tooltip">تم النسخ!</span>}
+                      <FiCopy size={16} />
                     </button>
                   )}
                 </div>
               </div>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>رقم الهاتف</label>
-                <div className="detail-value-with-copy">
-                  <span>{property.user.phone || 'غير متوفر'}</span>
-                  {property.user.phone && (
-                    <button 
-                      className={`copy-btn ${copyStatus['owner_phone'] ? 'copied' : ''}`}
-                      onClick={() => copyToClipboard(property.user.phone, 'owner_phone')}
-                      title="نسخ رقم الهاتف"
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
+                <span className="text-gray-800">{property.user.phone || 'غير متوفر'}</span>
+                {property.user.phone && (
+                  <button 
+                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['owner_phone'] ? 'text-green-600' : 'text-gray-500'}`}
+                    onClick={() => copyToClipboard(property.user.phone, 'owner_phone')}
+                    title="نسخ رقم الهاتف"
                     >
-                      <FiCopy />
-                      {copyStatus['owner_phone'] && <span className="copy-tooltip">تم النسخ!</span>}
-                    </button>
-                  )}
-                </div>
+                    <FiCopy size={16} />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -794,13 +796,13 @@ const AllInterests = () => {
 
         {/* الصور */}
         {property.images && property.images.length > 0 && (
-          <div className="form-section">
-            <h4>صور العقار ({property.images.length})</h4>
-            <div className="images-grid">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">صور العقار ({property.images.length})</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {property.images.map((image, index) => (
-                <div key={image.id} className="image-item">
-                  <FiMap className="image-icon" />
-                  <span className="image-name">صورة {index + 1}</span>
+                <div key={image.id} className="border border-gray-200 rounded-lg p-4 text-center">
+                  <FiMap className="mx-auto text-gray-400 mb-2" size={24} />
+                  <span className="text-sm text-gray-600">صورة {index + 1}</span>
                 </div>
               ))}
             </div>
@@ -812,181 +814,125 @@ const AllInterests = () => {
 
   const renderInterestDetails = (interest) => {
     return (
-      <div className="details-content">
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiUser />
-            اسم المهتم
+      <div className="space-y-4">
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <FiUser className="text-gray-500 ml-2" />
+            <span className="text-sm font-medium text-gray-700">اسم المهتم</span>
           </div>
-          <div className="detail-value-with-copy">
-            <span>{interest.full_name}</span>
-            {/* <button 
-              className={`copy-btn ${copyStatus['full_name'] ? 'copied' : ''}`}
-              onClick={() => copyToClipboard(interest.full_name, 'full_name')}
-              title="نسخ الاسم"
-            >
-              <FiCopy />
-              {copyStatus['full_name'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button> */}
-          </div>
+          <span className="text-gray-900 font-medium">{interest.full_name}</span>
         </div>
 
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiMail />
-            البريد الإلكتروني
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <FiMail className="text-gray-500 ml-2" />
+            <span className="text-sm font-medium text-gray-700">البريد الإلكتروني</span>
           </div>
-          <div className="detail-value-with-copy">
-            <span>{interest.email}</span>
+          <div className="flex items-center">
+            <span className="text-gray-900 font-medium mr-2">{interest.email}</span>
             <button 
-              className={`copy-btn ${copyStatus['email'] ? 'copied' : ''}`}
+              className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['email'] ? 'text-green-600' : 'text-gray-500'}`}
               onClick={() => copyToClipboard(interest.email, 'email')}
               title="نسخ البريد الإلكتروني"
             >
-              <FiCopy />
-              {copyStatus['email'] && <span className="copy-tooltip">تم النسخ!</span>}
+              <FiCopy size={16} />
             </button>
           </div>
         </div>
 
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiPhone />
-            رقم الهاتف
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <FiPhone className="text-gray-500 ml-2" />
+            <span className="text-sm font-medium text-gray-700">رقم الهاتف</span>
           </div>
-          <div className="detail-value-with-copy">
-            <span>{interest.phone}</span>
+          <div className="flex items-center">
+            <span className="text-gray-900 font-medium mr-2">{interest.phone}</span>
             <button 
-              className={`copy-btn ${copyStatus['phone'] ? 'copied' : ''}`}
+              className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['phone'] ? 'text-green-600' : 'text-gray-500'}`}
               onClick={() => copyToClipboard(interest.phone, 'phone')}
               title="نسخ رقم الهاتف"
             >
-              <FiCopy />
-              {copyStatus['phone'] && <span className="copy-tooltip">تم النسخ!</span>}
+              <FiCopy size={16} />
             </button>
           </div>
         </div>
 
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiHome />
-            العقار المهتم به
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <FiHome className="text-gray-500 ml-2" />
+            <span className="text-sm font-medium text-gray-700">العقار المهتم به</span>
           </div>
-          <div className="detail-value owner-info">
-            <div className="detail-value-with-copy">
-              <span className="property-badge">
-                {interest.property?.title || 'غير محدد'}
-              </span>
-              <div className="owner-actions">
-                {interest.property_id && (
-                  <button 
-                    className="owner-view-btn"
-                    onClick={() => openPropertyModal(interest.property_id)}
-                    title="عرض تفاصيل العقار"
-                  >
-                    <FiEye />
-                  </button>
-                )}
-                {interest.property?.title && (
-                  <button 
-                    className={`copy-btn ${copyStatus['property_title'] ? 'copied' : ''}`}
-                    onClick={() => copyToClipboard(interest.property.title, 'property_title')}
-                    title="نسخ اسم العقار"
-                  >
-                    <FiCopy />
-                    {copyStatus['property_title'] && <span className="copy-tooltip">تم النسخ!</span>}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            الحالة
-          </div>
-          <div className="detail-value">
-            {getStatusBadge(interest.status)}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiCalendar />
-            تاريخ الاهتمام
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{formatDate(interest.created_at)}</span>
-            {/* <button 
-              className={`copy-btn ${copyStatus['created_at'] ? 'copied' : ''}`}
-              onClick={() => copyToClipboard(formatDate(interest.created_at), 'created_at')}
-              title="نسخ تاريخ الاهتمام"
-            >
-              <FiCopy />
-              {copyStatus['created_at'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button> */}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiCalendar />
-            آخر تحديث
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{formatDate(interest.updated_at)}</span>
-            {/* <button 
-              className={`copy-btn ${copyStatus['updated_at'] ? 'copied' : ''}`}
-              onClick={() => copyToClipboard(formatDate(interest.updated_at), 'updated_at')}
-              title="نسخ تاريخ التحديث"
-            >
-              <FiCopy />
-              {copyStatus['updated_at'] && <span className="copy-tooltip">تم النسخ!</span>}
-            </button> */}
-          </div>
-        </div>
-
-        <div className="detail-item full-width">
-          <div className="detail-label">
-            <FiMessageSquare />
-            رسالة المهتم
-          </div>
-          <div className="detail-value message-text">
-            <div className="detail-value-with-copy">
-              <span>{interest.message || 'لا توجد رسالة'}</span>
-              {/* {interest.message && (
+          <div className="flex items-center">
+            <span className="text-gray-900 font-medium mr-2">{interest.property?.title || 'غير محدد'}</span>
+            <div className="flex space-x-1 space-x-reverse">
+              {interest.property_id && (
                 <button 
-                  className={`copy-btn ${copyStatus['message'] ? 'copied' : ''}`}
-                  onClick={() => copyToClipboard(interest.message, 'message')}
-                  title="نسخ الرسالة"
+                  className="p-1 rounded hover:bg-gray-200 transition-colors text-blue-600"
+                  onClick={() => openPropertyModal(interest.property_id)}
+                  title="عرض تفاصيل العقار"
                 >
-                  <FiCopy />
-                  {copyStatus['message'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  <FiEye size={16} />
                 </button>
-              )} */}
+              )}
+              {interest.property?.title && (
+                <button 
+                  className={`p-1 rounded hover:bg-gray-200 transition-colors ${copyStatus['property_title'] ? 'text-green-600' : 'text-gray-500'}`}
+                  onClick={() => copyToClipboard(interest.property.title, 'property_title')}
+                  title="نسخ اسم العقار"
+                >
+                  <FiCopy size={16} />
+                </button>
+              )}
             </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+          <span className="text-sm font-medium text-gray-700">الحالة</span>
+          {getStatusBadge(interest.status)}
+        </div>
+
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <FiCalendar className="text-gray-500 ml-2" />
+            <span className="text-sm font-medium text-gray-700">تاريخ الاهتمام</span>
+          </div>
+          <span className="text-gray-900">{formatDate(interest.created_at)}</span>
+        </div>
+
+        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center">
+            <FiCalendar className="text-gray-500 ml-2" />
+            <span className="text-sm font-medium text-gray-700">آخر تحديث</span>
+          </div>
+          <span className="text-gray-900">{formatDate(interest.updated_at)}</span>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center mb-2">
+            <FiMessageSquare className="text-gray-500 ml-2" />
+            <span className="text-sm font-medium text-gray-700">رسالة المهتم</span>
+          </div>
+          <div className="bg-white rounded-md p-3 border border-gray-200">
+            <p className="text-gray-800">{interest.message || 'لا توجد رسالة'}</p>
           </div>
         </div>
 
         {interest.admin_notes && (
-          <div className="detail-item full-width">
-            <div className="detail-label">
-              <FiEdit />
-              ملاحظات المسؤول
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center mb-2">
+              <FiEdit className="text-gray-500 ml-2" />
+              <span className="text-sm font-medium text-gray-700">ملاحظات المسؤول</span>
             </div>
-            <div className="detail-value admin-notes">
-              <div className="detail-value-with-copy">
-                <span>{interest.admin_notes}</span>
-                <button 
-                  className={`copy-btn ${copyStatus['admin_notes'] ? 'copied' : ''}`}
-                  onClick={() => copyToClipboard(interest.admin_notes, 'admin_notes')}
-                  title="نسخ ملاحظات المسؤول"
-                >
-                  <FiCopy />
-                  {copyStatus['admin_notes'] && <span className="copy-tooltip">تم النسخ!</span>}
-                </button>
-              </div>
+            <div className="flex items-center justify-between bg-white rounded-md p-3 border border-gray-200">
+              <p className="text-gray-800 flex-1">{interest.admin_notes}</p>
+              <button 
+                className={`p-1 rounded hover:bg-gray-200 transition-colors ml-2 ${copyStatus['admin_notes'] ? 'text-green-600' : 'text-gray-500'}`}
+                onClick={() => copyToClipboard(interest.admin_notes, 'admin_notes')}
+                title="نسخ ملاحظات المسؤول"
+              >
+                <FiCopy size={16} />
+              </button>
             </div>
           </div>
         )}
@@ -994,6 +940,8 @@ const AllInterests = () => {
     );
   };
 
+  // ========== الباجينيشن ==========
+  
   // إنشاء أزرار الباجينيشن
   const renderPagination = () => {
     if (!interestsData || !interestsData.pagination || interestsData.pagination.last_page <= 1) return null;
@@ -1004,7 +952,11 @@ const AllInterests = () => {
     pages.push(
       <button
         key="prev"
-        className={`pagination-btn ${currentPage === 1 ? 'disabled' : ''}`}
+        className={`flex items-center justify-center w-10 h-10 rounded-md border ${
+          currentPage === 1 
+            ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed' 
+            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+        }`}
         onClick={() => currentPage > 1 && updatePagination(currentPage - 1)}
         disabled={currentPage === 1}
       >
@@ -1035,12 +987,20 @@ const AllInterests = () => {
     
     uniquePages.forEach(page => {
       if (page === 'ellipsis-start' || page === 'ellipsis-end') {
-        pages.push(<span key={page} className="pagination-ellipsis">...</span>);
+        pages.push(
+          <span key={page} className="flex items-center justify-center w-10 h-10 text-gray-500">
+            ...
+          </span>
+        );
       } else {
         pages.push(
           <button
             key={page}
-            className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+            className={`flex items-center justify-center w-10 h-10 rounded-md border ${
+              currentPage === page 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
             onClick={() => updatePagination(page)}
           >
             {page}
@@ -1052,7 +1012,11 @@ const AllInterests = () => {
     pages.push(
       <button
         key="next"
-        className={`pagination-btn ${currentPage === pagination.last_page ? 'disabled' : ''}`}
+        className={`flex items-center justify-center w-10 h-10 rounded-md border ${
+          currentPage === pagination.last_page 
+            ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed' 
+            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+        }`}
         onClick={() => currentPage < pagination.last_page && updatePagination(currentPage + 1)}
         disabled={currentPage === pagination.last_page}
       >
@@ -1063,6 +1027,8 @@ const AllInterests = () => {
     return pages;
   };
 
+  // ========== المتغيرات المساعدة ==========
+  
   // التحقق إذا كان هناك أي فلتر نشط
   const hasActiveFilters = filters.search || filters.status !== 'all' || filters.property_id !== 'all' || 
                           filters.date_from || filters.date_to;
@@ -1084,54 +1050,64 @@ const AllInterests = () => {
 
   const loading = isLoading || isRefreshing || statusMutation.isLoading;
 
+  // ========== واجهة المستخدم ==========
+  
   return (
-    <div className="pending-users-container">
+    <div className="min-h-screen bg-gray-50 p-6">
       {/* شريط البحث والتصفية */}
-      <div className="filter-section">
-        <div className="filter-header">
-          <FiFilter className="filter-icon" />
-          <span>أدوات البحث والتصفية:</span>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <FiFilter className="text-gray-600 ml-2" />
+            <span className="text-lg font-semibold text-gray-800">أدوات البحث والتصفية:</span>
+          </div>
           {hasActiveFilters && (
-            <button className="clear-filters-btn" onClick={clearFilters}>
-              <FiSlash />
+            <button 
+              className="flex items-center px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+              onClick={clearFilters}
+            >
+              <FiSlash className="ml-1" />
               مسح الفلاتر
             </button>
           )}
         </div>
         
-        <form onSubmit={handleSearch} className="search-form">
-          <div className="search-input-group">
-            <FiSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="ابحث بالاسم أو البريد الإلكتروني أو الرسالة..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="search-input"
-            />
-            <button type="submit" className="search-btn">
+        <form onSubmit={handleSearch} className="mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="ابحث بالاسم أو البريد الإلكتروني أو الرسالة..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                className="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
               بحث
             </button>
-            <div className="dashboard-header-actions">
-              <button 
-                className="dashboard-refresh-btn" 
-                onClick={handleRefresh}
-                disabled={isRefreshing || loading}
-              >
-                <FiRefreshCw className={isRefreshing ? 'spinning' : ''} />
-                {isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}
-              </button>
-            </div>
+            <button 
+              className="flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              onClick={handleRefresh}
+              disabled={isRefreshing || loading}
+            >
+              <FiRefreshCw className={`ml-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}
+            </button>
           </div>
         </form>
 
-        <div className="filter-controls">
-          <div className="filter-group">
-            <label>الحالة:</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">الحالة:</label>
             <select 
               value={filters.status} 
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="filter-select"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">جميع الحالات</option>
               {filtersData.status_options.map(option => (
@@ -1140,32 +1116,32 @@ const AllInterests = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>من تاريخ:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">من تاريخ:</label>
             <input
               type="date"
               value={filters.date_from}
               onChange={(e) => handleFilterChange('date_from', e.target.value)}
-              className="filter-select"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
-          <div className="filter-group">
-            <label>إلى تاريخ:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">إلى تاريخ:</label>
             <input
               type="date"
               value={filters.date_to}
               onChange={(e) => handleFilterChange('date_to', e.target.value)}
-              className="filter-select"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
-          <div className="filter-group">
-            <label>ترتيب حسب:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ترتيب حسب:</label>
             <select 
               value={filters.sort_by} 
               onChange={(e) => handleFilterChange('sort_by', e.target.value)}
-              className="filter-select"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="created_at">تاريخ الاهتمام</option>
               <option value="full_name">اسم المستخدم</option>
@@ -1173,12 +1149,12 @@ const AllInterests = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>الاتجاه:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">الاتجاه:</label>
             <select 
               value={filters.sort_order} 
               onChange={(e) => handleFilterChange('sort_order', e.target.value)}
-              className="filter-select"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="desc">تنازلي</option>
               <option value="asc">تصاعدي</option>
@@ -1187,66 +1163,84 @@ const AllInterests = () => {
         </div>
       </div>
 
-      <div className="content-body">
-        <div className="users-grid">
-          {/* Interests List */}
-          <div className="users-list">
-            <div className="list-header">
-              <h3>قائمة طلبات الاهتمام ({interests.length})</h3>
-              <span className="page-info">
-                {pagination.total > 0 ? (
-                  <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
-                ) : (
-                  'لا توجد نتائج'
-                )}
-              </span>
+      {/* المحتوى الرئيسي */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* قائمة طلبات الاهتمام */}
+        <div className="xl:col-span-2">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-xl font-semibold text-gray-800 mb-2 sm:mb-0">
+                  قائمة طلبات الاهتمام ({interests.length})
+                </h3>
+                <span className="text-sm text-gray-600">
+                  {pagination.total > 0 ? (
+                    <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
+                  ) : (
+                    'لا توجد نتائج'
+                  )}
+                </span>
+              </div>
             </div>
             
             {loading ? (
-              <div className="dashboard-loading">
-                <div className="dashboard-loading-dots">
-                  <div className="dashboard-loading-dot"></div>
-                  <div className="dashboard-loading-dot"></div>
-                  <div className="dashboard-loading-dot"></div>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex space-x-2">
+                  <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
+                  <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                 </div>
-                <p className="dashboard-loading-text">جاري تحميل البيانات...</p>
+                <p className="mt-4 text-gray-600">جاري تحميل البيانات...</p>
               </div>
             ) : interests.length === 0 ? (
-              <div className="empty-state">
-                <FiHeart className="empty-icon" />
-                <p>لا توجد نتائج</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FiHeart className="text-gray-400 mb-4" size={48} />
+                <p className="text-gray-600 text-lg mb-4">لا توجد نتائج</p>
                 {hasActiveFilters && (
-                  <button className="btn btn-primary" onClick={clearFilters}>
+                  <button 
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    onClick={clearFilters}
+                  >
                     مسح الفلاتر
                   </button>
                 )}
               </div>
             ) : (
               <>
-                <div className="users-cards">
+                <div className="divide-y divide-gray-200">
                   {interests.map((interest) => (
                     <div 
                       key={interest.id} 
-                      className={`user-card ${selectedInterest?.id === interest.id ? 'active' : ''}`}
+                      className={`p-6 cursor-pointer transition-colors ${
+                        selectedInterest?.id === interest.id 
+                          ? 'bg-blue-50 border-r-4 border-r-blue-600' 
+                          : 'hover:bg-gray-50'
+                      }`}
                       onClick={() => setSelectedInterest(interest)}
                     >
-                      <div className="user-avatar">
-                        <FiUser />
-                      </div>
-                      <div className="user-info">
-                        <h4>{interest.full_name}</h4>
-                        <span className="user-type">{interest.property?.title}</span>
-                        <span className="user-date">
-                          <FiCalendar />
-                          {formatDate(interest.created_at)}
-                        </span>
-                        <div className="user-message-preview">
-                          <FiMessageSquare />
-                          {interest.message?.substring(0, 50)}...
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-4 space-x-reverse">
+                          <div className="flex-shrink-0">
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                              <FiUser className="text-blue-600" size={20} />
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 space-x-reverse mb-2">
+                              <h4 className="text-lg font-semibold text-gray-800">{interest.full_name}</h4>
+                              {getStatusBadge(interest.status)}
+                            </div>
+                            <p className="text-gray-600 mb-2">{interest.property?.title}</p>
+                            <div className="flex items-center text-sm text-gray-500 mb-2">
+                              <FiCalendar className="ml-1" size={14} />
+                              <span>{formatDate(interest.created_at)}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-500">
+                              <FiMessageSquare className="ml-1" size={14} />
+                              <span className="truncate">{interest.message?.substring(0, 60)}...</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className={`user-status ${getStatusColor(interest.status)}`}>
-                        {getStatusText(interest.status)}
                       </div>
                     </div>
                   ))}
@@ -1254,132 +1248,140 @@ const AllInterests = () => {
 
                 {/* الباجينيشن */}
                 {pagination.last_page > 1 && (
-                  <div className="pagination">
-                    {renderPagination()}
+                  <div className="p-6 border-t border-gray-200">
+                    <div className="flex items-center justify-center space-x-2 space-x-reverse">
+                      {renderPagination()}
+                    </div>
                   </div>
                 )}
               </>
             )}
           </div>
+        </div>
 
-          {/* Interest Details */}
-          <div className="user-details">
+        {/* تفاصيل طلب الاهتمام */}
+        <div className="xl:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6">
             {selectedInterest ? (
-              <div className="details-card">
-                <div className="details-header">
-                  <h3>تفاصيل طلب الاهتمام</h3>
-                  <span className="user-id">ID: {selectedInterest.id}</span>
+              <div>
+                <div className="p-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-gray-800">تفاصيل طلب الاهتمام</h3>
+                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">ID: {selectedInterest.id}</span>
+                  </div>
                 </div>
                 
-                {renderInterestDetails(selectedInterest)}
+                <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                  {renderInterestDetails(selectedInterest)}
+                </div>
 
-                <div className="details-actions">
-                  <div className="status-actions">
+                <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                  <div className="grid grid-cols-2 gap-3">
                     <button 
-                      className="btn btn-success"
+                      className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => openStatusModal(selectedInterest.id, 'تمت المراجعة')}
                       disabled={selectedInterest.status === 'تمت المراجعة' || loading}
                     >
-                      <FiCheck />
+                      <FiCheck className="ml-1" size={16} />
                       تمت المراجعة
                     </button>
                     
                     <button 
-                      className="btn btn-info"
+                      className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => openStatusModal(selectedInterest.id, 'تم التواصل')}
                       disabled={selectedInterest.status === 'تم التواصل' || loading}
                     >
-                      <FiPhone />
+                      <FiPhone className="ml-1" size={16} />
                       تم التواصل
                     </button>
                     
                     <button 
-                      className="btn btn-warning"
+                      className="flex items-center justify-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => openStatusModal(selectedInterest.id, 'قيد المراجعة')}
                       disabled={selectedInterest.status === 'قيد المراجعة' || loading}
                     >
-                      <FiFileText />
+                      <FiFileText className="ml-1" size={16} />
                       قيد المراجعة
                     </button>
                     
                     <button 
-                      className="btn btn-danger"
+                      className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => openStatusModal(selectedInterest.id, 'ملغي')}
                       disabled={selectedInterest.status === 'ملغي' || loading}
                     >
-                      <FiX />
+                      <FiX className="ml-1" size={16} />
                       إلغاء
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="no-selection">
-                <FiHeart className="no-selection-icon" />
-                <p>اختر طلب اهتمام لعرض التفاصيل</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FiHeart className="text-gray-400 mb-4" size={48} />
+                <p className="text-gray-600 text-lg">اختر طلب اهتمام لعرض التفاصيل</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
+      {/* ========== المودالات ========== */}
+      
       {/* مودال تغيير الحالة */}
       {statusModal.show && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>
-                <FiEdit />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <FiEdit className="ml-2" />
                 تغيير حالة الاهتمام
               </h3>
               <button 
-                className="close-btn"
+                className="text-gray-400 hover:text-gray-600 text-2xl"
                 onClick={closeStatusModal}
               >
                 ×
               </button>
             </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>الحالة الجديدة</label>
-                <div className="status-display">
-                  <span className={`status-badge ${getStatusColor(statusModal.newStatus)}`}>
-                    {getStatusText(statusModal.newStatus)}
-                  </span>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">الحالة الجديدة</label>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  {getStatusBadge(statusModal.newStatus)}
                 </div>
               </div>
               
-              <div className="form-group">
-                <label>رسالة / ملاحظات إضافية</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">رسالة / ملاحظات إضافية</label>
                 <textarea
                   value={statusModal.adminNote}
                   onChange={(e) => setStatusModal(prev => ({
                     ...prev,
                     adminNote: e.target.value
                   }))}
-                  className="form-input"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   rows="4"
                   placeholder={getStatusMessagePlaceholder(statusModal.newStatus)}
                 />
-                <div className="form-hint">
+                <div className="text-sm text-gray-500 mt-1">
                   هذه الرسالة ستظهر للمستخدم كتفسير لتغيير الحالة
                 </div>
               </div>
             </div>
-            <div className="modal-actions">
+            <div className="flex items-center justify-end space-x-3 space-x-reverse p-6 border-t border-gray-200">
               <button 
-                className="btn btn-secondary"
+                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 onClick={closeStatusModal}
                 disabled={loading}
               >
                 إلغاء
               </button>
               <button 
-                className="btn btn-primary"
+                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleStatusUpdate}
                 disabled={loading}
               >
-                <FiCheck />
+                <FiCheck className="ml-1" />
                 {loading ? 'جاري الحفظ...' : 'تأكيد التغيير'}
               </button>
             </div>
@@ -1389,37 +1391,37 @@ const AllInterests = () => {
 
       {/* مودال تفاصيل العقار */}
       {propertyModal.show && (
-        <div className="modal-overlay">
-          <div className="modal-content large-modal">
-            <div className="modal-header">
-              <h3>
-                <FiMap />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                <FiMap className="ml-2" />
                 تفاصيل العقار
               </h3>
               <button 
-                className="close-btn"
+                className="text-gray-400 hover:text-gray-600 text-2xl"
                 onClick={closePropertyModal}
               >
                 ×
               </button>
             </div>
-            <div className="modal-body">
+            <div className="flex-1 overflow-y-auto p-6">
               {propertyModal.loading ? (
-                <div className="dashboard-loading">
-                  <div className="dashboard-loading-dots">
-                    <div className="dashboard-loading-dot"></div>
-                    <div className="dashboard-loading-dot"></div>
-                    <div className="dashboard-loading-dot"></div>
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
+                    <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                    <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                   </div>
-                  <p className="dashboard-loading-text">جاري تحميل تفاصيل العقار...</p>
+                  <p className="mt-4 text-gray-600">جاري تحميل تفاصيل العقار...</p>
                 </div>
               ) : (
                 renderPropertyDetails(propertyModal.property)
               )}
             </div>
-            <div className="modal-actions">
+            <div className="flex items-center justify-end p-6 border-t border-gray-200">
               <button 
-                className="btn btn-primary"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 onClick={closePropertyModal}
               >
                 إغلاق
