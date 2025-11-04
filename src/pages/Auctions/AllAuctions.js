@@ -1259,10 +1259,11 @@ const AllAuctions = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Filter Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
+        {/* الخلفية الخاصة بشريط الأدوات فقط */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FiFilter className="text-gray-600" size={20} />
+            <FiFilter className="text-blue-600" size={22} />
             <span className="text-lg font-semibold text-gray-800">
               أدوات البحث والتصفية:
             </span>
@@ -1277,7 +1278,6 @@ const AllAuctions = () => {
             </button>
           )}
         </div>
-
         <form onSubmit={handleSearch} className="p-4 border-b border-gray-200">
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
@@ -1485,8 +1485,9 @@ const AllAuctions = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Auctions List */}
-        <div className="xl:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className="xl:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {/* شريط العنوان مع الخلفية الزرقاء */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-xl font-semibold text-gray-800 mb-2 sm:mb-0">
               قائمة المزادات ({pagination.total || 0})
             </h3>
@@ -1617,24 +1618,25 @@ const AllAuctions = () => {
         </div>
 
         {/* Auction Details */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {selectedAuction ? (
             <div className="h-full flex flex-col">
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-gray-800">
-                    تفاصيل المزاد
-                  </h3>
-                  <span className="text-sm text-gray-500">
-                    ID: {selectedAuction.id}
-                  </span>
-                </div>
+              {/* شريط عنوان المزاد باللون الأزرق المتدرج */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-800">
+                  تفاصيل المزاد
+                </h3>
+                <span className="text-sm text-gray-500">
+                  ID: {selectedAuction.id}
+                </span>
               </div>
 
+              {/* محتوى تفاصيل المزاد مع scroll عند الحاجة */}
               <div className="flex-1 overflow-y-auto p-4">
                 {renderAuctionDetails(selectedAuction)}
               </div>
 
+              {/* أزرار التحكم حسب حالة المزاد */}
               <div className="p-4 border-t border-gray-200">
                 <div className="flex flex-wrap gap-2">
                   {selectedAuction.status === "قيد المراجعة" && (
