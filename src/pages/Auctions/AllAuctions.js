@@ -21,13 +21,34 @@ import {
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/PendingUsers.css';
+
+/**
+ * =============================================
+ * فهرس المكون - Component Index
+ * =============================================
+ * 
+ * 1. State Management - إدارة الحالة
+ * 2. Effects - التأثيرات الجانبية
+ * 3. Clipboard Functions - دوال الحافظة
+ * 4. Modal Handlers - معالجات النوافذ المنبثقة
+ * 5. API Functions - دوال API
+ * 6. Filter Functions - دوال التصفية
+ * 7. Action Handlers - معالجات الأحداث
+ * 8. Helper Functions - الدوال المساعدة
+ * 9. Render Functions - دوال التصيير
+ * 10. Main Component Return - العنصر الرئيسي
+ * 
+ * =============================================
+ */
 
 const AllAuctions = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   
-  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
+  // ===============================
+  // 1. State Management - إدارة الحالة
+  // ===============================
+  
   const getInitialFilters = () => {
     const savedFilters = localStorage.getItem('auctionsFilters');
     if (savedFilters) {
@@ -52,7 +73,7 @@ const AllAuctions = () => {
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [copyStatus, setCopyStatus] = useState({}); // حالة نسخ البيانات
+  const [copyStatus, setCopyStatus] = useState({});
   const [rejectModal, setRejectModal] = useState({
     show: false,
     auctionId: null,
@@ -64,20 +85,48 @@ const AllAuctions = () => {
     owner: null
   });
 
-  // دالة نسخ النص إلى الحافظة
+  // ===============================
+  // 2. Effects - التأثيرات الجانبية
+  // ===============================
+  
+  useEffect(() => {
+    localStorage.setItem('auctionsFilters', JSON.stringify(filters));
+  }, [filters]);
+  
+  useEffect(() => {
+    localStorage.setItem('auctionsCurrentPage', currentPage.toString());
+  }, [currentPage]);
+  
+  useEffect(() => {
+    const savedSelectedAuction = localStorage.getItem('selectedAuction');
+    if (savedSelectedAuction) {
+      setSelectedAuction(JSON.parse(savedSelectedAuction));
+    }
+  }, []);
+  
+  useEffect(() => {
+    if (selectedAuction) {
+      localStorage.setItem('selectedAuction', JSON.stringify(selectedAuction));
+    } else {
+      localStorage.removeItem('selectedAuction');
+    }
+  }, [selectedAuction]);
+
+  // ===============================
+  // 3. Clipboard Functions - دوال الحافظة
+  // ===============================
+  
   const copyToClipboard = async (text, fieldName) => {
     if (!text) return;
     
     try {
       await navigator.clipboard.writeText(text.toString());
       
-      // تحديث حالة النسخ
       setCopyStatus(prev => ({
         ...prev,
         [fieldName]: true
       }));
       
-      // إخفاء رسالة النجاح بعد 2 ثانية
       setTimeout(() => {
         setCopyStatus(prev => ({
           ...prev,
@@ -87,7 +136,6 @@ const AllAuctions = () => {
       
     } catch (err) {
       console.error('فشل في نسخ النص: ', err);
-      // استخدام الطريقة القديمة كبديل
       const textArea = document.createElement('textarea');
       textArea.value = text;
       document.body.appendChild(textArea);
@@ -109,32 +157,10 @@ const AllAuctions = () => {
     }
   };
 
-  // حفظ الفلاتر والصفحة في localStorage عند تغييرها
-  useEffect(() => {
-    localStorage.setItem('auctionsFilters', JSON.stringify(filters));
-  }, [filters]);
+  // ===============================
+  // 4. Modal Handlers - معالجات النوافذ المنبثقة
+  // ===============================
   
-  useEffect(() => {
-    localStorage.setItem('auctionsCurrentPage', currentPage.toString());
-  }, [currentPage]);
-  
-  // استعادة المزاد المحدد من localStorage إذا كان موجوداً
-  useEffect(() => {
-    const savedSelectedAuction = localStorage.getItem('selectedAuction');
-    if (savedSelectedAuction) {
-      setSelectedAuction(JSON.parse(savedSelectedAuction));
-    }
-  }, []);
-  
-  // حفظ المزاد المحدد في localStorage
-  useEffect(() => {
-    if (selectedAuction) {
-      localStorage.setItem('selectedAuction', JSON.stringify(selectedAuction));
-    } else {
-      localStorage.removeItem('selectedAuction');
-    }
-  }, [selectedAuction]);
-
   const handleRefresh = async () => {
     console.log('بدء تحديث بيانات المزادات...');
     setIsRefreshing(true);
@@ -149,7 +175,6 @@ const AllAuctions = () => {
     }
   };
 
-  // فتح مودال الرفض
   const openRejectModal = (auctionId) => {
     setRejectModal({
       show: true,
@@ -158,7 +183,6 @@ const AllAuctions = () => {
     });
   };
 
-  // إغلاق مودال الرفض
   const closeRejectModal = () => {
     setRejectModal({
       show: false,
@@ -167,7 +191,6 @@ const AllAuctions = () => {
     });
   };
 
-  // فتح مودال تفاصيل الشركة
   const openOwnerModal = (owner) => {
     setOwnerModal({
       show: true,
@@ -175,7 +198,6 @@ const AllAuctions = () => {
     });
   };
 
-  // إغلاق مودال تفاصيل الشركة
   const closeOwnerModal = () => {
     setOwnerModal({
       show: false,
@@ -183,6 +205,10 @@ const AllAuctions = () => {
     });
   };
 
+  // ===============================
+  // 5. API Functions - دوال API
+  // ===============================
+  
   const buildQueryString = () => {
     const params = new URLSearchParams();
     
@@ -200,7 +226,6 @@ const AllAuctions = () => {
     return params.toString();
   };
 
-  // استخدام React Query لجلب بيانات المزادات
   const fetchAuctions = async () => {
     const token = localStorage.getItem('access_token');
       
@@ -259,7 +284,7 @@ const AllAuctions = () => {
     ['auctions', filters, currentPage],
     fetchAuctions,
     {
-      staleTime: 5 * 60 * 1000, // 5 دقائق
+      staleTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
       onError: (error) => {
         console.error('خطأ في جلب المزادات:', error);
@@ -268,7 +293,6 @@ const AllAuctions = () => {
     }
   );
 
-  // استخدام useMutation لعمليات الموافقة والرفض
   const approveMutation = useMutation(
     async (auctionId) => {
       const token = localStorage.getItem('access_token');
@@ -335,6 +359,10 @@ const AllAuctions = () => {
     }
   );
 
+  // ===============================
+  // 6. Filter Functions - دوال التصفية
+  // ===============================
+  
   const handleFilterChange = (key, value) => {
     const newFilters = {
       ...filters,
@@ -343,7 +371,6 @@ const AllAuctions = () => {
     
     setFilters(newFilters);
     
-    // إعادة ضبط الصفحة عند تغيير الفلاتر
     if (key !== 'page' && currentPage !== 1) {
       setCurrentPage(1);
     }
@@ -369,6 +396,10 @@ const AllAuctions = () => {
     setCurrentPage(1);
   };
 
+  // ===============================
+  // 7. Action Handlers - معالجات الأحداث
+  // ===============================
+  
   const handleApprove = async (auctionId) => {
     if (!window.confirm('هل أنت متأكد من قبول هذا المزاد؟')) {
       return;
@@ -392,11 +423,14 @@ const AllAuctions = () => {
     });
   };
 
-  // تحديث الصفحة الحالية
   const updatePagination = (newPage) => {
     setCurrentPage(newPage);
   };
 
+  // ===============================
+  // 8. Helper Functions - الدوال المساعدة
+  // ===============================
+  
   const formatDate = (dateString) => {
     if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
@@ -413,17 +447,19 @@ const AllAuctions = () => {
   };
 
   const getStatusBadge = (status) => {
+    const baseClasses = "px-3 py-1 rounded-full text-sm font-medium";
+    
     switch (status) {
       case 'مفتوح':
-        return <span className="status-badge approved">مفتوح</span>;
+        return <span className={`${baseClasses} bg-green-100 text-green-800 border border-green-200`}>مفتوح</span>;
       case 'مرفوض':
-        return <span className="status-badge rejected">مرفوض</span>;
+        return <span className={`${baseClasses} bg-red-100 text-red-800 border border-red-200`}>مرفوض</span>;
       case 'مغلق':
-        return <span className="status-badge sold">مغلق</span>;
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800 border border-gray-200`}>مغلق</span>;
       case 'قيد المراجعة':
-        return <span className="status-badge pending">قيد المراجعة</span>;
+        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800 border border-yellow-200`}>قيد المراجعة</span>;
       default:
-        return <span className="status-badge unknown">{status}</span>;
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800 border border-gray-200`}>{status}</span>;
     }
   };
 
@@ -442,78 +478,74 @@ const AllAuctions = () => {
     }
   };
 
-  // دالة لعرض تفاصيل الشركة في الفورم مع إضافة نسخ البيانات
+  // ===============================
+  // 9. Render Functions - دوال التصيير
+  // ===============================
+  
   const renderOwnerDetails = (owner) => {
     if (!owner) return null;
 
     return (
-      <div className="owner-details-form">
-        <div className="form-section">
-          <h4>معلومات الشركة</h4>
-          <div className="form-row">
-            <div className="form-group">
-              <label>اسم الشركة</label>
-              <div className="detail-value-with-copy">
-                <span>{owner.auction_name || 'غير متوفر'}</span>
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">معلومات الشركة</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">اسم الشركة</label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">{owner.auction_name || 'غير متوفر'}</span>
                 {owner.auction_name && (
                   <button 
-                    className={`copy-btn ${copyStatus['company_name'] ? 'copied' : ''}`}
+                    className={`p-1 rounded transition-colors ${copyStatus['company_name'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
                     onClick={() => copyToClipboard(owner.auction_name, 'company_name')}
                     title="نسخ اسم الشركة"
                   >
-                    <FiCopy />
-                    {copyStatus['company_name'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
             </div>
-            <div className="form-group">
-              <label>البريد الإلكتروني</label>
-              <div className="detail-value-with-copy">
-                <span>{owner.user?.email || 'غير متوفر'}</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">{owner.user?.email || 'غير متوفر'}</span>
                 {owner.user?.email && (
                   <button 
-                    className={`copy-btn ${copyStatus['company_email'] ? 'copied' : ''}`}
+                    className={`p-1 rounded transition-colors ${copyStatus['company_email'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
                     onClick={() => copyToClipboard(owner.user.email, 'company_email')}
                     title="نسخ البريد الإلكتروني"
                   >
-                    <FiCopy />
-                    {copyStatus['company_email'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
             </div>
-          </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label>رقم الهاتف</label>
-              <div className="detail-value-with-copy">
-                <span>{owner.user?.phone || 'غير متوفر'}</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">{owner.user?.phone || 'غير متوفر'}</span>
                 {owner.user?.phone && (
                   <button 
-                    className={`copy-btn ${copyStatus['company_phone'] ? 'copied' : ''}`}
+                    className={`p-1 rounded transition-colors ${copyStatus['company_phone'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
                     onClick={() => copyToClipboard(owner.user.phone, 'company_phone')}
                     title="نسخ رقم الهاتف"
                   >
-                    <FiCopy />
-                    {copyStatus['company_phone'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
             </div>
-            <div className="form-group">
-              <label>اسم المسؤول</label>
-              <div className="detail-value-with-copy">
-                <span>{owner.user?.full_name || 'غير متوفر'}</span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">اسم المسؤول</label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">{owner.user?.full_name || 'غير متوفر'}</span>
                 {owner.user?.full_name && (
                   <button 
-                    className={`copy-btn ${copyStatus['company_contact'] ? 'copied' : ''}`}
+                    className={`p-1 rounded transition-colors ${copyStatus['company_contact'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
                     onClick={() => copyToClipboard(owner.user.full_name, 'company_contact')}
                     title="نسخ اسم المسؤول"
                   >
-                    <FiCopy />
-                    {copyStatus['company_contact'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -522,35 +554,33 @@ const AllAuctions = () => {
         </div>
 
         {owner.commercial_register && (
-          <div className="form-section">
-            <h4>المعلومات التجارية</h4>
-            <div className="form-row">
-              <div className="form-group">
-                <label>السجل التجاري</label>
-                <div className="detail-value-with-copy">
-                  <span>{owner.commercial_register}</span>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">المعلومات التجارية</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">السجل التجاري</label>
+                <div className="flex items-center justify-between bg-white p-2 rounded border">
+                  <span className="text-gray-800">{owner.commercial_register}</span>
                   <button 
-                    className={`copy-btn ${copyStatus['commercial_register'] ? 'copied' : ''}`}
+                    className={`p-1 rounded transition-colors ${copyStatus['commercial_register'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
                     onClick={() => copyToClipboard(owner.commercial_register, 'commercial_register')}
                     title="نسخ السجل التجاري"
                   >
-                    <FiCopy />
-                    {copyStatus['commercial_register'] && <span className="copy-tooltip">تم النسخ!</span>}
+                    <FiCopy size={16} />
                   </button>
                 </div>
               </div>
               {owner.license_number && (
-                <div className="form-group">
-                  <label>رقم الترخيص</label>
-                  <div className="detail-value-with-copy">
-                    <span>{owner.license_number}</span>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">رقم الترخيص</label>
+                  <div className="flex items-center justify-between bg-white p-2 rounded border">
+                    <span className="text-gray-800">{owner.license_number}</span>
                     <button 
-                      className={`copy-btn ${copyStatus['license_number'] ? 'copied' : ''}`}
+                      className={`p-1 rounded transition-colors ${copyStatus['license_number'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
                       onClick={() => copyToClipboard(owner.license_number, 'license_number')}
                       title="نسخ رقم الترخيص"
                     >
-                      <FiCopy />
-                      {copyStatus['license_number'] && <span className="copy-tooltip">تم النسخ!</span>}
+                      <FiCopy size={16} />
                     </button>
                   </div>
                 </div>
@@ -564,325 +594,235 @@ const AllAuctions = () => {
 
   const renderAuctionDetails = (auction) => {
     return (
-      <div className="details-content">
-        <div className="detail-item">
-          <div className="detail-label">
-            العنوان
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">العنوان</label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{auction.title || 'غير محدد'}</span>
+            </div>
           </div>
-          <div className="detail-value-with-copy">
-            <span>{auction.title || 'غير محدد'}</span>
-            {/* {auction.title && (
-              <button 
-                className={`copy-btn ${copyStatus['auction_title'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.title, 'auction_title')}
-                title="نسخ العنوان"
-              >
-                <FiCopy />
-                {copyStatus['auction_title'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )} */}
-          </div>
-        </div>
 
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiUser />
-            الشركة المنظمة
-          </div>
-          <div className="detail-value owner-info">
-            <div className="detail-value-with-copy">
-              <span>{auction.company?.auction_name || auction.company?.user?.full_name || 'غير محدد'}</span>
-              <div className="owner-actions">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <FiUser size={16} />
+              الشركة المنظمة
+            </label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{auction.company?.auction_name || auction.company?.user?.full_name || 'غير محدد'}</span>
+              <div className="flex gap-1">
                 <button 
-                  className="owner-view-btn"
+                  className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                   onClick={() => openOwnerModal(auction.company)}
                   title="عرض تفاصيل الشركة"
                 >
-                  <FiEye />
+                  <FiEye size={16} />
                 </button>
                 <button 
-                  className={`copy-btn ${copyStatus['company_info'] ? 'copied' : ''}`}
+                  className={`p-1 rounded transition-colors ${copyStatus['company_info'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
                   onClick={() => copyToClipboard(auction.company?.auction_name || auction.company?.user?.full_name, 'company_info')}
                   title="نسخ اسم الشركة"
                 >
-                  <FiCopy />
-                  {copyStatus['company_info'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  <FiCopy size={16} />
                 </button>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="detail-item">
-          <div className="detail-label">
-            البريد الإلكتروني
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{auction.company?.user?.email || 'غير محدد'}</span>
-            {auction.company?.user?.email && (
-              <button 
-                className={`copy-btn ${copyStatus['auction_email'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.company.user.email, 'auction_email')}
-                title="نسخ البريد الإلكتروني"
-              >
-                <FiCopy />
-                {copyStatus['auction_email'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            الهاتف
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{auction.company?.user?.phone || 'غير محدد'}</span>
-            {auction.company?.user?.phone && (
-              <button 
-                className={`copy-btn ${copyStatus['auction_phone'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.company.user.phone, 'auction_phone')}
-                title="نسخ رقم الهاتف"
-              >
-                <FiCopy />
-                {copyStatus['auction_phone'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            الحالة
-          </div>
-          <div className="detail-value">
-            {getStatusBadge(auction.status)}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiCalendar />
-            تاريخ المزاد
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{formatDate(auction.auction_date)}</span>
-            {auction.auction_date && (
-              <button 
-                className={`copy-btn ${copyStatus['auction_date'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(formatDate(auction.auction_date), 'auction_date')}
-                title="نسخ تاريخ المزاد"
-              >
-                <FiCopy />
-                {copyStatus['auction_date'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiClock />
-            وقت البدء
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{formatTime(auction.start_time)}</span>
-            {auction.start_time && (
-              <button 
-                className={`copy-btn ${copyStatus['start_time'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.start_time, 'start_time')}
-                title="نسخ وقت البدء"
-              >
-                <FiCopy />
-                {copyStatus['start_time'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiMapPin />
-            العنوان
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{auction.address || 'غير محدد'}</span>
-            {/* {auction.address && (
-              <button 
-                className={`copy-btn ${copyStatus['auction_address'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.address, 'auction_address')}
-                title="نسخ العنوان"
-              >
-                <FiCopy />
-                {copyStatus['auction_address'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )} */}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            المنطقة
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{auction.region || 'غير محدد'}</span>
-            {/* {auction.region && (
-              <button 
-                className={`copy-btn ${copyStatus['auction_region'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.region, 'auction_region')}
-                title="نسخ المنطقة"
-              >
-                <FiCopy />
-                {copyStatus['auction_region'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )} */}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            المدينة
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{auction.city || 'غير محدد'}</span>
-            {/* {auction.city && (
-              <button 
-                className={`copy-btn ${copyStatus['auction_city'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.city, 'auction_city')}
-                title="نسخ المدينة"
-              >
-                <FiCopy />
-                {copyStatus['auction_city'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )} */}
-          </div>
-        </div>
-
-        {auction.latitude && auction.longitude && (
-          <div className="detail-item">
-            <div className="detail-label">
-              الإحداثيات
-            </div>
-            <div className="detail-value-with-copy">
-              <span>{auction.latitude}, {auction.longitude}</span>
-              <button 
-                className={`copy-btn ${copyStatus['coordinates'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(`${auction.latitude}, ${auction.longitude}`, 'coordinates')}
-                title="نسخ الإحداثيات"
-              >
-                <FiCopy />
-                {copyStatus['coordinates'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {auction.intro_link && (
-          <div className="detail-item">
-            <div className="detail-label">
-              <FiExternalLink />
-              رابط التعريف
-            </div>
-            <div className="detail-value-with-copy">
-              <a href={auction.intro_link} target="_blank" rel="noopener noreferrer" className="link">
-                {auction.intro_link}
-              </a>
-              <button 
-                className={`copy-btn ${copyStatus['intro_link'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.intro_link, 'intro_link')}
-                title="نسخ رابط التعريف"
-              >
-                <FiCopy />
-                {copyStatus['intro_link'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {auction.rejection_reason && (
-          <div className="detail-item">
-            <div className="detail-label">
-              سبب الرفض
-            </div>
-            <div className="detail-value-with-copy rejection-reason">
-              <span>{auction.rejection_reason}</span>
-              <button 
-                className={`copy-btn ${copyStatus['rejection_reason'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(auction.rejection_reason, 'rejection_reason')}
-                title="نسخ سبب الرفض"
-              >
-                <FiCopy />
-                {copyStatus['rejection_reason'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiCalendar />
-            تاريخ الإنشاء
-          </div>
-          <div className="detail-value-with-copy">
-            <span>{formatDate(auction.created_at)}</span>
-            {/* {auction.created_at && (
-              <button 
-                className={`copy-btn ${copyStatus['created_at'] ? 'copied' : ''}`}
-                onClick={() => copyToClipboard(formatDate(auction.created_at), 'created_at')}
-                title="نسخ تاريخ الإنشاء"
-              >
-                <FiCopy />
-                {copyStatus['created_at'] && <span className="copy-tooltip">تم النسخ!</span>}
-              </button>
-            )} */}
-          </div>
-        </div>
-
-        <div className="detail-item full-width">
-          <div className="detail-label">
-            الوصف
-          </div>
-          <div className="detail-value description-text">
-            <div className="detail-value-with-copy">
-              <span>{auction.description || 'لا يوجد وصف'}</span>
-              {/* {auction.description && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{auction.company?.user?.email || 'غير محدد'}</span>
+              {auction.company?.user?.email && (
                 <button 
-                  className={`copy-btn ${copyStatus['description'] ? 'copied' : ''}`}
-                  onClick={() => copyToClipboard(auction.description, 'description')}
-                  title="نسخ الوصف"
+                  className={`p-1 rounded transition-colors ${copyStatus['auction_email'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
+                  onClick={() => copyToClipboard(auction.company.user.email, 'auction_email')}
+                  title="نسخ البريد الإلكتروني"
                 >
-                  <FiCopy />
-                  {copyStatus['description'] && <span className="copy-tooltip">تم النسخ!</span>}
+                  <FiCopy size={16} />
                 </button>
-              )} */}
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">الهاتف</label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{auction.company?.user?.phone || 'غير محدد'}</span>
+              {auction.company?.user?.phone && (
+                <button 
+                  className={`p-1 rounded transition-colors ${copyStatus['auction_phone'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
+                  onClick={() => copyToClipboard(auction.company.user.phone, 'auction_phone')}
+                  title="نسخ رقم الهاتف"
+                >
+                  <FiCopy size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">الحالة</label>
+            <div className="bg-gray-50 p-2 rounded">
+              {getStatusBadge(auction.status)}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <FiCalendar size={16} />
+              تاريخ المزاد
+            </label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{formatDate(auction.auction_date)}</span>
+              {auction.auction_date && (
+                <button 
+                  className={`p-1 rounded transition-colors ${copyStatus['auction_date'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
+                  onClick={() => copyToClipboard(formatDate(auction.auction_date), 'auction_date')}
+                  title="نسخ تاريخ المزاد"
+                >
+                  <FiCopy size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <FiClock size={16} />
+              وقت البدء
+            </label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{formatTime(auction.start_time)}</span>
+              {auction.start_time && (
+                <button 
+                  className={`p-1 rounded transition-colors ${copyStatus['start_time'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
+                  onClick={() => copyToClipboard(auction.start_time, 'start_time')}
+                  title="نسخ وقت البدء"
+                >
+                  <FiCopy size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <FiMapPin size={16} />
+              العنوان
+            </label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{auction.address || 'غير محدد'}</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">المنطقة</label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{auction.region || 'غير محدد'}</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">المدينة</label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{auction.city || 'غير محدد'}</span>
+            </div>
+          </div>
+
+          {auction.latitude && auction.longitude && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">الإحداثيات</label>
+              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <span className="text-gray-800">{auction.latitude}, {auction.longitude}</span>
+                <button 
+                  className={`p-1 rounded transition-colors ${copyStatus['coordinates'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
+                  onClick={() => copyToClipboard(`${auction.latitude}, ${auction.longitude}`, 'coordinates')}
+                  title="نسخ الإحداثيات"
+                >
+                  <FiCopy size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {auction.intro_link && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <FiExternalLink size={16} />
+                رابط التعريف
+              </label>
+              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                <a href={auction.intro_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 truncate">
+                  {auction.intro_link}
+                </a>
+                <button 
+                  className={`p-1 rounded transition-colors ${copyStatus['intro_link'] ? 'text-green-600 bg-green-50' : 'text-gray-500 hover:text-blue-600 hover:bg-gray-100'}`}
+                  onClick={() => copyToClipboard(auction.intro_link, 'intro_link')}
+                  title="نسخ رابط التعريف"
+                >
+                  <FiCopy size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {auction.rejection_reason && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">سبب الرفض</label>
+              <div className="flex items-center justify-between bg-red-50 p-2 rounded border border-red-200">
+                <span className="text-red-800">{auction.rejection_reason}</span>
+                <button 
+                  className={`p-1 rounded transition-colors ${copyStatus['rejection_reason'] ? 'text-green-600 bg-green-50' : 'text-red-500 hover:text-red-700 hover:bg-red-100'}`}
+                  onClick={() => copyToClipboard(auction.rejection_reason, 'rejection_reason')}
+                  title="نسخ سبب الرفض"
+                >
+                  <FiCopy size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+              <FiCalendar size={16} />
+              تاريخ الإنشاء
+            </label>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              <span className="text-gray-800">{formatDate(auction.created_at)}</span>
             </div>
           </div>
         </div>
 
-        {/* الصور */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
+          <div className="bg-gray-50 p-3 rounded border">
+            <p className="text-gray-800">{auction.description || 'لا يوجد وصف'}</p>
+          </div>
+        </div>
+
         {auction.images && auction.images.length > 0 && (
-          <div className="images-section">
-            <h4>صور المزاد ({auction.images.length})</h4>
-            <div className="images-grid">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="text-lg font-semibold text-gray-800 mb-3">صور المزاد ({auction.images.length})</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {auction.images.map((image, index) => (
-                <div key={image.id || index} className="image-item">
-                  <FiImage className="image-icon" />
-                  <span className="image-name">صورة {index + 1}</span>
+                <div key={image.id || index} className="flex flex-col items-center p-3 bg-white rounded border">
+                  <FiImage className="text-gray-500 mb-1" size={24} />
+                  <span className="text-sm text-gray-700">صورة {index + 1}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* الفيديوهات */}
         {auction.videos && auction.videos.length > 0 && (
-          <div className="videos-section">
-            <h4>فيديوهات المزاد ({auction.videos.length})</h4>
-            <div className="videos-grid">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="text-lg font-semibold text-gray-800 mb-3">فيديوهات المزاد ({auction.videos.length})</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {auction.videos.map((video, index) => (
-                <div key={video.id || index} className="video-item">
-                  <FiVideo className="video-icon" />
-                  <span className="video-name">فيديو {index + 1}</span>
+                <div key={video.id || index} className="flex flex-col items-center p-3 bg-white rounded border">
+                  <FiVideo className="text-gray-500 mb-1" size={24} />
+                  <span className="text-sm text-gray-700">فيديو {index + 1}</span>
                 </div>
               ))}
             </div>
@@ -892,7 +832,6 @@ const AllAuctions = () => {
     );
   };
 
-  // إنشاء أزرار الباجينيشن
   const renderPagination = () => {
     if (!auctionsData || !auctionsData.pagination || auctionsData.pagination.last_page <= 1) return null;
 
@@ -902,15 +841,14 @@ const AllAuctions = () => {
     pages.push(
       <button
         key="prev"
-        className={`pagination-btn ${currentPage === 1 ? 'disabled' : ''}`}
+        className={`p-2 rounded border ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
         onClick={() => currentPage > 1 && updatePagination(currentPage - 1)}
         disabled={currentPage === 1}
       >
-        <FiChevronRight />
+        <FiChevronRight size={18} />
       </button>
     );
 
-    // أزرار الصفحات
     const showPages = [];
     showPages.push(1);
     
@@ -934,12 +872,12 @@ const AllAuctions = () => {
     
     uniquePages.forEach(page => {
       if (page === 'ellipsis-start' || page === 'ellipsis-end') {
-        pages.push(<span key={page} className="pagination-ellipsis">...</span>);
+        pages.push(<span key={page} className="px-3 py-2 text-gray-500">...</span>);
       } else {
         pages.push(
           <button
             key={page}
-            className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+            className={`p-2 min-w-[40px] rounded border ${currentPage === page ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
             onClick={() => updatePagination(page)}
           >
             {page}
@@ -948,26 +886,27 @@ const AllAuctions = () => {
       }
     });
 
-    // زر الصفحة التالية
     pages.push(
       <button
         key="next"
-        className={`pagination-btn ${currentPage === pagination.last_page ? 'disabled' : ''}`}
+        className={`p-2 rounded border ${currentPage === pagination.last_page ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
         onClick={() => currentPage < pagination.last_page && updatePagination(currentPage + 1)}
         disabled={currentPage === pagination.last_page}
       >
-        <FiChevronLeft />
+        <FiChevronLeft size={18} />
       </button>
     );
 
     return pages;
   };
 
-  // التحقق إذا كان هناك أي فلتر نشط
+  // ===============================
+  // 10. Main Component Return - العنصر الرئيسي
+  // ===============================
+  
   const hasActiveFilters = filters.search || filters.status !== 'all' || filters.region !== 'all' || 
                           filters.city !== 'all' || filters.date;
 
-  // استخراج البيانات من نتيجة الاستعلام
   const auctions = auctionsData?.data || [];
   const pagination = auctionsData?.pagination || {
     current_page: currentPage,
@@ -981,52 +920,62 @@ const AllAuctions = () => {
   const loading = isLoading || isRefreshing || approveMutation.isLoading || rejectMutation.isLoading;
 
   return (
-    <div className="pending-users-container">
-      {/* شريط البحث والتصفية */}
-      <div className="filter-section">
-        <div className="filter-header">
-          <FiFilter className="filter-icon" />
-          <span>أدوات البحث والتصفية:</span>
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {/* Filter Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FiFilter className="text-gray-600" size={20} />
+            <span className="text-lg font-semibold text-gray-800">أدوات البحث والتصفية:</span>
+          </div>
           {hasActiveFilters && (
-            <button className="clear-filters-btn" onClick={clearFilters}>
-              <FiSlash />
+            <button 
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-50 text-red-700 rounded border border-red-200 hover:bg-red-100 transition-colors"
+              onClick={clearFilters}
+            >
+              <FiSlash size={16} />
               مسح الفلاتر
             </button>
           )}
         </div>
         
-        <form onSubmit={handleSearch} className="search-form">
-          <div className="search-input-group">
-            <FiSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="ابحث باسم المزاد أو الوصف..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="search-input"
-            />
-            <button type="submit" className="search-btn">
+        <form onSubmit={handleSearch} className="p-4 border-b border-gray-200">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-1 relative">
+              <FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="ابحث باسم المزاد أو الوصف..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               بحث
             </button>
             <button 
               type="button"
-              className="dashboard-refresh-btn" 
+              className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
               onClick={handleRefresh}
               disabled={isRefreshing || loading}
             >
-              <FiRefreshCw className={isRefreshing ? 'spinning' : ''} />
+              <FiRefreshCw className={isRefreshing ? 'animate-spin' : ''} size={18} />
               {isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}
             </button>
           </div>
         </form>
 
-        <div className="filter-controls">
-          <div className="filter-group">
-            <label>الحالة:</label>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">الحالة:</label>
             <select 
               value={filters.status} 
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="filter-select"
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">جميع الحالات</option>
               <option value="مفتوح">مفتوح</option>
@@ -1036,12 +985,12 @@ const AllAuctions = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>المنطقة:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">المنطقة:</label>
             <select 
               value={filters.region} 
               onChange={(e) => handleFilterChange('region', e.target.value)}
-              className="filter-select"
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">جميع المناطق</option>
               <option value="الرياض">الرياض</option>
@@ -1060,100 +1009,100 @@ const AllAuctions = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>المدينة:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">المدينة:</label>
             <select 
               value={filters.city} 
               onChange={(e) => handleFilterChange('city', e.target.value)}
-              className="filter-select"
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-               <option value="all">جميع المدن</option>
-    <option value="الرياض">الرياض</option>
-    <option value="جدة">جدة</option>
-    <option value="مكة المكرمة">مكة المكرمة</option>
-    <option value="المدينة المنورة">المدينة المنورة</option>
-    <option value="الدمام">الدمام</option>
-    <option value="الخبر">الخبر</option>
-    <option value="الظهران">الظهران</option>
-    <option value="الجبيل">الجبيل</option>
-    <option value="القطيف">القطيف</option>
-    <option value="تبوك">تبوك</option>
-    <option value="حائل">حائل</option>
-    <option value="بريدة">بريدة</option>
-    <option value="عنيزة">عنيزة</option>
-    <option value="الرس">الرس</option>
-    <option value="خميس مشيط">خميس مشيط</option>
-    <option value="أبها">أبها</option>
-    <option value="نجران">نجران</option>
-    <option value="جازان">جازان</option>
-    <option value="بيشة">بيشة</option>
-    <option value="الباحة">الباحة</option>
-    <option value="سكاكا">سكاكا</option>
-    <option value="عرعر">عرعر</option>
-    <option value="القريات">القريات</option>
-    <option value="ينبع">ينبع</option>
-    <option value="رابغ">رابغ</option>
-    <option value="الطائف">الطائف</option>
-    <option value="محايل عسير">محايل عسير</option>
-    <option value="بلجرشي">بلجرشي</option>
-    <option value="صبيا">صبيا</option>
-    <option value="أحد رفيدة">أحد رفيدة</option>
-    <option value="تثليث">تثليث</option>
-    <option value="المجمعة">المجمعة</option>
-    <option value="الزلفي">الزلفي</option>
-    <option value="حوطة بني تميم">حوطة بني تميم</option>
-    <option value="الأحساء">الأحساء</option>
-    <option value="بقيق">بقيق</option>
-    <option value="رأس تنورة">رأس تنورة</option>
-    <option value="سيهات">سيهات</option>
-    <option value="صفوى">صفوى</option>
-    <option value="تاروت">تاروت</option>
-    <option value="النعيرية">النعيرية</option>
-    <option value="قرية العليا">قرية العليا</option>
-    <option value="الخرج">الخرج</option>
-    <option value="الدوادمي">الدوادمي</option>
-    <option value="القويعية">القويعية</option>
-    <option value="وادي الدواسر">وادي الدواسر</option>
-    <option value="الافلاج">الأفلاج</option>
-    <option value="رنية">رنية</option>
-    <option value="بيش">بيش</option>
-    <option value="الدرب">الدرب</option>
-    <option value="العارضة">العارضة</option>
-    <option value="أملج">أملج</option>
-    <option value="ضباء">ضباء</option>
-    <option value="الوجه">الوجه</option>
-    <option value="العلا">العلا</option>
-    <option value="خيبر">خيبر</option>
-    <option value="البدائع">البدائع</option>
-    <option value="الأسياح">الأسياح</option>
-    <option value="رياض الخبراء">رياض الخبراء</option>
-    <option value="النبهانية">النبهانية</option>
-    <option value="ضرما">ضرما</option>
-    <option value="حوطة سدير">حوطة سدير</option>
-    <option value="تمير">تمير</option>
-    <option value="الحوطة">الحوطة</option>
-    <option value="الحريق">الحريق</option>
-    <option value="شقراء">شقراء</option>
-    <option value="عفيف">عفيف</option>
+              <option value="all">جميع المدن</option>
+              <option value="الرياض">الرياض</option>
+              <option value="جدة">جدة</option>
+              <option value="مكة المكرمة">مكة المكرمة</option>
+              <option value="المدينة المنورة">المدينة المنورة</option>
+              <option value="الدمام">الدمام</option>
+              <option value="الخبر">الخبر</option>
+              <option value="الظهران">الظهران</option>
+              <option value="الجبيل">الجبيل</option>
+              <option value="القطيف">القطيف</option>
+              <option value="تبوك">تبوك</option>
+              <option value="حائل">حائل</option>
+              <option value="بريدة">بريدة</option>
+              <option value="عنيزة">عنيزة</option>
+              <option value="الرس">الرس</option>
+              <option value="خميس مشيط">خميس مشيط</option>
+              <option value="أبها">أبها</option>
+              <option value="نجران">نجران</option>
+              <option value="جازان">جازان</option>
+              <option value="بيشة">بيشة</option>
+              <option value="الباحة">الباحة</option>
+              <option value="سكاكا">سكاكا</option>
+              <option value="عرعر">عرعر</option>
+              <option value="القريات">القريات</option>
+              <option value="ينبع">ينبع</option>
+              <option value="رابغ">رابغ</option>
+              <option value="الطائف">الطائف</option>
+              <option value="محايل عسير">محايل عسير</option>
+              <option value="بلجرشي">بلجرشي</option>
+              <option value="صبيا">صبيا</option>
+              <option value="أحد رفيدة">أحد رفيدة</option>
+              <option value="تثليث">تثليث</option>
+              <option value="المجمعة">المجمعة</option>
+              <option value="الزلفي">الزلفي</option>
+              <option value="حوطة بني تميم">حوطة بني تميم</option>
+              <option value="الأحساء">الأحساء</option>
+              <option value="بقيق">بقيق</option>
+              <option value="رأس تنورة">رأس تنورة</option>
+              <option value="سيهات">سيهات</option>
+              <option value="صفوى">صفوى</option>
+              <option value="تاروت">تاروت</option>
+              <option value="النعيرية">النعيرية</option>
+              <option value="قرية العليا">قرية العليا</option>
+              <option value="الخرج">الخرج</option>
+              <option value="الدوادمي">الدوادمي</option>
+              <option value="القويعية">القويعية</option>
+              <option value="وادي الدواسر">وادي الدواسر</option>
+              <option value="الافلاج">الأفلاج</option>
+              <option value="رنية">رنية</option>
+              <option value="بيش">بيش</option>
+              <option value="الدرب">الدرب</option>
+              <option value="العارضة">العارضة</option>
+              <option value="أملج">أملج</option>
+              <option value="ضباء">ضباء</option>
+              <option value="الوجه">الوجه</option>
+              <option value="العلا">العلا</option>
+              <option value="خيبر">خيبر</option>
+              <option value="البدائع">البدائع</option>
+              <option value="الأسياح">الأسياح</option>
+              <option value="رياض الخبراء">رياض الخبراء</option>
+              <option value="النبهانية">النبهانية</option>
+              <option value="ضرما">ضرما</option>
+              <option value="حوطة سدير">حوطة سدير</option>
+              <option value="تمير">تمير</option>
+              <option value="الحوطة">الحوطة</option>
+              <option value="الحريق">الحريق</option>
+              <option value="شقراء">شقراء</option>
+              <option value="عفيف">عفيف</option>
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>تاريخ المزاد:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ المزاد:</label>
             <input
               type="date"
               value={filters.date}
               onChange={(e) => handleFilterChange('date', e.target.value)}
-              className="filter-select"
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
-          <div className="filter-group">
-            <label>ترتيب حسب:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ترتيب حسب:</label>
             <select 
               value={filters.sort_field} 
               onChange={(e) => handleFilterChange('sort_field', e.target.value)}
-              className="filter-select"
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="created_at">تاريخ الإنشاء</option>
               <option value="auction_date">تاريخ المزاد</option>
@@ -1161,12 +1110,12 @@ const AllAuctions = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>الاتجاه:</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">الاتجاه:</label>
             <select 
               value={filters.sort_direction} 
               onChange={(e) => handleFilterChange('sort_direction', e.target.value)}
-              className="filter-select"
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="desc">تنازلي</option>
               <option value="asc">تصاعدي</option>
@@ -1175,200 +1124,218 @@ const AllAuctions = () => {
         </div>
       </div>
 
-      <div className="content-body">
-        <div className="users-grid">
-          {/* Auctions List */}
-          <div className="users-list">
-            <div className="list-header">
-              <h3>قائمة المزادات ({auctions.length})</h3>
-              <span className="page-info">
-                {pagination.total > 0 ? (
-                  <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
-                ) : (
-                  'لا توجد نتائج'
-                )}
-              </span>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Auctions List */}
+        <div className="xl:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-xl font-semibold text-gray-800 mb-2 sm:mb-0">قائمة المزادات ({auctions.length})</h3>
+            <span className="text-sm text-gray-600">
+              {pagination.total > 0 ? (
+                <>عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة {pagination.current_page} من {pagination.last_page}</>
+              ) : (
+                'لا توجد نتائج'
+              )}
+            </span>
+          </div>
+          
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex space-x-2 mb-4">
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              </div>
+              <p className="text-gray-600">جاري تحميل البيانات...</p>
             </div>
-            
-            {loading ? (
-              <div className="dashboard-loading">
-                <div className="dashboard-loading-dots">
-                  <div className="dashboard-loading-dot"></div>
-                  <div className="dashboard-loading-dot"></div>
-                  <div className="dashboard-loading-dot"></div>
-                </div>
-                <p className="dashboard-loading-text">جاري تحميل البيانات...</p>
-              </div>
-            ) : auctions.length === 0 ? (
-              <div className="empty-state">
-                <FiCalendar className="empty-icon" />
-                <p>لا توجد مزادات</p>
-                {hasActiveFilters && (
-                  <button className="btn btn-primary" onClick={clearFilters}>
-                    مسح الفلاتر
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="users-cards">
-                  {auctions.map((auction) => (
-                    <div 
-                      key={auction.id} 
-                      className={`user-card ${selectedAuction?.id === auction.id ? 'active' : ''}`}
-                      onClick={() => setSelectedAuction(auction)}
-                    >
-                      <div className="user-avatar">
-                        <FiCalendar />
+          ) : auctions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <FiCalendar className="text-gray-400 mb-4" size={48} />
+              <p className="text-gray-600 text-lg mb-4">لا توجد مزادات</p>
+              {hasActiveFilters && (
+                <button 
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={clearFilters}
+                >
+                  مسح الفلاتر
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-gray-200 max-h-[calc(100vh-300px)] overflow-y-auto">
+                {auctions.map((auction) => (
+                  <div 
+                    key={auction.id} 
+                    className={`p-4 cursor-pointer transition-colors ${selectedAuction?.id === auction.id ? 'bg-blue-50 border-r-4 border-blue-600' : 'hover:bg-gray-50'}`}
+                    onClick={() => setSelectedAuction(auction)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <FiCalendar className="text-blue-600" size={20} />
                       </div>
-                      <div className="user-info">
-                        <h4>{auction.title}</h4>
-                        <span className="user-type">{auction.company?.auction_name || 'غير محدد'}</span>
-                        <span className="user-date">
-                          <FiCalendar />
-                          {formatDate(auction.auction_date)} - {formatTime(auction.start_time)}
-                        </span>
-                        <div className="auction-address">
-                          <FiMapPin />
-                          {auction.address || 'غير محدد'}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-lg font-medium text-gray-900 truncate">{auction.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">{auction.company?.auction_name || 'غير محدد'}</p>
+                        <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <FiCalendar size={14} />
+                            {formatDate(auction.auction_date)} - {formatTime(auction.start_time)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <FiMapPin size={14} />
+                            {auction.address || 'غير محدد'}
+                          </span>
+                          {auction.region && (
+                            <span className="flex items-center gap-1">
+                              <FiMapPin size={14} />
+                              {auction.region}
+                            </span>
+                          )}
                         </div>
-                        {auction.region && (
-                          <div className="auction-region">
-                            <FiMapPin />
-                            {auction.region}
-                          </div>
-                        )}
                       </div>
-                      <div className={`user-status ${auction.status?.replace(/\s+/g, '-') || 'unknown'}`}>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        auction.status === 'مفتوح' ? 'bg-green-100 text-green-800' :
+                        auction.status === 'مرفوض' ? 'bg-red-100 text-red-800' :
+                        auction.status === 'مغلق' ? 'bg-gray-100 text-gray-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
                         {getStatusText(auction.status)}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
 
-                {/* الباجينيشن */}
-                {pagination.last_page > 1 && (
-                  <div className="pagination">
+              {/* Pagination */}
+              {pagination.last_page > 1 && (
+                <div className="p-4 border-t border-gray-200 flex justify-center">
+                  <div className="flex items-center gap-1">
                     {renderPagination()}
                   </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Auction Details */}
-          <div className="user-details">
-            {selectedAuction ? (
-              <div className="details-card">
-                <div className="details-header">
-                  <h3>تفاصيل المزاد</h3>
-                  <span className="user-id">ID: {selectedAuction.id}</span>
                 </div>
-                
-                {renderAuctionDetails(selectedAuction)}
+              )}
+            </>
+          )}
+        </div>
 
-                <div className="details-actions">
+        {/* Auction Details */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          {selectedAuction ? (
+            <div className="h-full flex flex-col">
+              <div className="p-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-gray-800">تفاصيل المزاد</h3>
+                  <span className="text-sm text-gray-500">ID: {selectedAuction.id}</span>
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4">
+                {renderAuctionDetails(selectedAuction)}
+              </div>
+
+              <div className="p-4 border-t border-gray-200">
+                <div className="flex flex-wrap gap-2">
                   {selectedAuction.status === 'قيد المراجعة' && (
                     <>
                       <button 
-                        className="btn btn-success"
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                         onClick={() => handleApprove(selectedAuction.id)}
                         disabled={loading}
                       >
-                        <FiCheck />
+                        <FiCheck size={18} />
                         {loading ? 'جاري المعالجة...' : 'قبول المزاد'}
                       </button>
                       
                       <button 
-                        className="btn btn-danger"
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                         onClick={() => openRejectModal(selectedAuction.id)}
                         disabled={loading}
                       >
-                        <FiX />
+                        <FiX size={18} />
                         {loading ? 'جاري المعالجة...' : 'رفض المزاد'}
                       </button>
                     </>
                   )}
                   {selectedAuction.status === 'مرفوض' && (
                     <button 
-                      className="btn btn-success"
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                       onClick={() => handleApprove(selectedAuction.id)}
                       disabled={loading}
                     >
-                      <FiCheck />
+                      <FiCheck size={18} />
                       {loading ? 'جاري المعالجة...' : 'قبول المزاد'}
                     </button>
                   )}
                   {selectedAuction.status === 'مفتوح' && (
                     <button 
-                      className="btn btn-danger"
+                      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                       onClick={() => openRejectModal(selectedAuction.id)}
                       disabled={loading}
                     >
-                      <FiX />
+                      <FiX size={18} />
                       {loading ? 'جاري المعالجة...' : 'رفض المزاد'}
                     </button>
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="no-selection">
-                <FiCalendar className="no-selection-icon" />
-                <p>اختر مزادًا لعرض التفاصيل</p>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center py-12 text-center">
+              <FiCalendar className="text-gray-400 mb-4" size={48} />
+              <p className="text-gray-600 text-lg">اختر مزادًا لعرض التفاصيل</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* مودال الرفض */}
+      {/* Reject Modal */}
       {rejectModal.show && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>
-                <FiEdit />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <FiEdit size={20} />
                 رفض المزاد
               </h3>
               <button 
-                className="close-btn"
+                className="text-gray-400 hover:text-gray-600 text-xl"
                 onClick={closeRejectModal}
               >
                 ×
               </button>
             </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>سبب الرفض</label>
+            <div className="p-4">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">سبب الرفض</label>
                 <textarea
                   value={rejectModal.reason}
                   onChange={(e) => setRejectModal(prev => ({
                     ...prev,
                     reason: e.target.value
                   }))}
-                  className="form-input"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   rows="4"
                   placeholder="اكتب سبب رفض المزاد هنا..."
                 />
-                <div className="form-hint">
+                <div className="text-xs text-gray-500 mt-1">
                   هذا السبب سيظهر للشركة كتفسير لرفض مزادها
                 </div>
               </div>
             </div>
-            <div className="modal-actions">
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
               <button 
-                className="btn btn-secondary"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
                 onClick={closeRejectModal}
                 disabled={loading}
               >
                 إلغاء
               </button>
               <button 
-                className="btn btn-danger"
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                 onClick={handleReject}
                 disabled={loading}
               >
-                <FiX />
+                <FiX size={18} />
                 {loading ? 'جاري الحفظ...' : 'تأكيد الرفض'}
               </button>
             </div>
@@ -1376,28 +1343,28 @@ const AllAuctions = () => {
         </div>
       )}
 
-      {/* مودال تفاصيل الشركة */}
+      {/* Owner Modal */}
       {ownerModal.show && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>
-                <FiUser />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <FiUser size={20} />
                 تفاصيل الشركة
               </h3>
               <button 
-                className="close-btn"
+                className="text-gray-400 hover:text-gray-600 text-xl"
                 onClick={closeOwnerModal}
               >
                 ×
               </button>
             </div>
-            <div className="modal-body">
+            <div className="flex-1 overflow-y-auto p-4">
               {renderOwnerDetails(ownerModal.owner)}
             </div>
-            <div className="modal-actions">
+            <div className="p-4 border-t border-gray-200 flex justify-end">
               <button 
-                className="btn btn-primary"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 onClick={closeOwnerModal}
               >
                 إغلاق
@@ -1410,4 +1377,4 @@ const AllAuctions = () => {
   );
 };
 
-export default AllAuctions;
+export default AllAuctions; 
