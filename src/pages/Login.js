@@ -1,33 +1,98 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthController from '../utils/authController';
-import '../styles/Login.css';
+
+/*
+=================================================================================
+                            فهرس محتويات المكون
+=================================================================================
+1. إعدادات الحالة والمتغيرات (State & Variables)
+2. دوال الحماية والفلترة (Security & Validation)
+3. دوال الخلفية والمثلثات (Background & Triangles)
+4. دوال التعامل مع النموذج (Form Handlers)
+5. الواجهة الرئيسية (Main UI)
+6. قسم الصورة (Image Section)
+7. قسم النموذج (Form Section)
+=================================================================================
+*/
 
 function LoginPage({ onLoginSuccess }) {
+  // ==================== 1. إعدادات الحالة والمتغيرات ====================
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
   const trianglesCreated = useRef(false);
+  const attemptCount = useRef(0);
+  const lastAttemptTime = useRef(0);
   
   const navigate = useNavigate();
 
-  // دالة لإنشاء المثلثات العشوائية
+  // ==================== 2. دوال الحماية والفلترة ====================
+  
+  // فلترة النصوص من الرموز الخطيرة
+  const sanitizeInput = (input) => {
+    if (typeof input !== 'string') return '';
+    return input
+      .replace(/[<>]/g, '') // إزالة HTML tags
+      .replace(/javascript:/gi, '') // إزالة JavaScript URLs
+      .replace(/on\w+=/gi, '') // إزالة event handlers
+      .trim();
+  };
+
+  // التحقق من صحة البريد الإلكتروني
+  const validateEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email) && email.length <= 100;
+  };
+
+  // التحقق من قوة كلمة المرور
+  const validatePassword = (password) => {
+    return password.length >= 6 && password.length <= 128;
+  };
+
+  // حماية من هجمات Brute Force
+  const checkRateLimit = () => {
+    const now = Date.now();
+    const timeDiff = now - lastAttemptTime.current;
+    
+    if (timeDiff < 1000) { // أقل من ثانية واحدة
+      return false;
+    }
+    
+    if (attemptCount.current >= 5 && timeDiff < 300000) { // 5 محاولات في 5 دقائق
+      return false;
+    }
+    
+    if (timeDiff > 300000) { // إعادة تعيين بعد 5 دقائق
+      attemptCount.current = 0;
+    }
+    
+    return true;
+  };
+
+  // فلترة وتنظيف البيانات المدخلة
+  const cleanFormData = (data) => {
+    return {
+      email: sanitizeInput(data.email).toLowerCase(),
+      password: sanitizeInput(data.password)
+    };
+  };
+
+  // ==================== 3. دوال الخلفية والمثلثات ====================
+  
   const createTriangles = () => {
     if (trianglesCreated.current) return;
     
     const trianglesContainer = document.getElementById('triangles-background');
     if (!trianglesContainer) return;
     
-    // مسح المثلثات القديمة
     trianglesContainer.innerHTML = '';
     
-    // عدد المثلثات المراد إنشاؤها
     const triangleCount = 20;
-    
-    // ألوان المثلثات (درجات من الأزرق)
     const colors = [
       '#5DA7E1', '#4A90E2', '#357ABD', 
       '#2A5D84', '#1E4A6D', '#16354d'
@@ -35,22 +100,14 @@ function LoginPage({ onLoginSuccess }) {
     
     for (let i = 0; i < triangleCount; i++) {
       const triangle = document.createElement('div');
-      triangle.className = 'triangle';
+      triangle.className = 'absolute opacity-20 pointer-events-none';
       
-      // حجم عشوائي
-      const size = Math.random() * 100 + 30; // بين 30 و 130 بكسل
-      
-      // موقع عشوائي - فقط في المنطقة البيضاء (النصف السفلي)
-      const left = Math.random() * 100; // بين 0% و 100%
-      const top = 50 + Math.random() * 50; // بين 50% و 100% (النصف السفلي فقط)
-      
-      // لون عشوائي
+      const size = Math.random() * 100 + 30;
+      const left = Math.random() * 100;
+      const top = 50 + Math.random() * 50;
       const color = colors[Math.floor(Math.random() * colors.length)];
-      
-      // دوران عشوائي
       const rotation = Math.random() * 360;
       
-      // إنشاء المثلث باستخدام CSS borders
       triangle.style.width = '0';
       triangle.style.height = '0';
       triangle.style.borderLeft = `${size/2}px solid transparent`;
@@ -59,7 +116,6 @@ function LoginPage({ onLoginSuccess }) {
       triangle.style.left = `${left}%`;
       triangle.style.top = `${top}%`;
       triangle.style.transform = `rotate(${rotation}deg)`;
-      triangle.style.position = 'absolute';
       
       trianglesContainer.appendChild(triangle);
     }
@@ -68,12 +124,10 @@ function LoginPage({ onLoginSuccess }) {
   };
 
   useEffect(() => {
-    // تأخير إنشاء المثلثات لضمان تحميل DOM
     const timer = setTimeout(() => {
       createTriangles();
     }, 100);
     
-    // إعادة إنشاء المثلثات عند تغيير حجم النافذة
     const handleResize = () => {
       trianglesCreated.current = false;
       createTriangles();
@@ -87,91 +141,178 @@ function LoginPage({ onLoginSuccess }) {
     };
   }, []);
 
+  // ==================== 4. دوال التعامل مع النموذج ====================
+  
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    const cleanValue = sanitizeInput(value);
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: cleanValue
+    }));
+    
+    // إزالة رسائل الخطأ عند التعديل
     setError('');
+    setValidationErrors(prev => ({
+      ...prev,
+      [name]: ''
+    }));
+  };
+
+  const validateForm = (data) => {
+    const errors = {};
+    
+    if (!data.email) {
+      errors.email = 'البريد الإلكتروني مطلوب';
+    } else if (!validateEmail(data.email)) {
+      errors.email = 'البريد الإلكتروني غير صحيح';
+    }
+    
+    if (!data.password) {
+      errors.password = 'كلمة المرور مطلوبة';
+    } else if (!validatePassword(data.password)) {
+      errors.password = 'كلمة المرور يجب أن تكون بين 6-128 حرف';
+    }
+    
+    return errors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // التحقق من Rate Limiting
+    if (!checkRateLimit()) {
+      setError('تم تجاوز عدد المحاولات المسموح. يرجى المحاولة بعد 5 دقائق.');
+      return;
+    }
+    
     setLoading(true);
     setError('');
-
-    if (!formData.email || !formData.password) {
-      setError('يرجى ملء جميع الحقول');
+    setValidationErrors({});
+    
+    // تنظيف البيانات
+    const cleanedData = cleanFormData(formData);
+    
+    // التحقق من صحة البيانات
+    const errors = validateForm(cleanedData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       setLoading(false);
       return;
     }
 
-    console.log('بيانات التسجيل:', formData);
+    // تسجيل محاولة جديدة
+    attemptCount.current += 1;
+    lastAttemptTime.current = Date.now();
 
-    const result = await AuthController.login(formData.email, formData.password);
+    try {
+      console.log('بيانات التسجيل:', { email: cleanedData.email, password: '***' });
 
-    console.log('نتيجة تسجيل الدخول:', result);
+      const result = await AuthController.login(cleanedData.email, cleanedData.password);
 
-    if (result.success) {
-      console.log('تم تسجيل الدخول بنجاح، التوجيه إلى Dashboard...');
-      
-      if (onLoginSuccess) {
-        onLoginSuccess();
+      console.log('نتيجة تسجيل الدخول:', { success: result.success });
+
+      if (result.success) {
+        console.log('تم تسجيل الدخول بنجاح، التوجيه إلى Dashboard...');
+        
+        // إعادة تعيين عداد المحاولات عند النجاح
+        attemptCount.current = 0;
+        
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
+        
+        window.location.href = '/dashboard';
+        
+      } else {
+        setError(result.error || 'حدث خطأ في تسجيل الدخول');
       }
-      
-      window.location.href = '/dashboard';
-      
-    } else {
-      setError(result.error);
+    } catch (error) {
+      console.error('خطأ في تسجيل الدخول:', error);
+      setError('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.');
+    } finally {
       setLoading(false);
     }
   };
 
+  // ==================== 5. الواجهة الرئيسية ====================
+  
   return (
-    <div className="login-page">
-      {/* المثلثات العشوائية في الخلفية البيضاء */}
-      <div id="triangles-background" className="triangles-background"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col relative overflow-hidden">
+      {/* خلفية المثلثات */}
+      <div id="triangles-background" className="absolute inset-0 z-0"></div>
       
-      {/* قسم الصورة في النصف العلوي */}
-      <div className="login-image-section">
-        <div className="image-container">
+      {/* ==================== 6. قسم الصورة ==================== */}
+      <div className="relative z-10 h-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 flex items-center justify-center">
+        <div className="relative w-full h-full flex items-center justify-center">
           <img 
             src={process.env.PUBLIC_URL + "/images/3.jpg"} 
             alt="صورة ترحيبية" 
-            className="welcome-image"
+            className="w-full h-full object-cover opacity-30"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
           />
-          <div className="image-overlay">
-            <div className="welcome-text">
-              <div className="logo-container">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 to-blue-600/40"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-white space-y-4">
+              <div className="mb-6">
                 <img 
                   src={process.env.PUBLIC_URL + "/images/logo.png"} 
                   alt="شاهين Logo" 
-                  className="brand-logo"
+                  className="h-60 w-auto mx-auto drop-shadow-2xl"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
                 />
               </div>
+              <h2 className="text-3xl md:text-4xl font-bold drop-shadow-lg">
+                مرحباً بك في شاهين
+              </h2>
+              <p className="text-lg md:text-xl opacity-90 drop-shadow-md">
+                نظام إدارة متطور وآمن
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* قسم نموذج التسجيل في النصف السفلي */}
-      <div className="login-form-section">
-        <div className="login-container">
-          <div className="login-content">
-            <div className="login-header">
-              <h1>تسجيل الدخول</h1>
-              <p>أدخل بياناتك للمتابعة إلى لوحة التحكم</p>
+      {/* ==================== 7. قسم النموذج ==================== */}
+      <div className="relative z-10 h-1/2 bg-white flex items-center justify-center p-4">
+        <div className="w-full max-w-md mx-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 transform transition-all duration-300 hover:shadow-3xl">
+            
+            {/* رأس النموذج */}
+            <div className="text-center mb-8">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+                تسجيل الدخول
+              </h1>
+              <p className="text-gray-600 text-sm md:text-base">
+                أدخل بياناتك للمتابعة إلى لوحة التحكم
+              </p>
             </div>
 
+            {/* رسائل الخطأ العامة */}
             {error && (
-              <div className="error-message">
-                {error}
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm text-center animate-pulse">
+                <div className="flex items-center justify-center space-x-2 space-x-reverse">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span>{error}</span>
+                </div>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="auth-form">
-              <div className="form-group">
-                <label className="form-label">البريد الإلكتروني</label>
+            {/* النموذج */}
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+              
+              {/* حقل البريد الإلكتروني */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  البريد الإلكتروني
+                </label>
                 <input
                   type="email"
                   name="email"
@@ -179,13 +320,31 @@ function LoginPage({ onLoginSuccess }) {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="form-input"
+                  maxLength="100"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-left ${
+                    validationErrors.email 
+                      ? 'border-red-300 bg-red-50' 
+                      : 'border-gray-300 bg-gray-50 hover:bg-white focus:bg-white'
+                  } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={loading}
+                  autoComplete="email"
+                  dir="ltr"
                 />
+                {validationErrors.email && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center space-x-1 space-x-reverse">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <span>{validationErrors.email}</span>
+                  </p>
+                )}
               </div>
 
-              <div className="form-group">
-                <label className="form-label">كلمة المرور</label>
+              {/* حقل كلمة المرور */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  كلمة المرور
+                </label>
                 <input
                   type="password"
                   name="password"
@@ -193,32 +352,68 @@ function LoginPage({ onLoginSuccess }) {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="form-input"
+                  maxLength="128"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                    validationErrors.password 
+                      ? 'border-red-300 bg-red-50' 
+                      : 'border-gray-300 bg-gray-50 hover:bg-white focus:bg-white'
+                  } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={loading}
+                  autoComplete="current-password"
                 />
+                {validationErrors.password && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center space-x-1 space-x-reverse">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <span>{validationErrors.password}</span>
+                  </p>
+                )}
               </div>
 
-              <div className="form-options">
-                <a href="#forgot" className="forgot-password">
-                  نسيت كلمة المرور؟
-                </a>
+              {/* خيارات النموذج */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center space-x-2 space-x-reverse text-sm">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-600">تذكرني</span>
+                </label>
               </div>
 
+              {/* زر الإرسال */}
               <button 
                 type="submit" 
-                className="btn-login-submit"
+                className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all duration-200 transform ${
+                  loading 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
+                }`}
                 disabled={loading}
               >
                 {loading ? (
-                  <>
-                    <span className="loading-spinner"></span>
-                    جاري تسجيل الدخول...
-                  </>
+                  <div className="flex items-center justify-center space-x-2 space-x-reverse">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>جاري تسجيل الدخول...</span>
+                  </div>
                 ) : (
-                  'تسجيل الدخول'
+                  <div className="flex items-center justify-center space-x-2 space-x-reverse">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    <span>تسجيل الدخول</span>
+                  </div>
                 )}
               </button>
             </form>
+
+            {/* معلومات إضافية */}
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-500">
+                محمي بواسطة تشفير SSL وأحدث بروتوكولات الأمان
+              </p>
+            </div>
           </div>
         </div>
       </div>

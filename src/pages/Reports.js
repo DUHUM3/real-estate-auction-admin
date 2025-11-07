@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   FiUsers,
   FiHome,
@@ -9,99 +9,152 @@ import {
   FiDownload,
   FiFileText,
   FiFile,
-  FiSlash
-} from 'react-icons/fi';
-import * as XLSX from 'xlsx';
-import '../styles/Reports.css';
+  FiSlash,
+} from "react-icons/fi";
+import * as XLSX from "xlsx";
+
+/**
+ * =============================================
+ * نظام التقارير - Reports System
+ * =============================================
+ *
+ * الفهرس:
+ * 1. State Management - إدارة الحالة
+ * 2. Constants - الثوابت
+ * 3. API Functions - دوال API
+ * 4. Filter Handlers - معالجات الفلاتر
+ * 5. Export Functions - دوال التصدير
+ * 6. UI Components - مكونات الواجهة
+ *
+ * المكونات الرئيسية:
+ * - Filters Section - قسم الفلاتر
+ * - Reports Table - جدول التقارير
+ * - Export Options - خيارات التصدير
+ */
 
 const ReportsPage = () => {
+  // =========================================================================
+  // 1. STATE MANAGEMENT - إدارة الحالة
+  // =========================================================================
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
-    type: 'users',
-    period: 'daily',
-    status: 'all',
-    search: '',
-    region: '',
+    type: "users",
+    period: "daily",
+    status: "all",
+    search: "",
+    region: "",
   });
   const [totalCount, setTotalCount] = useState(0);
-  const [dateRange, setDateRange] = useState({ from: '', to: '' });
+  const [dateRange, setDateRange] = useState({ from: "", to: "" });
 
+  // =========================================================================
+  // 2. CONSTANTS - الثوابت
+  // =========================================================================
   const reportTypes = [
-    { value: 'users', label: 'المستخدمين', icon: <FiUsers /> },
-    { value: 'properties', label: 'العقارات', icon: <FiHome /> },
-    { value: 'auctions', label: 'المزادات', icon: <FiCalendar /> },
-    { value: 'interests', label: 'طلبات الاهتمام', icon: <FiHeart /> },
+    { value: "users", label: "المستخدمين", icon: <FiUsers /> },
+    { value: "properties", label: "العقارات", icon: <FiHome /> },
+    { value: "auctions", label: "المزادات", icon: <FiCalendar /> },
+    { value: "interests", label: "طلبات الاهتمام", icon: <FiHeart /> },
   ];
 
   const periodTypes = [
-    { value: 'daily', label: 'يومي' },
-    { value: 'weekly', label: 'أسبوعي' },
-    { value: 'monthly', label: 'شهري' },
+    { value: "daily", label: "يومي" },
+    { value: "weekly", label: "أسبوعي" },
+    { value: "monthly", label: "شهري" },
   ];
 
   const statusOptions = {
     properties: [
-      { value: 'all', label: 'الكل' },
-      { value: 'approved', label: 'مقبول' },
-      { value: 'pending', label: 'قيد المراجعة' },
-      { value: 'rejected', label: 'مرفوض' },
+      { value: "all", label: "الكل" },
+      { value: "approved", label: "مقبول" },
+      { value: "pending", label: "قيد المراجعة" },
+      { value: "rejected", label: "مرفوض" },
     ],
     users: [
-      { value: 'all', label: 'الكل' },
-      { value: 'approved', label: 'مقبول' },
-      { value: 'pending', label: 'قيد المراجعة' },
-      { value: 'rejected', label: 'مرفوض' },
+      { value: "all", label: "الكل" },
+      { value: "approved", label: "مقبول" },
+      { value: "pending", label: "قيد المراجعة" },
+      { value: "rejected", label: "مرفوض" },
     ],
     auctions: [
-      { value: 'all', label: 'الكل' },
-      { value: 'مفتوح', label: 'مفتوح' },
-      { value: 'مغلق', label: 'مغلق' },
-      { value: 'قيد المراجعة', label: 'قيد المراجعة' },
-      { value: 'مرفوض', label: 'مرفوض' },
+      { value: "all", label: "الكل" },
+      { value: "مفتوح", label: "مفتوح" },
+      { value: "مغلق", label: "مغلق" },
+      { value: "قيد المراجعة", label: "قيد المراجعة" },
+      { value: "مرفوض", label: "مرفوض" },
     ],
     interests: [
-      { value: 'all', label: 'الكل' },
-      { value: 'pending', label: 'قيد المراجعة' },
-      { value: 'reviewed', label: 'تمت المراجعة' },
-      { value: 'cancelled', label: 'ملغي' },
+      { value: "all", label: "الكل" },
+      { value: "pending", label: "قيد المراجعة" },
+      { value: "reviewed", label: "تمت المراجعة" },
+      { value: "cancelled", label: "ملغي" },
     ],
   };
 
   const regions = [
-    { value: '', label: 'كل المناطق' },
-    { value: 'عدن', label: 'عدن' },
-    { value: 'صنعاء', label: 'صنعاء' },
-    { value: 'تعز', label: 'تعز' },
-    { value: 'حضرموت', label: 'حضرموت' },
-    { value: 'الحديدة', label: 'الحديدة' },
-    { value: 'إب', label: 'إب' },
-    { value: 'ذمار', label: 'ذمار' },
-    { value: 'المكلا', label: 'المكلا' },
-    { value: 'سيئون', label: 'سيئون' },
-    { value: 'شبوة', label: 'شبوة' },
-    { value: 'حجة', label: 'حجة' },
-    { value: 'المهرة', label: 'المهرة' },
-    { value: 'الضالع', label: 'الضالع' },
-    { value: 'لحج', label: 'لحج' },
-    { value: 'أبين', label: 'أبين' },
-    { value: 'عمران', label: 'عمران' },
-    { value: 'البيضاء', label: 'البيضاء' },
-    { value: 'صعدة', label: 'صعدة' },
-    { value: 'الجوف', label: 'الجوف' },
-    { value: 'المحويت', label: 'المحويت' },
-    { value: 'ريمة', label: 'ريمة' },
-    { value: 'أرخبيل سقطرى', label: 'أرخبيل سقطرى' },
+    { value: "", label: "كل المناطق" },
+    { value: "عدن", label: "عدن" },
+    { value: "صنعاء", label: "صنعاء" },
+    { value: "تعز", label: "تعز" },
+    { value: "حضرموت", label: "حضرموت" },
+    { value: "الحديدة", label: "الحديدة" },
+    { value: "إب", label: "إب" },
+    { value: "ذمار", label: "ذمار" },
+    { value: "المكلا", label: "المكلا" },
+    { value: "سيئون", label: "سيئون" },
+    { value: "شبوة", label: "شبوة" },
+    { value: "حجة", label: "حجة" },
+    { value: "المهرة", label: "المهرة" },
+    { value: "الضالع", label: "الضالع" },
+    { value: "لحج", label: "لحج" },
+    { value: "أبين", label: "أبين" },
+    { value: "عمران", label: "عمران" },
+    { value: "البيضاء", label: "البيضاء" },
+    { value: "صعدة", label: "صعدة" },
+    { value: "الجوف", label: "الجوف" },
+    { value: "المحويت", label: "المحويت" },
+    { value: "ريمة", label: "ريمة" },
+    { value: "أرخبيل سقطرى", label: "أرخبيل سقطرى" },
   ];
 
   const tableHeaders = {
-    users: ['الاسم الكامل', 'البريد الإلكتروني', 'الحالة', 'نوع المستخدم', 'تاريخ التسجيل'],
-    properties: ['العنوان', 'المنطقة', 'المدينة', 'الحالة', 'المالك', 'تاريخ الإضافة'],
-    auctions: ['العنوان', 'الحالة', 'تاريخ المزاد', 'الشركة', 'المالك', 'تاريخ الإنشاء'],
-    interests: ['المستخدم', 'البريد الإلكتروني', 'العقار', 'الحالة', 'تاريخ الاهتمام'],
+    users: [
+      "الاسم الكامل",
+      "البريد الإلكتروني",
+      "الحالة",
+      "نوع المستخدم",
+      "تاريخ التسجيل",
+    ],
+    properties: [
+      "العنوان",
+      "المنطقة",
+      "المدينة",
+      "الحالة",
+      "المالك",
+      "تاريخ الإضافة",
+    ],
+    auctions: [
+      "العنوان",
+      "الحالة",
+      "تاريخ المزاد",
+      "الشركة",
+      "المالك",
+      "تاريخ الإنشاء",
+    ],
+    interests: [
+      "المستخدم",
+      "البريد الإلكتروني",
+      "العقار",
+      "الحالة",
+      "تاريخ الاهتمام",
+    ],
   };
 
+  // =========================================================================
+  // 3. API FUNCTIONS - دوال API
+  // =========================================================================
   useEffect(() => {
     fetchReports();
   }, [filters.type, filters.period]);
@@ -112,42 +165,46 @@ const ReportsPage = () => {
 
     try {
       let url = `https://shahin-tqay.onrender.com/api/admin/reports?period=${filters.period}&type=${filters.type}`;
-      
-      if (filters.status && filters.status !== 'all') {
+
+      if (filters.status && filters.status !== "all") {
         url += `&status=${filters.status}`;
       }
-      
+
       if (filters.search) {
         url += `&search=${encodeURIComponent(filters.search)}`;
       }
-      
-      if (filters.type === 'properties' && filters.region) {
+
+      if (filters.type === "properties" && filters.region) {
         url += `&region=${encodeURIComponent(filters.region)}`;
       }
-      
-      const token = localStorage.getItem('access_token');
+
+      const token = localStorage.getItem("access_token");
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
-      
+
       if (!response.ok) {
-        throw new Error('فشل في جلب البيانات');
+        throw new Error("فشل في جلب البيانات");
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         setReports(result.data || []);
         setTotalCount(result.count || 0);
         setDateRange({
-          from: result.range?.from ? new Date(result.range.from).toLocaleDateString('ar-SA') : '',
-          to: result.range?.to ? new Date(result.range.to).toLocaleDateString('ar-SA') : ''
+          from: result.range?.from
+            ? new Date(result.range.from).toLocaleDateString("ar-SA")
+            : "",
+          to: result.range?.to
+            ? new Date(result.range.to).toLocaleDateString("ar-SA")
+            : "",
         });
       } else {
-        throw new Error(result.message || 'حدث خطأ غير معروف');
+        throw new Error(result.message || "حدث خطأ غير معروف");
       }
     } catch (err) {
       setError(err.message);
@@ -158,10 +215,13 @@ const ReportsPage = () => {
     }
   };
 
+  // =========================================================================
+  // 4. FILTER HANDLERS - معالجات الفلاتر
+  // =========================================================================
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   };
 
@@ -172,148 +232,131 @@ const ReportsPage = () => {
 
   const clearFilters = () => {
     setFilters({
-      type: 'users',
-      period: 'daily',
-      status: 'all',
-      search: '',
-      region: '',
+      type: "users",
+      period: "daily",
+      status: "all",
+      search: "",
+      region: "",
     });
   };
 
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case 'approved':
-      case 'مقبول':
-        return 'approved';
-      case 'pending':
-      case 'قيد المراجعة':
-        return 'pending';
-      case 'rejected':
-      case 'مرفوض':
-        return 'rejected';
-      case 'reviewed':
-      case 'تمت المراجعة':
-        return 'reviewed';
-      case 'cancelled':
-      case 'ملغي':
-        return 'cancelled';
-      case 'مفتوح':
-        return 'open';
-      case 'مغلق':
-        return 'closed';
-      default:
-        return 'unknown';
-    }
-  };
+  const hasActiveFilters =
+    filters.status !== "all" || filters.search || filters.region;
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'approved':
-        return 'مقبول';
-      case 'pending':
-        return 'قيد المراجعة';
-      case 'rejected':
-        return 'مرفوض';
-      case 'reviewed':
-        return 'تمت المراجعة';
-      case 'cancelled':
-        return 'ملغي';
-      case 'مفتوح':
-        return 'مفتوح';
-      case 'مغلق':
-        return 'مغلق';
-      case 'قيد المراجعة':
-        return 'قيد المراجعة';
-      default:
-        return status;
-    }
-  };
-
+  // =========================================================================
+  // 5. EXPORT FUNCTIONS - دوال التصدير
+  // =========================================================================
   const exportToExcel = () => {
     try {
       if (reports.length === 0) {
-        alert('لا توجد بيانات للتصدير');
+        alert("لا توجد بيانات للتصدير");
         return;
       }
 
-      const reportTitle = reportTypes.find(t => t.value === filters.type)?.label || 'تقرير';
-      const periodTitle = periodTypes.find(p => p.value === filters.period)?.label || '';
-      const fileName = `${reportTitle}_${periodTitle}_${new Date().toLocaleDateString('ar-SA')}.xlsx`;
-      
+      const reportTitle =
+        reportTypes.find((t) => t.value === filters.type)?.label || "تقرير";
+      const periodTitle =
+        periodTypes.find((p) => p.value === filters.period)?.label || "";
+      const fileName = `${reportTitle}_${periodTitle}_${new Date().toLocaleDateString(
+        "ar-SA"
+      )}.xlsx`;
+
       const headers = tableHeaders[filters.type];
-      
+
       // تحضير البيانات للتقرير
-      const dataForExport = reports.map(item => {
+      const dataForExport = reports.map((item) => {
         const row = {};
-        
-        if (filters.type === 'users') {
+
+        if (filters.type === "users") {
           headers.forEach((header) => {
-            if (header === 'الاسم الكامل') row[header] = item.full_name || 'غير محدد';
-            else if (header === 'البريد الإلكتروني') row[header] = item.email || 'غير متوفر';
-            else if (header === 'الحالة') row[header] = getStatusText(item.status);
-            else if (header === 'نوع المستخدم') row[header] = item.user_type || 'غير محدد';
-            else if (header === 'تاريخ التسجيل') row[header] = item.created_at || 'غير محدد';
+            if (header === "الاسم الكامل")
+              row[header] = item.full_name || "غير محدد";
+            else if (header === "البريد الإلكتروني")
+              row[header] = item.email || "غير متوفر";
+            else if (header === "الحالة")
+              row[header] = getStatusText(item.status);
+            else if (header === "نوع المستخدم")
+              row[header] = item.user_type || "غير محدد";
+            else if (header === "تاريخ التسجيل")
+              row[header] = item.created_at || "غير محدد";
           });
-        } else if (filters.type === 'properties') {
+        } else if (filters.type === "properties") {
           headers.forEach((header) => {
-            if (header === 'العنوان') row[header] = item.title || 'غير محدد';
-            else if (header === 'المنطقة') row[header] = item.region || 'غير محدد';
-            else if (header === 'المدينة') row[header] = item.city || 'غير محدد';
-            else if (header === 'الحالة') row[header] = getStatusText(item.status);
-            else if (header === 'المالك') row[header] = item.owner || 'غير محدد';
-            else if (header === 'تاريخ الإضافة') row[header] = item.created_at || 'غير محدد';
+            if (header === "العنوان") row[header] = item.title || "غير محدد";
+            else if (header === "المنطقة")
+              row[header] = item.region || "غير محدد";
+            else if (header === "المدينة")
+              row[header] = item.city || "غير محدد";
+            else if (header === "الحالة")
+              row[header] = getStatusText(item.status);
+            else if (header === "المالك")
+              row[header] = item.owner || "غير محدد";
+            else if (header === "تاريخ الإضافة")
+              row[header] = item.created_at || "غير محدد";
           });
-        } else if (filters.type === 'auctions') {
+        } else if (filters.type === "auctions") {
           headers.forEach((header) => {
-            if (header === 'العنوان') row[header] = item.title || 'غير محدد';
-            else if (header === 'الحالة') row[header] = getStatusText(item.status);
-            else if (header === 'تاريخ المزاد') row[header] = item.auction_date || 'غير محدد';
-            else if (header === 'الشركة') row[header] = item.company || 'غير محدد';
-            else if (header === 'المالك') row[header] = item.owner || 'غير محدد';
-            else if (header === 'تاريخ الإنشاء') row[header] = item.created_at || 'غير محدد';
+            if (header === "العنوان") row[header] = item.title || "غير محدد";
+            else if (header === "الحالة")
+              row[header] = getStatusText(item.status);
+            else if (header === "تاريخ المزاد")
+              row[header] = item.auction_date || "غير محدد";
+            else if (header === "الشركة")
+              row[header] = item.company || "غير محدد";
+            else if (header === "المالك")
+              row[header] = item.owner || "غير محدد";
+            else if (header === "تاريخ الإنشاء")
+              row[header] = item.created_at || "غير محدد";
           });
-        } else if (filters.type === 'interests') {
+        } else if (filters.type === "interests") {
           headers.forEach((header) => {
-            if (header === 'المستخدم') row[header] = item.user || 'غير محدد';
-            else if (header === 'البريد الإلكتروني') row[header] = item.email || 'غير متوفر';
-            else if (header === 'العقار') row[header] = item.property || 'غير محدد';
-            else if (header === 'الحالة') row[header] = getStatusText(item.status);
-            else if (header === 'تاريخ الاهتمام') row[header] = item.created_at || 'غير محدد';
+            if (header === "المستخدم") row[header] = item.user || "غير محدد";
+            else if (header === "البريد الإلكتروني")
+              row[header] = item.email || "غير متوفر";
+            else if (header === "العقار")
+              row[header] = item.property || "غير محدد";
+            else if (header === "الحالة")
+              row[header] = getStatusText(item.status);
+            else if (header === "تاريخ الاهتمام")
+              row[header] = item.created_at || "غير محدد";
           });
         }
-        
+
         return row;
       });
-      
+
       // إنشاء ورقة العمل
       const worksheet = XLSX.utils.json_to_sheet(dataForExport);
-      
+
       // إنشاء المصنف وإضافة الورقة
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, reportTitle);
-      
+
       // تصدير الملف
       XLSX.writeFile(workbook, fileName);
-      
     } catch (error) {
-      console.error('خطأ في تصدير Excel:', error);
-      alert('حدث خطأ أثناء تصدير الملف: ' + error.message);
+      console.error("خطأ في تصدير Excel:", error);
+      alert("حدث خطأ أثناء تصدير الملف: " + error.message);
     }
   };
 
-const exportToPdf = () => {
-  try {
-    if (reports.length === 0) {
-      alert('لا توجد بيانات للتصدير');
-      return;
-    }
+  const exportToPdf = () => {
+    try {
+      if (reports.length === 0) {
+        alert("لا توجد بيانات للتصدير");
+        return;
+      }
 
-    const reportTitle = reportTypes.find(t => t.value === filters.type)?.label || 'تقرير';
-    const periodTitle = periodTypes.find(p => p.value === filters.period)?.label || '';
-    const fileName = `${reportTitle}_${periodTitle}_${new Date().toLocaleDateString('ar-SA')}.pdf`;
+      const reportTitle =
+        reportTypes.find((t) => t.value === filters.type)?.label || "تقرير";
+      const periodTitle =
+        periodTypes.find((p) => p.value === filters.period)?.label || "";
+      const fileName = `${reportTitle}_${periodTitle}_${new Date().toLocaleDateString(
+        "ar-SA"
+      )}.pdf`;
 
-    // إنشاء محتوى HTML للPDF
-    let htmlContent = `
+      // إنشاء محتوى HTML للPDF
+      let htmlContent = `
       <!DOCTYPE html>
       <html dir="rtl">
       <head>
@@ -550,15 +593,31 @@ const exportToPdf = () => {
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">مقبول:</span>
-                  <span class="stat-value">${reports.filter(item => item.status === 'approved' || item.status === 'مقبول').length}</span>
+                  <span class="stat-value">${
+                    reports.filter(
+                      (item) =>
+                        item.status === "approved" || item.status === "مقبول"
+                    ).length
+                  }</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">قيد المراجعة:</span>
-                  <span class="stat-value">${reports.filter(item => item.status === 'pending' || item.status === 'قيد المراجعة').length}</span>
+                  <span class="stat-value">${
+                    reports.filter(
+                      (item) =>
+                        item.status === "pending" ||
+                        item.status === "قيد المراجعة"
+                    ).length
+                  }</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">مرفوض:</span>
-                  <span class="stat-value">${reports.filter(item => item.status === 'rejected' || item.status === 'مرفوض').length}</span>
+                  <span class="stat-value">${
+                    reports.filter(
+                      (item) =>
+                        item.status === "rejected" || item.status === "مرفوض"
+                    ).length
+                  }</span>
                 </div>
               </div>
             </div>
@@ -575,7 +634,9 @@ const exportToPdf = () => {
               <div class="header-stats">
                 <div class="stat-item">
                   <span class="stat-label">التاريخ:</span>
-                  <span class="stat-value">${new Date().toLocaleDateString('ar-SA')}</span>
+                  <span class="stat-value">${new Date().toLocaleDateString(
+                    "ar-SA"
+                  )}</span>
                 </div>
                 <div class="stat-item">
                   <span class="stat-label">من:</span>
@@ -592,65 +653,73 @@ const exportToPdf = () => {
         
     `;
 
-    // إضافة الجدول
-    htmlContent += `<table>`;
-    
-    // رأس الجدول
-    htmlContent += `<thead><tr>`;
-    htmlContent += `<th>#</th>`;
-    tableHeaders[filters.type].forEach(header => {
-      htmlContent += `<th>${header}</th>`;
-    });
-    htmlContent += `</tr></thead>`;
-    
-    // جسم الجدول
-    htmlContent += `<tbody>`;
-    reports.forEach((item, index) => {
-      htmlContent += `<tr>`;
-      htmlContent += `<td>${index + 1}</td>`;
-      
-      if (filters.type === 'users') {
-        htmlContent += `
-          <td>${item.full_name || 'غير محدد'}</td>
-          <td>${item.email || 'غير متوفر'}</td>
-          <td><span class="status-badge status-${getStatusBadgeClass(item.status)}">${getStatusText(item.status)}</span></td>
-          <td>${item.user_type || 'غير محدد'}</td>
-          <td>${item.created_at || 'غير محدد'}</td>
+      // إضافة الجدول
+      htmlContent += `<table>`;
+
+      // رأس الجدول
+      htmlContent += `<thead><tr>`;
+      htmlContent += `<th>#</th>`;
+      tableHeaders[filters.type].forEach((header) => {
+        htmlContent += `<th>${header}</th>`;
+      });
+      htmlContent += `</tr></thead>`;
+
+      // جسم الجدول
+      htmlContent += `<tbody>`;
+      reports.forEach((item, index) => {
+        htmlContent += `<tr>`;
+        htmlContent += `<td>${index + 1}</td>`;
+
+        if (filters.type === "users") {
+          htmlContent += `
+          <td>${item.full_name || "غير محدد"}</td>
+          <td>${item.email || "غير متوفر"}</td>
+          <td><span class="status-badge status-${getStatusBadgeClass(
+            item.status
+          )}">${getStatusText(item.status)}</span></td>
+          <td>${item.user_type || "غير محدد"}</td>
+          <td>${item.created_at || "غير محدد"}</td>
         `;
-      } else if (filters.type === 'properties') {
-        htmlContent += `
-          <td>${item.title || 'غير محدد'}</td>
-          <td>${item.region || 'غير محدد'}</td>
-          <td>${item.city || 'غير محدد'}</td>
-          <td><span class="status-badge status-${getStatusBadgeClass(item.status)}">${getStatusText(item.status)}</span></td>
-          <td>${item.owner || 'غير محدد'}</td>
-          <td>${item.created_at || 'غير محدد'}</td>
+        } else if (filters.type === "properties") {
+          htmlContent += `
+          <td>${item.title || "غير محدد"}</td>
+          <td>${item.region || "غير محدد"}</td>
+          <td>${item.city || "غير محدد"}</td>
+          <td><span class="status-badge status-${getStatusBadgeClass(
+            item.status
+          )}">${getStatusText(item.status)}</span></td>
+          <td>${item.owner || "غير محدد"}</td>
+          <td>${item.created_at || "غير محدد"}</td>
         `;
-      } else if (filters.type === 'auctions') {
-        htmlContent += `
-          <td>${item.title || 'غير محدد'}</td>
-          <td><span class="status-badge status-${getStatusBadgeClass(item.status)}">${getStatusText(item.status)}</span></td>
-          <td>${item.auction_date || 'غير محدد'}</td>
-          <td>${item.company || 'غير محدد'}</td>
-          <td>${item.owner || 'غير محدد'}</td>
-          <td>${item.created_at || 'غير محدد'}</td>
+        } else if (filters.type === "auctions") {
+          htmlContent += `
+          <td>${item.title || "غير محدد"}</td>
+          <td><span class="status-badge status-${getStatusBadgeClass(
+            item.status
+          )}">${getStatusText(item.status)}</span></td>
+          <td>${item.auction_date || "غير محدد"}</td>
+          <td>${item.company || "غير محدد"}</td>
+          <td>${item.owner || "غير محدد"}</td>
+          <td>${item.created_at || "غير محدد"}</td>
         `;
-      } else if (filters.type === 'interests') {
-        htmlContent += `
-          <td>${item.user || 'غير محدد'}</td>
-          <td>${item.email || 'غير متوفر'}</td>
-          <td>${item.property || 'غير محدد'}</td>
-          <td><span class="status-badge status-${getStatusBadgeClass(item.status)}">${getStatusText(item.status)}</span></td>
-          <td>${item.created_at || 'غير محدد'}</td>
+        } else if (filters.type === "interests") {
+          htmlContent += `
+          <td>${item.user || "غير محدد"}</td>
+          <td>${item.email || "غير متوفر"}</td>
+          <td>${item.property || "غير محدد"}</td>
+          <td><span class="status-badge status-${getStatusBadgeClass(
+            item.status
+          )}">${getStatusText(item.status)}</span></td>
+          <td>${item.created_at || "غير محدد"}</td>
         `;
-      }
-      
-      htmlContent += `</tr>`;
-    });
-    htmlContent += `</tbody></table>`;
-    
-    // التذييل
-    htmlContent += `
+        }
+
+        htmlContent += `</tr>`;
+      });
+      htmlContent += `</tbody></table>`;
+
+      // التذييل
+      htmlContent += `
           </div>
           
           <div class="footer">
@@ -662,11 +731,15 @@ const exportToPdf = () => {
       </html>
     `;
 
-    // إنشاء نافذة طباعة بدون عناوين
-    const printWindow = window.open('', '_blank', 'width=1000,height=700,toolbar=no,location=no,directories=no,status=no,menubar=no');
-    
-    // كتابة المحتوى مع إخفاء العناوين
-    printWindow.document.write(`
+      // إنشاء نافذة طباعة بدون عناوين
+      const printWindow = window.open(
+        "",
+        "_blank",
+        "width=1000,height=700,toolbar=no,location=no,directories=no,status=no,menubar=no"
+      );
+
+      // كتابة المحتوى مع إخفاء العناوين
+      printWindow.document.write(`
       <html>
         <head>
           <title>${reportTitle}</title>
@@ -682,37 +755,89 @@ const exportToPdf = () => {
         </body>
       </html>
     `);
-    
-    printWindow.document.close();
-    
-    // إغلاق النافذة بعد الطباعة
-    printWindow.onafterprint = function() {
-      printWindow.close();
-    };
-    
-  } catch (error) {
-    console.error('خطأ في تصدير PDF:', error);
-    alert('حدث خطأ أثناء تصدير PDF: ' + error.message);
-  }
-};
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  const hasActiveFilters = filters.status !== 'all' || filters.search || filters.region;
+
+      printWindow.document.close();
+
+      // إغلاق النافذة بعد الطباعة
+      printWindow.onafterprint = function () {
+        printWindow.close();
+      };
+    } catch (error) {
+      console.error("خطأ في تصدير PDF:", error);
+      alert("حدث خطأ أثناء تصدير PDF: " + error.message);
+    }
+  };
+
+  // =========================================================================
+  // 6. UI COMPONENTS - مكونات الواجهة
+  // =========================================================================
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "approved":
+      case "مقبول":
+        return "bg-green-100 text-green-800";
+      case "pending":
+      case "قيد المراجعة":
+        return "bg-yellow-100 text-yellow-800";
+      case "rejected":
+      case "مرفوض":
+        return "bg-red-100 text-red-800";
+      case "reviewed":
+      case "تمت المراجعة":
+        return "bg-blue-100 text-blue-800";
+      case "cancelled":
+      case "ملغي":
+        return "bg-gray-100 text-gray-800";
+      case "مفتوح":
+        return "bg-teal-100 text-teal-800";
+      case "مغلق":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case "approved":
+        return "مقبول";
+      case "pending":
+        return "قيد المراجعة";
+      case "rejected":
+        return "مرفوض";
+      case "reviewed":
+        return "تمت المراجعة";
+      case "cancelled":
+        return "ملغي";
+      case "مفتوح":
+        return "مفتوح";
+      case "مغلق":
+        return "مغلق";
+      case "قيد المراجعة":
+        return "قيد المراجعة";
+      default:
+        return status;
+    }
+  };
 
   const renderTable = () => {
     if (loading) {
       return (
-        <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>جاري تحميل البيانات...</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600 text-lg">جاري تحميل البيانات...</p>
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="error-state">
-          <p>{error}</p>
-          <button className="btn btn-primary" onClick={fetchReports}>
+        <div className="flex flex-col items-center justify-center py-12 bg-red-50 rounded-lg">
+          <p className="text-red-600 text-lg mb-4">{error}</p>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200"
+            onClick={fetchReports}
+          >
             إعادة المحاولة
           </button>
         </div>
@@ -721,11 +846,14 @@ const exportToPdf = () => {
 
     if (reports.length === 0) {
       return (
-        <div className="empty-state">
-          <FiFileText className="empty-icon" />
-          <p>لا توجد بيانات للعرض</p>
+        <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-lg">
+          <FiFileText className="text-6xl text-gray-400 mb-4" />
+          <p className="text-gray-600 text-lg mb-4">لا توجد بيانات للعرض</p>
           {hasActiveFilters && (
-            <button className="btn btn-primary" onClick={clearFilters}>
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200"
+              onClick={clearFilters}
+            >
               مسح الفلاتر
             </button>
           )}
@@ -735,72 +863,136 @@ const exportToPdf = () => {
 
     return (
       <>
-        <div className="table-container">
-          <table>
-            <thead>
+        <div className="overflow-x-auto bg-white rounded-lg shadow border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th>#</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  #
+                </th>
                 {tableHeaders[filters.type].map((header, index) => (
-                  <th key={index}>{header}</th>
+                  <th
+                    key={index}
+                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    {header}
+                  </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
               {reports.map((item, index) => (
-                <tr key={item.id || index}>
-                  <td>{index + 1}</td>
-                  {filters.type === 'users' && (
+                <tr
+                  key={item.id || index}
+                  className="hover:bg-gray-50 transition duration-150"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {index + 1}
+                  </td>
+                  {filters.type === "users" && (
                     <>
-                      <td>{item.full_name || 'غير محدد'}</td>
-                      <td>{item.email || 'غير متوفر'}</td>
-                      <td>
-                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {item.full_name || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.email || "غير متوفر"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(
+                            item.status
+                          )}`}
+                        >
                           {getStatusText(item.status)}
                         </span>
                       </td>
-                      <td>{item.user_type || 'غير محدد'}</td>
-                      <td>{item.created_at || 'غير محدد'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.user_type || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.created_at || "غير محدد"}
+                      </td>
                     </>
                   )}
-                  {filters.type === 'properties' && (
+                  {filters.type === "properties" && (
                     <>
-                      <td>{item.title || 'غير محدد'}</td>
-                      <td>{item.region || 'غير محدد'}</td>
-                      <td>{item.city || 'غير محدد'}</td>
-                      <td>
-                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {item.title || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.region || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.city || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(
+                            item.status
+                          )}`}
+                        >
                           {getStatusText(item.status)}
                         </span>
                       </td>
-                      <td>{item.owner || 'غير محدد'}</td>
-                      <td>{item.created_at || 'غير محدد'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.owner || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.created_at || "غير محدد"}
+                      </td>
                     </>
                   )}
-                  {filters.type === 'auctions' && (
+                  {filters.type === "auctions" && (
                     <>
-                      <td>{item.title || 'غير محدد'}</td>
-                      <td>
-                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {item.title || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(
+                            item.status
+                          )}`}
+                        >
                           {getStatusText(item.status)}
                         </span>
                       </td>
-                      <td>{item.auction_date || 'غير محدد'}</td>
-                      <td>{item.company || 'غير محدد'}</td>
-                      <td>{item.owner || 'غير محدد'}</td>
-                      <td>{item.created_at || 'غير محدد'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.auction_date || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.company || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.owner || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.created_at || "غير محدد"}
+                      </td>
                     </>
                   )}
-                  {filters.type === 'interests' && (
+                  {filters.type === "interests" && (
                     <>
-                      <td>{item.user || 'غير محدد'}</td>
-                      <td>{item.email || 'غير متوفر'}</td>
-                      <td>{item.property || 'غير محدد'}</td>
-                      <td>
-                        <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {item.user || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.email || "غير متوفر"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.property || "غير محدد"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(
+                            item.status
+                          )}`}
+                        >
                           {getStatusText(item.status)}
                         </span>
                       </td>
-                      <td>{item.created_at || 'غير محدد'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {item.created_at || "غير محدد"}
+                      </td>
                     </>
                   )}
                 </tr>
@@ -809,133 +1001,180 @@ const exportToPdf = () => {
           </table>
         </div>
 
-        <div className="pagination-info">
-          <p>إجمالي النتائج: {totalCount}</p>
+        <div className="mt-4 flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg">
+          <p className="text-sm text-gray-700">
+            إجمالي النتائج: <span className="font-semibold">{totalCount}</span>
+          </p>
         </div>
       </>
     );
   };
 
   return (
-    <div className="reports-page">
-      {/* Header */}
-      <div className="content-header">
-        <h1>
-          <FiFile className="header-icon" />
-          نظام التقارير
-        </h1>
-        <p>اختر نوع التقرير والفترة لعرض البيانات</p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* ========================================================================= */}
+      {/* HEADER SECTION - قسم الرأس */}
+      {/* ========================================================================= */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <FiFile className="text-3xl text-blue-600" />
+          <h1 className="text-3xl font-bold text-gray-900">نظام التقارير</h1>
+        </div>
+        <p className="text-gray-600 text-lg">
+          اختر نوع التقرير والفترة لعرض البيانات
+        </p>
       </div>
 
-      {/* Filters Section */}
-      <div className="filter-section">
-        <div className="filter-header">
-          <FiFilter className="filter-icon" />
-          <span>أدوات البحث والتصفية:</span>
+      {/* ========================================================================= */}
+      {/* FILTERS SECTION - قسم الفلاتر */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        {/* Filter Header */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <FiFilter className="text-xl text-blue-600" />
+            <span className="text-lg font-semibold text-gray-900">
+              أدوات البحث والتصفية:
+            </span>
+          </div>
           {hasActiveFilters && (
-            <button className="clear-filters-btn" onClick={clearFilters}>
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition duration-200"
+            >
               <FiSlash />
               مسح الفلاتر
             </button>
           )}
         </div>
 
-        <form onSubmit={handleSearch} className="search-form">
-          <div className="search-input-group">
-            <FiSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="ابحث هنا..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="search-input"
-            />
-            <button type="submit" className="search-btn">
+        {/* Search Form */}
+        <form onSubmit={handleSearch} className="mb-6">
+          <div className="flex gap-2 max-w-2xl">
+            <div className="relative flex-1">
+              <FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="ابحث هنا..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange("search", e.target.value)}
+                className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200 font-medium"
+            >
               بحث
             </button>
           </div>
         </form>
 
-        <div className="filter-controls">
-          <div className="filter-group">
-            <label>نوع التقرير</label>
-            <select 
-              value={filters.type} 
-              onChange={(e) => handleFilterChange('type', e.target.value)}
-              className="filter-select"
+        {/* Filter Controls */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              نوع التقرير
+            </label>
+            <select
+              value={filters.type}
+              onChange={(e) => handleFilterChange("type", e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
             >
-              {reportTypes.map(type => (
-                <option key={type.value} value={type.value}>{type.label}</option>
+              {reportTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
               ))}
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>الفترة</label>
-            <select 
-              value={filters.period} 
-              onChange={(e) => handleFilterChange('period', e.target.value)}
-              className="filter-select"
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              الفترة
+            </label>
+            <select
+              value={filters.period}
+              onChange={(e) => handleFilterChange("period", e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
             >
-              {periodTypes.map(period => (
-                <option key={period.value} value={period.value}>{period.label}</option>
+              {periodTypes.map((period) => (
+                <option key={period.value} value={period.value}>
+                  {period.label}
+                </option>
               ))}
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>الحالة</label>
-            <select 
-              value={filters.status} 
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="filter-select"
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              الحالة
+            </label>
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange("status", e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
             >
-              {statusOptions[filters.type]?.map(status => (
-                <option key={status.value} value={status.value}>{status.label}</option>
+              {statusOptions[filters.type]?.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
               ))}
             </select>
           </div>
 
-          {filters.type === 'properties' && (
-            <div className="filter-group">
-              <label>المنطقة</label>
-              <select 
-                value={filters.region} 
-                onChange={(e) => handleFilterChange('region', e.target.value)}
-                className="filter-select"
+          {filters.type === "properties" && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                المنطقة
+              </label>
+              <select
+                value={filters.region}
+                onChange={(e) => handleFilterChange("region", e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
               >
-                {regions.map(region => (
-                  <option key={region.value} value={region.value}>{region.label}</option>
+                {regions.map((region) => (
+                  <option key={region.value} value={region.value}>
+                    {region.label}
+                  </option>
                 ))}
               </select>
             </div>
           )}
         </div>
 
-        <div className="date-range">
-          <p>الفترة من: <strong>{dateRange.from}</strong> إلى: <strong>{dateRange.to}</strong></p>
+        {/* Date Range */}
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <p className="text-blue-800 text-sm">
+            الفترة من: <strong>{dateRange.from}</strong> إلى:{" "}
+            <strong>{dateRange.to}</strong>
+          </p>
         </div>
       </div>
 
-      {/* Reports Content */}
-      <div className="reports-content">
-        <div className="reports-header">
-          <h2>
-            {reportTypes.find(t => t.value === filters.type)?.label || 'تقرير'} - 
-            {periodTypes.find(p => p.value === filters.period)?.label || ''}
+      {/* ========================================================================= */}
+      {/* REPORTS CONTENT - محتوى التقارير */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        {/* Reports Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">
+            {reportTypes.find((t) => t.value === filters.type)?.label ||
+              "تقرير"}{" "}
+            -{periodTypes.find((p) => p.value === filters.period)?.label || ""}
           </h2>
-          
-          <div className="export-options">
-            <button 
-              className="btn btn-secondary"
+
+          <div className="flex gap-3">
+            <button
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={exportToExcel}
               disabled={loading || reports.length === 0}
             >
               <FiDownload />
               تصدير Excel
             </button>
-            <button 
-              className="btn btn-danger"
+            <button
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={exportToPdf}
               disabled={loading || reports.length === 0}
             >
@@ -945,6 +1184,7 @@ const exportToPdf = () => {
           </div>
         </div>
 
+        {/* Reports Table */}
         {renderTable()}
       </div>
     </div>

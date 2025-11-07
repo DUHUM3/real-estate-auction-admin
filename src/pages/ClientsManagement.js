@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FiUser, 
   FiClock, 
@@ -20,11 +20,33 @@ import {
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
-import '../styles/PendingUsers.css';
+
+/**
+ * =============================================
+ * إدارة العملاء المميزين - Clients Management
+ * =============================================
+ * 
+ * الفهرس:
+ * 1. State Management - إدارة الحالة
+ * 2. API Functions - دوال API
+ * 3. Event Handlers - معالجات الأحداث
+ * 4. Helper Functions - دوال مساعدة
+ * 5. UI Components - مكونات الواجهة
+ *    - 5.1 Header Section - قسم الرأس
+ *    - 5.2 Filter Section - قسم الفلاتر
+ *    - 5.3 Add Client Modal - نافذة إضافة عميل
+ *    - 5.4 Clients List - قائمة العملاء
+ *    - 5.5 Client Details - تفاصيل العميل
+ * 6. Main Component - المكون الرئيسي
+ */
 
 const ClientsManagement = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  
+  // ===========================================================================
+  // 1. State Management - إدارة الحالة
+  // ===========================================================================
   
   // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
   const getInitialFilters = () => {
@@ -49,11 +71,15 @@ const ClientsManagement = () => {
   });
 
   // حفظ الفلاتر في localStorage عند تغييرها
-  React.useEffect(() => {
+  useEffect(() => {
     localStorage.setItem('clientsFilters', JSON.stringify(filters));
   }, [filters]);
 
-  // استخدام React Query لجلب بيانات العملاء
+  // ===========================================================================
+  // 2. API Functions - دوال API
+  // ===========================================================================
+  
+  // جلب بيانات العملاء
   const fetchClients = async () => {
     const token = localStorage.getItem('access_token');
       
@@ -94,6 +120,7 @@ const ClientsManagement = () => {
     }
   };
 
+  // استخدام React Query لجلب بيانات العملاء
   const { 
     data: clientsData, 
     isLoading, 
@@ -187,6 +214,10 @@ const ClientsManagement = () => {
     }
   );
 
+  // ===========================================================================
+  // 3. Event Handlers - معالجات الأحداث
+  // ===========================================================================
+  
   const handleFilterChange = (key, value) => {
     const newFilters = {
       ...filters,
@@ -255,6 +286,10 @@ const ClientsManagement = () => {
     }
   };
 
+  // ===========================================================================
+  // 4. Helper Functions - دوال مساعدة
+  // ===========================================================================
+  
   const formatDate = (dateString) => {
     if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
@@ -267,81 +302,6 @@ const ClientsManagement = () => {
     });
   };
 
-  const renderClientDetails = (client) => {
-    return (
-      <div className="additional-details">
-        <h4>تفاصيل العميل</h4>
-        
-        {client.logo && (
-          <div className="detail-item">
-            <div className="detail-label">
-              <FiImage />
-              الشعار
-            </div>
-            <div className="detail-value">
-              <img 
-                src={client.logo} 
-                alt={`شعار ${client.name}`}
-                style={{ 
-                  maxWidth: '150px', 
-                  maxHeight: '80px', 
-                  borderRadius: '4px',
-                  border: '1px solid #e0e0e0'
-                }}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'block';
-                }}
-              />
-              <div style={{ display: 'none', color: '#5d6d7e' }}>
-                <FiImage /> لا يمكن تحميل الصورة
-              </div>
-            </div>
-          </div>
-        )}
-
-        {client.website && (
-          <div className="detail-item">
-            <div className="detail-label">
-              <FiGlobe />
-              الموقع الإلكتروني
-            </div>
-            <div className="detail-value">
-              <a 
-                href={client.website} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="link"
-              >
-                {client.website}
-              </a>
-            </div>
-          </div>
-        )}
-
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiCalendar />
-            تاريخ الإضافة
-          </div>
-          <div className="detail-value">
-            {formatDate(client.created_at)}
-          </div>
-        </div>
-
-        <div className="detail-item">
-          <div className="detail-label">
-            <FiCalendar />
-            آخر تحديث
-          </div>
-          <div className="detail-value">
-            {formatDate(client.updated_at)}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // التحقق إذا كان هناك أي فلتر نشط
   const hasActiveFilters = filters.search;
 
@@ -351,82 +311,173 @@ const ClientsManagement = () => {
 
   const loading = isLoading || addClientMutation.isLoading || deleteClientMutation.isLoading;
 
+  // ===========================================================================
+  // 5. UI Components - مكونات الواجهة
+  // ===========================================================================
+  
+  // 5.1 Client Details Renderer - عرض تفاصيل العميل
+  const renderClientDetails = (client) => {
+    return (
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <h4 className="text-lg font-semibold text-gray-800 mb-4">تفاصيل العميل</h4>
+        
+        {client.logo && (
+          <div className="flex items-start mb-4">
+            <div className="flex items-center text-gray-600 w-32">
+              <FiImage className="ml-2" />
+              <span>الشعار</span>
+            </div>
+            <div className="flex-1">
+              <img 
+                src={client.logo} 
+                alt={`شعار ${client.name}`}
+                className="max-w-[150px] max-h-[80px] rounded border border-gray-300"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'block';
+                }}
+              />
+              <div className="hidden text-gray-600">
+                <FiImage className="inline ml-1" /> لا يمكن تحميل الصورة
+              </div>
+            </div>
+          </div>
+        )}
+
+        {client.website && (
+          <div className="flex items-start mb-4">
+            <div className="flex items-center text-gray-600 w-32">
+              <FiGlobe className="ml-2" />
+              <span>الموقع الإلكتروني</span>
+            </div>
+            <div className="flex-1">
+              <a 
+                href={client.website} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                {client.website}
+              </a>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-start mb-4">
+          <div className="flex items-center text-gray-600 w-32">
+            <FiCalendar className="ml-2" />
+            <span>تاريخ الإضافة</span>
+          </div>
+          <div className="flex-1 text-gray-800">
+            {formatDate(client.created_at)}
+          </div>
+        </div>
+
+        <div className="flex items-start">
+          <div className="flex items-center text-gray-600 w-32">
+            <FiCalendar className="ml-2" />
+            <span>آخر تحديث</span>
+          </div>
+          <div className="flex-1 text-gray-800">
+            {formatDate(client.updated_at)}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ===========================================================================
+  // 6. Main Component - المكون الرئيسي
+  // ===========================================================================
+  
   return (
-    <div className="pending-users-container">
-      <div className="content-header">
-        <h1>
-          <FiUser className="header-icon" />
-          إدارة العملاء المميزين
-        </h1>
-        <p>إدارة قائمة العملاء المميزين - العدد الإجمالي: {count}</p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      
+      {/* 5.1 Header Section - قسم الرأس */}
+      <div className="mb-8">
+        <div className="flex items-center mb-2">
+          <FiUser className="text-2xl text-blue-600 ml-3" />
+          <h1 className="text-2xl font-bold text-gray-800">إدارة العملاء المميزين</h1>
+        </div>
+        <p className="text-gray-600">إدارة قائمة العملاء المميزين - العدد الإجمالي: {count}</p>
       </div>
 
-      {/* شريط البحث والتصفية */}
-      <div className="filter-section">
-        <div className="filter-header">
-          <FiFilter className="filter-icon" />
-          <span>أدوات البحث والتصفية:</span>
+      {/* 5.2 Filter Section - قسم الفلاتر */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <FiFilter className="text-gray-600 ml-2" />
+            <span className="text-gray-700 font-medium">أدوات البحث والتصفية:</span>
+          </div>
           {hasActiveFilters && (
-            <button className="clear-filters-btn" onClick={clearFilters}>
-              <FiSlash />
+            <button 
+              className="flex items-center px-3 py-2 text-sm text-red-600 hover:text-red-800 transition-colors"
+              onClick={clearFilters}
+            >
+              <FiSlash className="ml-1" />
               مسح الفلاتر
             </button>
           )}
         </div>
         
-        <form onSubmit={handleSearch} className="search-form">
-          <div className="search-input-group">
-            <FiSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="ابحث باسم العميل..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="search-input"
-            />
-            <button type="submit" className="search-btn">
+        <form onSubmit={handleSearch} className="mb-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="ابحث باسم العميل..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               بحث
             </button>
-            <div className="dashboard-header-actions">
+            <div className="flex gap-3">
               <button 
-                className="dashboard-refresh-btn" 
+                className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
                 onClick={() => refetch()}
                 disabled={loading}
               >
-                <FiRefreshCw />
+                <FiRefreshCw className="ml-2" />
                 تحديث البيانات
               </button>
               
               <button 
-                className="btn btn-success"
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 onClick={() => setShowAddForm(true)}
               >
-                <FiPlus />
+                <FiPlus className="ml-2" />
                 إضافة عميل جديد
               </button>
             </div>
           </div>
         </form>
 
-        <div className="filter-controls">
-          <div className="filter-group">
-            <label>ترتيب حسب:</label>
+        <div className="flex flex-wrap gap-6">
+          <div className="flex items-center gap-2">
+            <label className="text-gray-700">ترتيب حسب:</label>
             <select 
               value={filters.sort_by} 
               onChange={(e) => handleFilterChange('sort_by', e.target.value)}
-              className="filter-select"
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             >
               <option value="created_at">تاريخ الإضافة</option>
               <option value="name">اسم العميل</option>
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>الاتجاه:</label>
+          <div className="flex items-center gap-2">
+            <label className="text-gray-700">الاتجاه:</label>
             <select 
               value={filters.sort_order} 
               onChange={(e) => handleFilterChange('sort_order', e.target.value)}
-              className="filter-select"
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             >
               <option value="desc">تنازلي</option>
               <option value="asc">تصاعدي</option>
@@ -435,79 +486,76 @@ const ClientsManagement = () => {
         </div>
       </div>
 
-      {/* نموذج إضافة عميل جديد */}
+      {/* 5.3 Add Client Modal - نافذة إضافة عميل */}
       {showAddForm && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>إضافة عميل جديد</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800">إضافة عميل جديد</h3>
               <button 
-                className="close-btn"
+                className="text-gray-500 hover:text-gray-700 text-2xl"
                 onClick={() => setShowAddForm(false)}
               >
                 &times;
               </button>
             </div>
             
-            <form onSubmit={handleAddClient} className="add-client-form">
-              <div className="form-group">
-                <label className="form-label">اسم العميل *</label>
+            <form onSubmit={handleAddClient} className="p-6">
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">اسم العميل *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="أدخل اسم العميل"
                   required
-                  className="form-input"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">الموقع الإلكتروني</label>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">الموقع الإلكتروني</label>
                 <input
                   type="url"
                   value={formData.website}
                   onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
                   placeholder="https://example.com"
-                  className="form-input"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">شعار العميل</label>
-                <div className="file-upload">
+              <div className="mb-6">
+                <label className="block text-gray-700 mb-2">شعار العميل</label>
+                <div className="relative">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleLogoChange}
-                    className="file-input"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     id="logo-upload"
                   />
-                  <label htmlFor="logo-upload" className="file-label">
-                    <FiImage />
-                    {formData.logo ? formData.logo.name : 'اختر ملف الشعار'}
+                  <label htmlFor="logo-upload" className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors cursor-pointer">
+                    <FiImage className="ml-2 text-gray-400" />
+                    <span className="text-gray-600">
+                      {formData.logo ? formData.logo.name : 'اختر ملف الشعار'}
+                    </span>
                   </label>
                 </div>
                 {formData.logo && (
-                  <div className="file-preview">
+                  <div className="mt-3">
                     <img 
                       src={URL.createObjectURL(formData.logo)} 
                       alt="معاينة الشعار"
-                      style={{ 
-                        maxWidth: '100px', 
-                        maxHeight: '60px',
-                        marginTop: '10px',
-                        borderRadius: '4px'
-                      }}
+                      className="max-w-[100px] max-h-[60px] rounded border border-gray-300"
                     />
                   </div>
                 )}
               </div>
 
-              <div className="form-actions">
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button 
                   type="button"
-                  className="btn btn-secondary"
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
                   onClick={() => setShowAddForm(false)}
                   disabled={addClientMutation.isLoading}
                 >
@@ -515,7 +563,7 @@ const ClientsManagement = () => {
                 </button>
                 <button 
                   type="submit"
-                  className="btn btn-primary"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                   disabled={addClientMutation.isLoading}
                 >
                   {addClientMutation.isLoading ? 'جاري الإضافة...' : 'إضافة العميل'}
@@ -526,69 +574,73 @@ const ClientsManagement = () => {
         </div>
       )}
 
-      <div className="content-body">
-        <div className="users-grid">
-          {/* قائمة العملاء */}
-          <div className="users-list">
-            <div className="list-header">
-              <h3>قائمة العملاء ({clients.length})</h3>
+      {/* 5.4 & 5.5 Clients List and Details - قائمة العملاء وتفاصيلهم */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+          
+          {/* 5.4 Clients List - قائمة العملاء */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">قائمة العملاء ({clients.length})</h3>
             </div>
             
             {loading ? (
-              <div className="dashboard-loading">
-                <div className="dashboard-loading-dots">
-                  <div className="dashboard-loading-dot"></div>
-                  <div className="dashboard-loading-dot"></div>
-                  <div className="dashboard-loading-dot"></div>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="flex space-x-2">
+                  <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
+                  <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                <p className="dashboard-loading-text">جاري تحميل العملاء...</p>
+                <p className="mt-4 text-gray-600">جاري تحميل العملاء...</p>
               </div>
             ) : clients.length === 0 ? (
-              <div className="empty-state">
-                <FiUser className="empty-icon" />
-                <p>لا توجد عملاء مميزين</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FiUser className="text-4xl text-gray-400 mb-3" />
+                <p className="text-gray-500 mb-4">لا توجد عملاء مميزين</p>
                 {hasActiveFilters && (
-                  <button className="btn btn-primary" onClick={clearFilters}>
+                  <button 
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    onClick={clearFilters}
+                  >
                     مسح الفلاتر
                   </button>
                 )}
               </div>
             ) : (
-              <div className="users-cards">
+              <div className="space-y-3 max-h-[600px] overflow-y-auto">
                 {clients.map((client) => (
                   <div 
                     key={client.id} 
-                    className={`user-card ${selectedClient?.id === client.id ? 'active' : ''}`}
+                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
+                      selectedClient?.id === client.id 
+                        ? 'border-blue-500 bg-blue-50 shadow-sm' 
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
                     onClick={() => setSelectedClient(client)}
                   >
-                    <div className="user-avatar">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-300">
                       {client.logo ? (
                         <img 
                           src={client.logo} 
                           alt={client.name}
-                          style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            borderRadius: '50%',
-                            objectFit: 'cover'
-                          }}
+                          className="w-full h-full object-cover"
                           onError={(e) => {
                             e.target.style.display = 'none';
                           }}
                         />
                       ) : null}
-                      {!client.logo && <FiUser />}
+                      {!client.logo && <FiUser className="text-gray-400" />}
                     </div>
-                    <div className="user-info">
-                      <h4>{client.name}</h4>
+                    <div className="flex-1 mr-4">
+                      <h4 className="font-medium text-gray-800">{client.name}</h4>
                       {client.created_at && (
-                        <span className="user-date">
-                          <FiCalendar />
-                          {formatDate(client.created_at)}
-                        </span>
+                        <div className="flex items-center text-sm text-gray-500 mt-1">
+                          <FiCalendar className="ml-1" />
+                          <span>{formatDate(client.created_at)}</span>
+                        </div>
                       )}
                     </div>
-                    <div className="user-status approved">
+                    <div className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
                       مميز
                     </div>
                   </div>
@@ -597,36 +649,36 @@ const ClientsManagement = () => {
             )}
           </div>
 
-          {/* تفاصيل العميل */}
-          <div className="user-details">
+          {/* 5.5 Client Details - تفاصيل العميل */}
+          <div>
             {selectedClient ? (
-              <div className="details-card">
-                <div className="details-header">
-                  <h3>تفاصيل العميل</h3>
-                  <span className="user-id">ID: {selectedClient.id}</span>
+              <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 h-full">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-800">تفاصيل العميل</h3>
+                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">ID: {selectedClient.id}</span>
                 </div>
                 
-                <div className="details-content">
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      <FiUser />
-                      اسم العميل
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <div className="flex items-center text-gray-600 w-32">
+                      <FiUser className="ml-2" />
+                      <span>اسم العميل</span>
                     </div>
-                    <div className="detail-value">{selectedClient.name}</div>
+                    <div className="flex-1 text-gray-800 font-medium">{selectedClient.name}</div>
                   </div>
 
                   {selectedClient.website && (
-                    <div className="detail-item">
-                      <div className="detail-label">
-                        <FiGlobe />
-                        الموقع الإلكتروني
+                    <div className="flex items-start">
+                      <div className="flex items-center text-gray-600 w-32">
+                        <FiGlobe className="ml-2" />
+                        <span>الموقع الإلكتروني</span>
                       </div>
-                      <div className="detail-value">
+                      <div className="flex-1">
                         <a 
                           href={selectedClient.website} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="link"
+                          className="text-blue-600 hover:text-blue-800 transition-colors"
                         >
                           {selectedClient.website}
                         </a>
@@ -634,12 +686,14 @@ const ClientsManagement = () => {
                     </div>
                   )}
 
-                  <div className="detail-item">
-                    <div className="detail-label">
-                      الحالة
+                  <div className="flex items-start">
+                    <div className="flex items-center text-gray-600 w-32">
+                      <span>الحالة</span>
                     </div>
-                    <div className="detail-value">
-                      <span className="status-badge approved">مميز</span>
+                    <div className="flex-1">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        مميز
+                      </span>
                     </div>
                   </div>
 
@@ -647,21 +701,21 @@ const ClientsManagement = () => {
                   {renderClientDetails(selectedClient)}
                 </div>
 
-                <div className="details-actions">
+                <div className="mt-8 pt-6 border-t border-gray-200">
                   <button 
-                    className="btn btn-danger"
+                    className="flex items-center justify-center w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                     onClick={() => handleDeleteClient(selectedClient.id)}
                     disabled={deleteClientMutation.isLoading}
                   >
-                    <FiTrash2 />
+                    <FiTrash2 className="ml-2" />
                     {deleteClientMutation.isLoading ? 'جاري المعالجة...' : 'حذف العميل'}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="no-selection">
-                <FiUser className="no-selection-icon" />
-                <p>اختر عميلاً لعرض التفاصيل</p>
+              <div className="flex flex-col items-center justify-center h-full py-12 text-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                <FiUser className="text-4xl text-gray-400 mb-3" />
+                <p className="text-gray-500">اختر عميلاً لعرض التفاصيل</p>
               </div>
             )}
           </div>

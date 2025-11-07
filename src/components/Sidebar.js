@@ -95,7 +95,7 @@ const Sidebar = () => {
         <li>
           <Link to="/inventory" className={location.pathname === '/inventory' ? 'active' : ''}>
             <FiHeart className="menu-icon" />
-            <span className="menu-text">المهتمين بالشراء</span>
+            <span className="menu-text">المهتمين بشراء الأراضي</span>
           </Link>
         </li>
 
@@ -111,7 +111,7 @@ const Sidebar = () => {
         <li>
           <Link to="/auctions-requests" className={location.pathname === '/auctions-requests' ? 'active' : ''}>
             <FiSend className="menu-icon" />
-            <span className="menu-text">طلبات التسويق</span>
+            <span className="menu-text">طلبات تسويق الأراضي لشركات المزاد</span>
           </Link>
         </li>
         
