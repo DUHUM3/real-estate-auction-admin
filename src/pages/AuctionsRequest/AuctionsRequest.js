@@ -239,48 +239,55 @@ const MarketingRequests = () => {
     },
   });
 
-  // ✅ استخدام useMutation لتحديث حالة الطلب
-  const statusMutation = useMutation(
-    async ({ requestId, status, message }) => {
-      const token = localStorage.getItem("access_token");
-      const requestBody = { status };
+// ✅ استخدام useMutation لتحديث حالة الطلب (نسخة محسّنة وآمنة)
+const statusMutation = useMutation(
+  async ({ requestId, status, message }) => {
+    const token = localStorage.getItem("access_token");
 
-      if (status === "rejected" && message) {
-        requestBody.message = message;
-      }
-
-      const response = await fetch(
-        `https://shahin-tqay.onrender.com/api/admin/auction-requests/${requestId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "فشل في تحديث حالة الطلب");
-      }
-
-      return await response.json();
-    },
-    {
-      onSuccess: () => {
-        alert("تم تحديث حالة الطلب بنجاح");
-        setSelectedRequest(null);
-        closeStatusModal();
-        refetch();
-        queryClient.invalidateQueries(["marketingRequests"]);
-      },
-      onError: (error) => {
-        alert(error.message);
-      },
+    const requestBody = { status };
+    if (status === "rejected" && message) {
+      requestBody.message = message;
     }
-  );
+
+    const response = await fetch(
+      `https://shahin-tqay.onrender.com/api/admin/auction-requests/${requestId}/status`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.message || "حدث خطأ أثناء تحديث الحالة");
+    }
+
+    return data;
+  },
+  {
+    onSuccess: (data) => {
+      alert(data.message || "تم تحديث حالة الطلب بنجاح");
+      setSelectedRequest(null);
+      closeStatusModal();
+      refetch();
+      queryClient.invalidateQueries(["marketingRequests"]);
+    },
+    onError: (error) => {
+      console.error("❌ خطأ أثناء تحديث الحالة:", error);
+      alert(error.message || "فشل في تحديث حالة الطلب");
+    },
+  }
+);
 
   // =====================================================
   // ⚙️ معالجة الحالات والإجراءات
