@@ -130,20 +130,11 @@ const Sidebar = () => {
             <span className="menu-text">التقارير</span>
           </Link>
         </li>
-
-        {/* الإشعارات */}
-        <li>
-          <Link to="/notifications" className={location.pathname === '/notifications' ? 'active' : ''}>
-            <FiBell className="menu-icon" />
-            <span className="menu-text">الإشعارات</span>
-          </Link>
-        </li>
-
         {/* الحساب البنكي */}
         <li>
-          <Link to="/bank-account" className={location.pathname === '/bank-account' ? 'active' : ''}>
+          <Link to="/Contact" className={location.pathname === '/Contact' ? 'active' : ''}>
             <FiCreditCard className="menu-icon" />
-            <span className="menu-text">الحساب البنكي</span>
+            <span className="menu-text"> تواصل معنا</span>
           </Link>
         </li>
 
