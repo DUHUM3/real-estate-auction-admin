@@ -20,7 +20,7 @@ class AuthController {
     try {
       console.log('جاري محاولة تسجيل الدخول...', { email });
       
-      const response = await fetch('https://shahin-tqay.onrender.com/api/admin/login', {
+      const response = await fetch('http://72.61.119.194/api/admin/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ class AuthController {
         throw new Error('لا يوجد refresh token');
       }
       
-      const response = await fetch('https://shahin-tqay.onrender.com/api/admin/refresh', {
+      const response = await fetch('http://72.61.119.194/api/admin/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

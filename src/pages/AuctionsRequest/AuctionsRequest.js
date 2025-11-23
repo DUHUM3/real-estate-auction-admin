@@ -99,10 +99,10 @@ const MarketingRequests = () => {
       page: 1,
       per_page: 10,
     };
-    
+
     setFilters(defaultFilters);
     localStorage.removeItem("marketingRequestsFilters");
-    
+
     // استخدام setTimeout لضمان تحديث state أولاً ثم إعادة الجلب
     setTimeout(() => {
       refetch();
@@ -157,7 +157,7 @@ const MarketingRequests = () => {
       throw new Error("لم يتم العثور على رمز الدخول");
     }
     const queryString = buildQueryString();
-    const url = `https://shahin-tqay.onrender.com/api/admin/auction-requests?${queryString}`;
+    const url = `http://72.61.119.194/api/admin/auction-requests?${queryString}`;
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -231,63 +231,66 @@ const MarketingRequests = () => {
     error,
     refetch,
   } = useQuery(["marketingRequests", filters], fetchMarketingRequests, {
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error("خطأ في جلب طلبات التسويق:", error);
-      alert("حدث خطأ أثناء جلب البيانات: " + error.message);
-    },
+    staleTime: 0, // البيانات تعتبر قديمة فوراً
+    cacheTime: 0, // التخلص من الكاش بعد فترة قصيرة
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always", // كل مرة نركب المكون، يعيد جلب البيانات من السيرفر
   });
 
-// ✅ استخدام useMutation لتحديث حالة الطلب (نسخة محسّنة وآمنة)
-const statusMutation = useMutation(
-  async ({ requestId, status, message }) => {
-    const token = localStorage.getItem("access_token");
+  // ✅ استخدام useMutation لتحديث حالة الطلب (نسخة محسّنة وآمنة)
+  const statusMutation = useMutation(
+    async ({ requestId, status, message }) => {
+      const token = localStorage.getItem("access_token");
 
-    const requestBody = { status };
-    if (status === "rejected" && message) {
-      requestBody.message = message;
-    }
-
-    const response = await fetch(
-      `https://shahin-tqay.onrender.com/api/admin/auction-requests/${requestId}/status`,
-      {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+      const requestBody = { status };
+      if (status === "rejected" && message) {
+        requestBody.message = message;
       }
-    );
 
-    let data;
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
+      const response = await fetch(
+        `http://72.61.119.194/api/admin/auction-requests/${requestId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
 
-    if (!response.ok) {
-      throw new Error(data?.message || "حدث خطأ أثناء تحديث الحالة");
-    }
+      const data = await response.json();
 
-    return data;
-  },
-  {
-    onSuccess: (data) => {
-      alert(data.message || "تم تحديث حالة الطلب بنجاح");
-      setSelectedRequest(null);
-      closeStatusModal();
-      refetch();
-      queryClient.invalidateQueries(["marketingRequests"]);
+      if (!response.ok) {
+        throw new Error(data?.message || "حدث خطأ أثناء تحديث الحالة");
+      }
+
+      return data;
     },
-    onError: (error) => {
-      console.error("❌ خطأ أثناء تحديث الحالة:", error);
-      alert(error.message || "فشل في تحديث حالة الطلب");
-    },
-  }
-);
+    {
+      onSuccess: (data) => {
+        alert(data.message || "تم تحديث حالة الطلب بنجاح");
+        setSelectedRequest(null);
+        closeStatusModal();
+
+        // 🔥 تحديث العنصر مباشرة في الـ state بدون إعادة fetch كامل
+        queryClient.setQueryData(["marketingRequests", filters], (oldData) => {
+          if (!oldData) return oldData;
+
+          return {
+            ...oldData,
+            data: oldData.data.map((req) =>
+              req.id === data.auction_request.id ? data.auction_request : req
+            ),
+          };
+        });
+      },
+      onError: (error) => {
+        console.error("❌ خطأ أثناء تحديث الحالة:", error);
+        alert(error.message || "فشل في تحديث حالة الطلب");
+      },
+    }
+  );
 
   // =====================================================
   // ⚙️ معالجة الحالات والإجراءات
@@ -338,11 +341,19 @@ const statusMutation = useMutation(
       return;
     }
 
-    statusMutation.mutate({
-      requestId: statusModal.requestId,
-      status: statusModal.newStatus,
-      message: statusModal.rejectionMessage,
-    });
+    statusMutation.mutate(
+      {
+        requestId: statusModal.requestId,
+        status: statusModal.newStatus,
+        message: statusModal.rejectionMessage,
+      },
+      {
+        onSuccess: (data) => {
+          queryClient.invalidateQueries(["marketingRequests"]); // يجبر جلب جديد من السيرفر
+          closeStatusModal();
+        },
+      }
+    );
   };
 
   // 🔥 الحل: إضافة الدوال المفقودة
@@ -450,7 +461,7 @@ const statusMutation = useMutation(
     if (imagePath.startsWith("http")) {
       return imagePath;
     }
-    return `https://shahin-tqay.onrender.com/${imagePath}`;
+    return `http://72.61.119.194/storage/${imagePath}`;
   };
 
   // إنشاء أزرار الباجينيشن

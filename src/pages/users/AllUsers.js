@@ -194,7 +194,7 @@ const AllUsers = () => {
     }
 
     const queryString = buildQueryString();
-    const url = `https://shahin-tqay.onrender.com/api/admin/users?${queryString}`;
+    const url = `http://72.61.119.194/api/admin/users?${queryString}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -316,7 +316,7 @@ const AllUsers = () => {
     async (userId) => {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `https://shahin-tqay.onrender.com/api/admin/users/${userId}/approve`,
+        `http://72.61.119.194/api/admin/users/${userId}/approve`,
         {
           method: "POST",
           headers: {
@@ -359,7 +359,7 @@ const AllUsers = () => {
     async ({ userId, adminMessage }) => {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `https://shahin-tqay.onrender.com/api/admin/users/${userId}/reject`,
+        `http://72.61.119.194/api/admin/users/${userId}/reject`,
         {
           method: "POST",
           headers: {
@@ -735,24 +735,33 @@ const AllUsers = () => {
                 <FiFileText className="text-gray-400" />
                 <span>ملف الرخصة</span>
               </div>
-              {broker.license_file ? (
-                <a
-                  href={broker.license_file}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-blue-600 hover:underline"
-                >
-                  <FiFileText />
-                  عرض / تحميل الملف
-                </a>
-              ) : (
-                <span className="text-gray-500">لا يوجد ملف مرفق</span>
-              )}
+              <div className="flex items-center justify-between">
+                {broker.license_file ? (
+                  <a
+                    href={
+                      broker.license_file.startsWith("http")
+                        ? broker.license_file
+                        : `http://72.61.119.194/storage/${broker.license_file}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline inline-flex items-center gap-2"
+                  >
+                    <FiFileText />
+                    عرض الملف
+                  </a>
+                ) : (
+                  <span className="text-gray-500 font-medium">
+                    لا يوجد ملف مرفق
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
       );
     }
+
     if (userType === 6 && user.auction_company) {
       const auction = user.auction_company;
 
@@ -768,22 +777,16 @@ const AllUsers = () => {
             {/* السجل التجاري */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FiHash className="text-gray-400" />
+                <FiFileText className="text-gray-400" />
                 <span>السجل التجاري</span>
               </div>
               <div className="flex items-center justify-between">
-                {auction.commercial_register ? (
-                  <a
-                    href={auction.commercial_register}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    عرض السجل التجاري
-                  </a>
-                ) : (
-                  <span className="text-gray-800 font-medium">غير محدد</span>
-                )}
+                {/* عرض الرقم كنص فقط */}
+                <span className="text-gray-800 font-medium">
+                  {auction.commercial_register || "غير محدد"}
+                </span>
+
+                {/* زر نسخ الرقم */}
                 {auction.commercial_register && (
                   <button
                     className={`p-1 rounded transition-colors ${
@@ -873,7 +876,11 @@ const AllUsers = () => {
               <div className="flex items-center justify-between">
                 {auction.commercial_file ? (
                   <a
-                    href={auction.commercial_file}
+                    href={
+                      auction.commercial_file.startsWith("http")
+                        ? auction.commercial_file
+                        : `http://72.61.119.194/storage/${auction.commercial_file}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline"
@@ -883,6 +890,7 @@ const AllUsers = () => {
                 ) : (
                   <span className="text-gray-800 font-medium">غير محدد</span>
                 )}
+
                 {auction.commercial_file && (
                   <button
                     className={`p-1 rounded transition-colors ${
@@ -944,7 +952,11 @@ const AllUsers = () => {
               <div className="flex items-center justify-between">
                 {auction.license_file ? (
                   <a
-                    href={auction.license_file}
+                    href={
+                      auction.license_file.startsWith("http")
+                        ? auction.license_file
+                        : `http://72.61.119.194/storage/${auction.license_file}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline"
@@ -954,6 +966,7 @@ const AllUsers = () => {
                 ) : (
                   <span className="text-gray-800 font-medium">غير محدد</span>
                 )}
+
                 {auction.license_file && (
                   <button
                     className={`p-1 rounded transition-colors ${
@@ -1091,7 +1104,11 @@ const AllUsers = () => {
               <div className="flex items-center justify-between">
                 {entity.commercial_file ? (
                   <a
-                    href={entity.commercial_file}
+                    href={
+                      entity.commercial_file.startsWith("http")
+                        ? entity.commercial_file
+                        : `http://72.61.119.194/storage/${entity.commercial_file}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline"
