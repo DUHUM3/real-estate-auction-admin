@@ -21,6 +21,7 @@ import AuctionsRequests from "./pages/AuctionsRequest/AuctionsRequest";
 import LandRequests from "./pages/landRequests/landRequests";
 import AuthController from "./utils/authController";
 import PrivacyPolicy from "./pages/PrivacyPolicy1"; // ✅ ← هذا هو الاستدعاء الصحيح
+import Admin from "./pages/Admin"; // ✅ ← هذا هو الاستدعاء الصحيح
 import Contact from "./pages/Contact";
 
 import "./App.css";
@@ -173,6 +174,15 @@ function App() {
                         element={
                           <ProtectedRoute isAuthenticated={isLoggedIn}>
                             <PrivacyPolicy/>
+                          </ProtectedRoute>
+                        }
+                      />
+                      {/* ✅ صفحة الادمن الخصوصية */}
+                      <Route
+                        path="/admin"
+                        element={
+                          <ProtectedRoute isAuthenticated={isLoggedIn}>
+                            <Admin/>
                           </ProtectedRoute>
                         }
                       />

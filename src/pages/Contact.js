@@ -25,7 +25,7 @@ const ContactsPage = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // API base URL
-  const API_BASE_URL = 'https://shahin-tqay.onrender.com';
+  const API_BASE_URL = 'http://72.61.119.194';
 
   // بناء query parameters ديناميكي
   const buildQueryParams = useCallback((filters, page = 1) => {

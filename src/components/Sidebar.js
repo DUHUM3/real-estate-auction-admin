@@ -145,6 +145,13 @@ const Sidebar = () => {
             <span className="menu-text">سياسة الخصوصية</span>
           </Link>
         </li>
+        {/* الادمن  */}
+        <li>
+          <Link to="/admin" className={location.pathname === '/admin' ? 'active' : ''}>
+            <FiShield className="menu-icon" />
+            <span className="menu-text"> إدارة حسابات الأدمن</span>
+          </Link>
+        </li>
       </ul>
       
       <div className="sidebar-footer">
