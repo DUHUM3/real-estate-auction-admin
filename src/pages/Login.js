@@ -247,40 +247,36 @@ function LoginPage({ onLoginSuccess }) {
 <div className="relative z-10 h-1/2 flex items-center justify-center">
   <div className="relative w-full h-full flex items-center justify-center">
     <img
-      src={process.env.PUBLIC_URL + "/images/3.jpg"}
+      src={process.env.PUBLIC_URL + "/images/cover2.webp"}
       alt="صورة ترحيبية"
-      className="w-full h-full object-cover opacity-30"
+      className="w-full h-full object-cover opacity-80"
       onError={(e) => {
         e.target.style.display = 'none';
       }}
     />
 
-    {/* الطبقة البيضاء */}
-    <div className="absolute inset-0 bg-white/40"></div>
-
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="text-center text-black space-y-4">
-        <div className="mb-6">
-          <img
-            src={process.env.PUBLIC_URL + "/images/logo.png"}
-            alt="شاهين Logo"
-            className="h-100 w-auto mx-auto drop-shadow-2xl"
-            onError={(e) => {
-              e.target.style.display = 'none';
-            }}
-          />
-        </div>
-        <h2 className="text-3xl md:text-4xl font-bold drop-shadow-lg">
-          مرحباً بك في شاهين بلس
-        </h2>
-        <p className="text-lg md:text-xl opacity-90 drop-shadow-md">
-          نظام إدارة متطور وآمن
-        </p>
-      </div>
+  <div className="absolute inset-0 flex items-center justify-center">
+  <div className="text-center text-black space-y-4">
+    <div className="mb-6">
+      <img
+        src={process.env.PUBLIC_URL + "/images/logo.webp"}
+        alt="شاهين Logo"
+        className="h-100 w-auto mx-auto drop-shadow-2xl"
+        onError={(e) => {
+          e.target.style.display = 'none';
+        }}
+      />
     </div>
+    <h2 className="text-3xl md:text-4xl font-bold drop-shadow-lg">
+      مرحباً بك في شاهين بلس
+    </h2>
+    <p className="text-lg md:text-xl opacity-90 drop-shadow-md">
+      نظام إدارة متطور وآمن
+    </p>
   </div>
 </div>
-
+  </div>
+</div>
 
       {/* ==================== 7. قسم النموذج ==================== */}
       <div className="relative z-10 h-1/2 bg-white flex items-center justify-center p-4">

@@ -137,19 +137,18 @@ const Sidebar = () => {
             <span className="menu-text"> تواصل معنا</span>
           </Link>
         </li>
-
+         {/* الادمن  */}
+        <li>
+          <Link to="/admin" className={location.pathname === '/admin' ? 'active' : ''}>
+            <FiShield className="menu-icon" />
+            <span className="menu-text"> إدارة حسابات الأدمن</span>
+          </Link>
+        </li>
         {/* سياسة الخصوصية */}
         <li>
           <Link to="/privacy-policy" className={location.pathname === '/privacy-policy' ? 'active' : ''}>
             <FiShield className="menu-icon" />
             <span className="menu-text">سياسة الخصوصية</span>
-          </Link>
-        </li>
-        {/* الادمن  */}
-        <li>
-          <Link to="/admin" className={location.pathname === '/admin' ? 'active' : ''}>
-            <FiShield className="menu-icon" />
-            <span className="menu-text"> إدارة حسابات الأدمن</span>
           </Link>
         </li>
       </ul>
