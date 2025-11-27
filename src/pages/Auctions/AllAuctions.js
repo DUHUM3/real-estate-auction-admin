@@ -235,7 +235,7 @@ const AllAuctions = () => {
     }
 
     const queryString = buildQueryString();
-    const url = `http://72.61.119.194/api/admin/auctions?${queryString}`;
+    const url = `https://core-api-x41.shaheenplus.sa/api/admin/auctions?${queryString}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -297,7 +297,7 @@ const AllAuctions = () => {
       if (!token) throw new Error("لم يتم العثور على رمز الدخول");
 
       const response = await fetch(
-        `http://72.61.119.194/api/admin/auctions/${auctionId}/approve`,
+        `https://core-api-x41.shaheenplus.sa/api/admin/auctions/${auctionId}/approve`,
         {
           method: "POST",
           headers: {
@@ -344,7 +344,7 @@ const AllAuctions = () => {
       if (!token) throw new Error("لم يتم العثور على رمز الدخول");
 
       const response = await fetch(
-        `http://72.61.119.194/api/admin/auctions/${auctionId}/reject`,
+        `https://core-api-x41.shaheenplus.sa/api/admin/auctions/${auctionId}/reject`,
         {
           method: "POST",
           headers: {

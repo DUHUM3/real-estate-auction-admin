@@ -52,7 +52,7 @@ const Dashboard = () => {
         return;
       }
 
-      const response = await fetch('http://72.61.119.194/api/admin/dashboard/statistics', {
+      const response = await fetch('https://core-api-x41.shaheenplus.sa/api/admin/dashboard/statistics', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

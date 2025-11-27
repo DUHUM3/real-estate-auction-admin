@@ -25,7 +25,7 @@ const ContactsPage = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // API base URL
-  const API_BASE_URL = 'http://72.61.119.194';
+  const API_BASE_URL = 'https://core-api-x41.shaheenplus.sa';
 
   // بناء query parameters ديناميكي
   const buildQueryParams = useCallback((filters, page = 1) => {

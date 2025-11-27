@@ -22,7 +22,7 @@ const PendingAuctions = () => {
         return;
       }
 
-      const response = await fetch('https://shahin-tqay.onrender.com/api/admin/auctions/pending/list', {
+      const response = await fetch('https://core-api-x41.shaheenplus.sa/api/admin/auctions/pending/list', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -67,7 +67,7 @@ const PendingAuctions = () => {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/auctions/${auctionId}/approve`, {
+      const response = await fetch(`https://core-api-x41.shaheenplus.sa/api/admin/auctions/${auctionId}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -100,7 +100,7 @@ const PendingAuctions = () => {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/auctions/${auctionId}/reject`, {
+      const response = await fetch(`https://core-api-x41.shaheenplus.sa/api/admin/auctions/${auctionId}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

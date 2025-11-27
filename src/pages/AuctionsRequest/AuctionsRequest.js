@@ -157,7 +157,7 @@ const MarketingRequests = () => {
       throw new Error("لم يتم العثور على رمز الدخول");
     }
     const queryString = buildQueryString();
-    const url = `http://72.61.119.194/api/admin/auction-requests?${queryString}`;
+    const url = `https://core-api-x41.shaheenplus.sa/api/admin/auction-requests?${queryString}`;
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -248,7 +248,7 @@ const MarketingRequests = () => {
       }
 
       const response = await fetch(
-        `http://72.61.119.194/api/admin/auction-requests/${requestId}/status`,
+        `https://core-api-x41.shaheenplus.sa/api/admin/auction-requests/${requestId}/status`,
         {
           method: "PATCH",
           headers: {
@@ -461,7 +461,7 @@ const MarketingRequests = () => {
     if (imagePath.startsWith("http")) {
       return imagePath;
     }
-    return `http://72.61.119.194/storage/${imagePath}`;
+    return `https://core-api-x41.shaheenplus.sa/storage/${imagePath}`;
   };
 
   // إنشاء أزرار الباجينيشن

@@ -178,63 +178,71 @@ function LoginPage({ onLoginSuccess }) {
     return errors;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // التحقق من Rate Limiting
-    if (!checkRateLimit()) {
-      setError('تم تجاوز عدد المحاولات المسموح. يرجى المحاولة بعد 5 دقائق.');
-      return;
-    }
-    
-    setLoading(true);
-    setError('');
-    setValidationErrors({});
-    
-    // تنظيف البيانات
-    const cleanedData = cleanFormData(formData);
-    
-    // التحقق من صحة البيانات
-    const errors = validateForm(cleanedData);
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      setLoading(false);
-      return;
-    }
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    // تسجيل محاولة جديدة
-    attemptCount.current += 1;
-    lastAttemptTime.current = Date.now();
+  // التحقق من Rate Limiting
+  if (!checkRateLimit()) {
+    setError('تم تجاوز عدد المحاولات المسموح. يرجى المحاولة بعد 5 دقائق.');
+    return;
+  }
 
-    try {
-      console.log('بيانات التسجيل:', { email: cleanedData.email, password: '***' });
+  setLoading(true);
+  setError('');
+  setValidationErrors({});
 
-      const result = await AuthController.login(cleanedData.email, cleanedData.password);
+  // تنظيف البيانات
+  const cleanedData = cleanFormData(formData);
 
-      console.log('نتيجة تسجيل الدخول:', { success: result.success });
+  // التحقق من صحة البيانات
+  const errors = validateForm(cleanedData);
+  if (Object.keys(errors).length > 0) {
+    setValidationErrors(errors);
+    setLoading(false);
+    return;
+  }
 
-      if (result.success) {
-        console.log('تم تسجيل الدخول بنجاح، التوجيه إلى Dashboard...');
-        
-        // إعادة تعيين عداد المحاولات عند النجاح
-        attemptCount.current = 0;
-        
-        if (onLoginSuccess) {
-          onLoginSuccess();
-        }
-        
-        window.location.href = '/dashboard';
-        
-      } else {
-        setError(result.error || 'حدث خطأ في تسجيل الدخول');
+  // تسجيل محاولة جديدة
+  attemptCount.current += 1;
+  lastAttemptTime.current = Date.now();
+
+  try {
+    console.log("بيانات التسجيل:", { email: cleanedData.email, password: '***' });
+
+    const result = await AuthController.login(cleanedData.email, cleanedData.password);
+
+    console.log("نتيجة تسجيل الدخول:", result);
+
+    if (result.success) {
+      
+      // 💥 أهم خطوة: تخزين التوكنات
+      localStorage.setItem("admin_token", result.token);
+      localStorage.setItem("admin_refresh_token", result.refreshToken);
+
+      console.log("تم تخزين التوكن:", result.token);
+
+      // إعادة تعيين محاولات الفشل
+      attemptCount.current = 0;
+
+      // تنفيذ حدث نجاح تسجيل الدخول إن وجد
+      if (onLoginSuccess) {
+        onLoginSuccess();
       }
-    } catch (error) {
-      console.error('خطأ في تسجيل الدخول:', error);
-      setError('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.');
-    } finally {
-      setLoading(false);
+
+      // توجيه إلى لوحة التحكم
+      window.location.href = "/dashboard";
+
+    } else {
+      setError(result.error || "حدث خطأ في تسجيل الدخول");
     }
-  };
+
+  } catch (error) {
+    console.error("خطأ في تسجيل الدخول:", error);
+    setError("حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ==================== 5. الواجهة الرئيسية ====================
   

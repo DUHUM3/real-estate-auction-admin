@@ -26,7 +26,7 @@ const PendingLands = () => {
         return;
       }
 
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties/pending?page=${currentPage}`, {
+      const response = await fetch(`https://core-api-x41.shaheenplus.sa/api/admin/properties/pending?page=${currentPage}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -95,7 +95,7 @@ const PendingLands = () => {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/properties/${landId}/status`, {
+      const response = await fetch(`https://core-api-x41.shaheenplus.sa/api/admin/properties/${landId}/status`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

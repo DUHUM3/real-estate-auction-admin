@@ -88,7 +88,7 @@ const ClientsManagement = () => {
       throw new Error('لم يتم العثور على رمز الدخول');
     }
 
-    const response = await fetch('https://shahin-tqay.onrender.com/api/admin/clients', {
+    const response = await fetch('https://core-api-x41.shaheenplus.sa/api/admin/clients', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -153,7 +153,7 @@ const ClientsManagement = () => {
         formDataToSend.append('logo', formData.logo);
       }
 
-      const response = await fetch('https://shahin-tqay.onrender.com/api/admin/clients', {
+      const response = await fetch('https://core-api-x41.shaheenplus.sa/api/admin/clients', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -186,7 +186,7 @@ const ClientsManagement = () => {
   const deleteClientMutation = useMutation(
     async (clientId) => {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/clients/${clientId}`, {
+      const response = await fetch(`https://core-api-x41.shaheenplus.sa/api/admin/clients/${clientId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

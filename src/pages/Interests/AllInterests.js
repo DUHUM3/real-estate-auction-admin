@@ -189,7 +189,7 @@ const AllInterests = () => {
     }
 
     const queryString = buildQueryString();
-    const url = `https://shahin-tqay.onrender.com/api/admin/interests?${queryString}`;
+    const url = `https://core-api-x41.shaheenplus.sa/api/admin/interests?${queryString}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -257,7 +257,7 @@ const AllInterests = () => {
     }
 
     const response = await fetch(
-      `https://shahin-tqay.onrender.com/api/admin/properties/${propertyId}`,
+      `https://core-api-x41.shaheenplus.sa/api/admin/properties/${propertyId}`,
       {
         method: "GET",
         headers: {
@@ -334,7 +334,7 @@ const AllInterests = () => {
     async ({ interestId, status, adminNote }) => {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `https://shahin-tqay.onrender.com/api/admin/interests/${interestId}/status`,
+        `https://core-api-x41.shaheenplus.sa/api/admin/interests/${interestId}/status`,
         {
           method: "PUT",
           headers: {

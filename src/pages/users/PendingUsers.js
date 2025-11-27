@@ -25,7 +25,7 @@ const PendingUsers = () => {
     }
 
     // استخدم نفس النطاق المستخدم في تسجيل الدخول
-    const response = await fetch('https://shahin-tqay.onrender.com/api/admin/users/pending', {
+    const response = await fetch('https://core-api-x41.shaheenplus.sa/api/admin/users/pending', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -74,7 +74,7 @@ const PendingUsers = () => {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/users/${userId}/approve`, {
+      const response = await fetch(`https://core-api-x41.shaheenplus.sa/api/admin/users/${userId}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -106,7 +106,7 @@ const PendingUsers = () => {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://shahin-tqay.onrender.com/api/admin/users/${userId}/reject`, {
+      const response = await fetch(`https://core-api-x41.shaheenplus.sa/api/admin/users/${userId}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

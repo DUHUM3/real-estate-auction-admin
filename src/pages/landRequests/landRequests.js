@@ -179,7 +179,7 @@ const LandRequests = () => {
     }
 
     const queryString = buildQueryString();
-    const url = `https://shahin-tqay.onrender.com/api/admin/land-requests?${queryString}`;
+    const url = `https://core-api-x41.shaheenplus.sa/api/admin/land-requests?${queryString}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -250,7 +250,7 @@ const LandRequests = () => {
     }
 
     const response = await fetch(
-      `https://shahin-tqay.onrender.com/api/admin/users/${userId}`,
+      `https://core-api-x41.shaheenplus.sa/api/admin/users/${userId}`,
       {
         method: "GET",
         headers: {
@@ -343,7 +343,7 @@ const LandRequests = () => {
     async ({ requestId, status, adminNote }) => {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `https://shahin-tqay.onrender.com/api/admin/land-requests/${requestId}/status`,
+        `https://core-api-x41.shaheenplus.sa/api/admin/land-requests/${requestId}/status`,
         {
           method: "PATCH",
           headers: {

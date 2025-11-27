@@ -164,7 +164,7 @@ const ReportsPage = () => {
     setError(null);
 
     try {
-      let url = `https://shahin-tqay.onrender.com/api/admin/reports?period=${filters.period}&type=${filters.type}`;
+      let url = `https://core-api-x41.shaheenplus.sa/api/admin/reports?period=${filters.period}&type=${filters.type}`;
 
       if (filters.status && filters.status !== "all") {
         url += `&status=${filters.status}`;

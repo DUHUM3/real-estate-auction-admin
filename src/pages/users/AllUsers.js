@@ -194,7 +194,7 @@ const AllUsers = () => {
     }
 
     const queryString = buildQueryString();
-    const url = `http://72.61.119.194/api/admin/users?${queryString}`;
+    const url = `https://core-api-x41.shaheenplus.sa/api/admin/users?${queryString}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -316,7 +316,7 @@ const AllUsers = () => {
     async (userId) => {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `http://72.61.119.194/api/admin/users/${userId}/approve`,
+        `https://core-api-x41.shaheenplus.sa/api/admin/users/${userId}/approve`,
         {
           method: "POST",
           headers: {
@@ -359,7 +359,7 @@ const AllUsers = () => {
     async ({ userId, adminMessage }) => {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `http://72.61.119.194/api/admin/users/${userId}/reject`,
+        `https://core-api-x41.shaheenplus.sa/api/admin/users/${userId}/reject`,
         {
           method: "POST",
           headers: {
@@ -741,7 +741,7 @@ const AllUsers = () => {
                     href={
                       broker.license_file.startsWith("http")
                         ? broker.license_file
-                        : `http://72.61.119.194/storage/${broker.license_file}`
+                        : `https://core-api-x41.shaheenplus.sa/storage/${broker.license_file}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -879,7 +879,7 @@ const AllUsers = () => {
                     href={
                       auction.commercial_file.startsWith("http")
                         ? auction.commercial_file
-                        : `http://72.61.119.194/storage/${auction.commercial_file}`
+                        : `https://core-api-x41.shaheenplus.sa/storage/${auction.commercial_file}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -955,7 +955,7 @@ const AllUsers = () => {
                     href={
                       auction.license_file.startsWith("http")
                         ? auction.license_file
-                        : `http://72.61.119.194/storage/${auction.license_file}`
+                        : `https://core-api-x41.shaheenplus.sa/storage/${auction.license_file}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1107,7 +1107,7 @@ const AllUsers = () => {
                     href={
                       entity.commercial_file.startsWith("http")
                         ? entity.commercial_file
-                        : `http://72.61.119.194/storage/${entity.commercial_file}`
+                        : `https://core-api-x41.shaheenplus.sa/storage/${entity.commercial_file}`
                     }
                     target="_blank"
                     rel="noopener noreferrer"

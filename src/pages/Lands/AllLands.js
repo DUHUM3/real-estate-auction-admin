@@ -189,7 +189,7 @@ const AllLands = () => {
     }
 
     const queryString = buildQueryString();
-    const url = `https://shahin-tqay.onrender.com/api/admin/properties?${queryString}`;
+    const url = `https://core-api-x41.shaheenplus.sa/api/admin/properties?${queryString}`;
 
     const response = await fetch(url, {
       method: "GET",
@@ -283,7 +283,7 @@ const AllLands = () => {
       console.log("إرسال طلب تحديث الحالة:", { landId, requestBody });
 
       const response = await fetch(
-        `https://shahin-tqay.onrender.com/api/admin/properties/${landId}/status`,
+        `https://core-api-x41.shaheenplus.sa/api/admin/properties/${landId}/status`,
         {
           method: "PUT", // ✅ تم تغيير الطريقة لتتناسب مع الكنترولر
           headers: {
