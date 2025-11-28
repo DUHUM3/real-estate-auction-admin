@@ -20,8 +20,8 @@ import Inventory from "./pages/Interests/AllInterests";
 import AuctionsRequests from "./pages/AuctionsRequest/AuctionsRequest";
 import LandRequests from "./pages/landRequests/landRequests";
 import AuthController from "./utils/authController";
-import PrivacyPolicy from "./pages/PrivacyPolicy1"; // ✅ ← هذا هو الاستدعاء الصحيح
-import Admin from "./pages/Admin"; // ✅ ← هذا هو الاستدعاء الصحيح
+import PrivacyPolicy from "./pages/PrivacyPolicy1";
+import Admin from "./pages/Admin";
 import Contact from "./pages/Contact";
 
 import "./App.css";
@@ -67,14 +67,15 @@ function App() {
     setIsLoggedIn(false);
   };
 
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner-large"></div>
-        <p>جاري التحميل...</p>
-      </div>
-    );
-  }
+  // استبدل جزء التحميل في App.js بـ:
+if (loading) {
+  return (
+    <div className="flex flex-col justify-center items-center h-screen bg-gray-50">
+      <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+      <p className="text-gray-600">جاري التحميل...</p>
+    </div>
+  );
+}
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -82,10 +83,10 @@ function App() {
         <Router>
           <div className="app">
             {isLoggedIn ? (
-              <>
+              <div className="flex min-h-screen"> {/* ✅ التصحيح هنا */}
                 <Sidebar onLogout={handleLogout} />
-                <div className="main-content">
-                  <div className="content">
+                <div className="flex-1 flex flex-col lg:mr-72"> {/* ✅ التصحيح هنا */}
+                  <div className="content flex-1 p-6"> {/* ✅ التصحيح هنا */}
                     <Routes>
                       <Route
                         path="/dashboard"
@@ -167,8 +168,6 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-
-                      {/* ✅ صفحة سياسة الخصوصية */}
                       <Route
                         path="/privacy-policy"
                         element={
@@ -177,7 +176,6 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-                      {/* ✅ صفحة الادمن الخصوصية */}
                       <Route
                         path="/admin"
                         element={
@@ -186,13 +184,12 @@ function App() {
                           </ProtectedRoute>
                         }
                       />
-
                       <Route path="/" element={<Navigate to="/dashboard" />} />
                       <Route path="*" element={<Navigate to="/dashboard" />} />
                     </Routes>
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
               <Routes>
                 <Route
