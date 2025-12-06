@@ -951,28 +951,6 @@ const AllLands = () => {
             </div>
           </div>
         </div>
-
-        {/* الصور */}
-        {land.images && land.images.length > 0 && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-medium text-gray-700 mb-3">
-              صور الأرض ({land.images.length})
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {land.images.map((image, index) => (
-                <div
-                  key={image.id}
-                  className="flex flex-col items-center justify-center bg-white p-3 rounded border border-gray-200"
-                >
-                  <FiImage className="text-gray-400 text-xl mb-1" />
-                  <span className="text-xs text-gray-600">
-                    صورة {index + 1}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -1381,258 +1359,352 @@ const AllLands = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lands List */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <h3 className="font-semibold text-lg text-gray-800">
-                  قائمة الأراضي ({lands.length})
-                </h3>
-                <span className="text-sm text-gray-500">
-                  {pagination.total > 0 ? (
-                    <>
-                      عرض {pagination.from} إلى {pagination.to} من{" "}
-                      {pagination.total} - الصفحة {pagination.current_page} من{" "}
-                      {pagination.last_page}
-                    </>
+<div className="lg:col-span-2">
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h3 className="font-semibold text-lg text-gray-800">
+          قائمة الأراضي ({lands.length})
+        </h3>
+        <span className="text-sm text-gray-500">
+          {pagination.total > 0 ? (
+            <>
+              عرض {pagination.from} إلى {pagination.to} من{" "}
+              {pagination.total} - الصفحة {pagination.current_page} من{" "}
+              {pagination.last_page}
+            </>
+          ) : (
+            "لا توجد نتائج"
+          )}
+        </span>
+      </div>
+    </div>
+
+    {loading ? (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="flex space-x-2">
+          <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+          <div
+            className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
+            style={{ animationDelay: "0.1s" }}
+          ></div>
+          <div
+            className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
+            style={{ animationDelay: "0.2s" }}
+          ></div>
+        </div>
+        <p className="mt-4 text-gray-600">جاري تحميل البيانات...</p>
+      </div>
+    ) : lands.length === 0 ? (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <FiMap className="text-gray-400 text-4xl mb-4" />
+        <p className="text-gray-500 mb-4">لا توجد نتائج</p>
+        {hasActiveFilters && (
+          <button
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            onClick={clearFilters}
+          >
+            مسح الفلاتر
+          </button>
+        )}
+      </div>
+    ) : (
+      <>
+        <div className="divide-y divide-gray-200">
+          {lands.map((land) => (
+            <div
+              key={land.id}
+              className={`p-4 cursor-pointer transition-colors ${
+                selectedLand?.id === land.id
+                  ? "bg-blue-50 border-r-4 border-blue-500"
+                  : "hover:bg-gray-50"
+              }`}
+              onClick={() => setSelectedLand(land)}
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                  {land.cover_image ? (
+                    <img
+                      src={`https://core-api-x41.shaheenplus.sa/storage/${land.cover_image}`}
+                      alt={land.title}
+                      className="w-full h-full object-cover"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`https://core-api-x41.shaheenplus.sa/storage/${land.cover_image}`, '_blank');
+                      }}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://via.placeholder.com/48?text=صورة";
+                      }}
+                    />
                   ) : (
-                    "لا توجد نتائج"
+                    <FiMap className="text-blue-600 text-xl" />
                   )}
-                </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-gray-900 truncate">
+                    {land.title}
+                  </h4>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-gray-500">
+                      {land.region} - {land.city}
+                    </span>
+                    <span className="flex items-center text-sm text-gray-500">
+                      <FiCalendar className="ml-1 text-xs" />
+                      {formatDate(land.created_at)}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {getLandTypeBadge(land.land_type)}
+                    {getPurposeBadge(land.purpose)}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <div
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      land.status === "مفتوح"
+                        ? "bg-green-100 text-green-800"
+                        : land.status === "مرفوض"
+                        ? "bg-red-100 text-red-800"
+                        : land.status === "تم البيع"
+                        ? "bg-purple-100 text-purple-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
+                    {getStatusText(land.status)}
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-gray-700">
+                    {land.total_area} م²
+                  </div>
+                </div>
               </div>
             </div>
+          ))}
+        </div>
 
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="flex space-x-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
+        {/* الباجينيشن */}
+        {pagination.last_page > 1 && (
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex justify-center items-center space-x-2 space-x-reverse">
+              {renderPagination()}
+            </div>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</div>
+
+{/* Land Details */}
+<div className="lg:col-span-1">
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-6">
+    {selectedLand ? (
+      <div>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-lg text-gray-800">
+              تفاصيل الأرض
+            </h3>
+            <span className="text-sm text-gray-500">
+              ID: {selectedLand.id}
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+          {/* عرض الصور في تفاصيل الأرض */}
+          <div className="space-y-4">
+            {selectedLand.cover_image && (
+              <div className="relative rounded-lg overflow-hidden">
+                <img
+                  src={`https://core-api-x41.shaheenplus.sa/storage/${selectedLand.cover_image}`}
+                  alt={selectedLand.title}
+                  className="w-full h-56 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(`https://core-api-x41.shaheenplus.sa/storage/${selectedLand.cover_image}`, '_blank')}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://via.placeholder.com/600x300?text=صورة+رئيسية";
+                  }}
+                />
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                  الصورة الرئيسية
                 </div>
-                <p className="mt-4 text-gray-600">جاري تحميل البيانات...</p>
               </div>
-            ) : lands.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FiMap className="text-gray-400 text-4xl mb-4" />
-                <p className="text-gray-500 mb-4">لا توجد نتائج</p>
-                {hasActiveFilters && (
-                  <button
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    onClick={clearFilters}
-                  >
-                    مسح الفلاتر
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="divide-y divide-gray-200">
-                  {lands.map((land) => (
-                    <div
-                      key={land.id}
-                      className={`p-4 cursor-pointer transition-colors ${
-                        selectedLand?.id === land.id
-                          ? "bg-blue-50 border-r-4 border-blue-500"
-                          : "hover:bg-gray-50"
-                      }`}
-                      onClick={() => setSelectedLand(land)}
+            )}
+
+            {selectedLand.images && selectedLand.images.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-700 mb-2">
+                  الصور الإضافية ({selectedLand.images.length})
+                </h4>
+                
+                <div className="relative">
+                  {/* سهم التمرير لليسار */}
+                  {selectedLand.images.length > 4 && (
+                    <button
+                      className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
+                      onClick={() => document.getElementById('images-scroll').scrollBy({ left: -150, behavior: 'smooth' })}
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <FiMap className="text-blue-600 text-xl" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 truncate">
-                            {land.title}
-                          </h4>
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <span className="text-sm text-gray-500">
-                              {land.region} - {land.city}
-                            </span>
-                            <span className="flex items-center text-sm text-gray-500">
-                              <FiCalendar className="ml-1 text-xs" />
-                              {formatDate(land.created_at)}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {getLandTypeBadge(land.land_type)}
-                            {getPurposeBadge(land.purpose)}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <div
-                            className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              land.status === "مفتوح"
-                                ? "bg-green-100 text-green-800"
-                                : land.status === "مرفوض"
-                                ? "bg-red-100 text-red-800"
-                                : land.status === "تم البيع"
-                                ? "bg-purple-100 text-purple-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            {getStatusText(land.status)}
-                          </div>
-                          <div className="mt-2 text-sm font-medium text-gray-700">
-                            {land.total_area} م²
+                      <FiChevronRight className="text-gray-700 text-lg" />
+                    </button>
+                  )}
+                  
+                  <div
+                    id="images-scroll"
+                    className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {selectedLand.images.map((img, index) => (
+                      <div key={img.id} className="flex-shrink-0 w-32">
+                        <div className="relative">
+                          <img
+                            src={`https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`}
+                            alt={`صورة ${index + 1} - ${selectedLand.title}`}
+                            className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(`https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`, '_blank')}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "https://via.placeholder.com/128x96?text=صورة+إضافية";
+                            }}
+                          />
+                          <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
+                            {index + 1}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* الباجينيشن */}
-                {pagination.last_page > 1 && (
-                  <div className="p-4 border-t border-gray-200">
-                    <div className="flex justify-center items-center space-x-2 space-x-reverse">
-                      {renderPagination()}
-                    </div>
+                    ))}
                   </div>
-                )}
+                  
+                  {/* سهم التمرير لليمين */}
+                  {selectedLand.images.length > 4 && (
+                    <button
+                      className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
+                      onClick={() => document.getElementById('images-scroll').scrollBy({ left: 150, behavior: 'smooth' })}
+                    >
+                      <FiChevronLeft className="text-gray-700 text-lg" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* باقي تفاصيل الأرض */}
+          {renderLandDetails(selectedLand)}
+        </div>
+
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex flex-col gap-3">
+            {/* الأزرار بناءً على الحالة الحالية */}
+            {selectedLand.status === "قيد المراجعة" && (
+              <>
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleApprove(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiCheck />
+                  {loading ? "جاري المعالجة..." : "قبول (مفتوح)"}
+                </button>
+
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => openRejectModal(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiX />
+                  {loading ? "جاري المعالجة..." : "رفض"}
+                </button>
+              </>
+            )}
+
+            {selectedLand.status === "مرفوض" && (
+              <>
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleApprove(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiCheck />
+                  {loading ? "جاري المعالجة..." : "قبول (مفتوح)"}
+                </button>
+
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleReturnToPending(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiRefreshCw />
+                  {loading ? "جاري المعالجة..." : "إعادة للمراجعة"}
+                </button>
+              </>
+            )}
+
+            {selectedLand.status === "مفتوح" && (
+              <>
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => openRejectModal(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiX />
+                  {loading ? "جاري المعالجة..." : "رفض"}
+                </button>
+
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleMarkAsSold(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiShoppingCart />
+                  {loading ? "جاري المعالجة..." : "标记 كمباعة"}
+                </button>
+
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleReturnToPending(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiRefreshCw />
+                  {loading ? "جاري المعالجة..." : "إعادة للمراجعة"}
+                </button>
+              </>
+            )}
+
+            {selectedLand.status === "تم البيع" && (
+              <>
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleApprove(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiCheck />
+                  {loading ? "جاري المعالجة..." : "إعادة فتح"}
+                </button>
+
+                <button
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleReturnToPending(selectedLand.id)}
+                  disabled={loading}
+                >
+                  <FiRefreshCw />
+                  {loading ? "جاري المعالجة..." : "إعادة للمراجعة"}
+                </button>
               </>
             )}
           </div>
         </div>
-
-        {/* Land Details */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-6">
-            {selectedLand ? (
-              <div>
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-lg text-gray-800">
-                      تفاصيل الأرض
-                    </h3>
-                    <span className="text-sm text-gray-500">
-                      ID: {selectedLand.id}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-                  {renderLandDetails(selectedLand)}
-                </div>
-
-                <div className="p-4 border-t border-gray-200">
-                  <div className="flex flex-col gap-3">
-                    {/* الأزرار بناءً على الحالة الحالية */}
-                    {selectedLand.status === "قيد المراجعة" && (
-                      <>
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => handleApprove(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiCheck />
-                          {loading ? "جاري المعالجة..." : "قبول (مفتوح)"}
-                        </button>
-
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => openRejectModal(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiX />
-                          {loading ? "جاري المعالجة..." : "رفض"}
-                        </button>
-                      </>
-                    )}
-
-                    {selectedLand.status === "مرفوض" && (
-                      <>
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => handleApprove(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiCheck />
-                          {loading ? "جاري المعالجة..." : "قبول (مفتوح)"}
-                        </button>
-
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => handleReturnToPending(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiRefreshCw />
-                          {loading ? "جاري المعالجة..." : "إعادة للمراجعة"}
-                        </button>
-                      </>
-                    )}
-
-                    {selectedLand.status === "مفتوح" && (
-                      <>
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => openRejectModal(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiX />
-                          {loading ? "جاري المعالجة..." : "رفض"}
-                        </button>
-
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => handleMarkAsSold(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiShoppingCart />
-                          {loading ? "جاري المعالجة..." : "标记 كمباعة"}
-                        </button>
-
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => handleReturnToPending(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiRefreshCw />
-                          {loading ? "جاري المعالجة..." : "إعادة للمراجعة"}
-                        </button>
-                      </>
-                    )}
-
-                    {selectedLand.status === "تم البيع" && (
-                      <>
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => handleApprove(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiCheck />
-                          {loading ? "جاري المعالجة..." : "إعادة فتح"}
-                        </button>
-
-                        <button
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={() => handleReturnToPending(selectedLand.id)}
-                          disabled={loading}
-                        >
-                          <FiRefreshCw />
-                          {loading ? "جاري المعالجة..." : "إعادة للمراجعة"}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FiMap className="text-gray-400 text-4xl mb-4" />
-                <p className="text-gray-500">اختر أرضًا لعرض التفاصيل</p>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
-
+    ) : (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <FiMap className="text-gray-400 text-4xl mb-4" />
+        <p className="text-gray-500">اختر أرضًا لعرض التفاصيل</p>
+      </div>
+    )}
+  </div>
+</div>
+      </div>  
+      
       {/* مودال الرفض */}
       {rejectModal.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
