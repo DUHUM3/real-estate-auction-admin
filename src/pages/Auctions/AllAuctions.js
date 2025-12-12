@@ -1035,28 +1035,6 @@ const AllAuctions = () => {
             </p>
           </div>
         </div>
-
-        {auction.images && auction.images.length > 0 && (
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="text-lg font-semibold text-gray-800 mb-3">
-              صور المزاد ({auction.images.length})
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {auction.images.map((image, index) => (
-                <div
-                  key={image.id || index}
-                  className="flex flex-col items-center p-3 bg-white rounded border"
-                >
-                  <FiImage className="text-gray-500 mb-1" size={24} />
-                  <span className="text-sm text-gray-700">
-                    صورة {index + 1}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {auction.videos && auction.videos.length > 0 && (
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-semibold text-gray-800 mb-3">
@@ -1616,7 +1594,6 @@ const AllAuctions = () => {
             </>
           )}
         </div>
-
         {/* Auction Details */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {selectedAuction ? (
@@ -1633,6 +1610,110 @@ const AllAuctions = () => {
 
               {/* محتوى تفاصيل المزاد مع scroll عند الحاجة */}
               <div className="flex-1 overflow-y-auto p-4">
+                {/* عرض الصور في أعلى التفاصيل */}
+                <div className="space-y-4 mb-6">
+                  {selectedAuction.cover_image && (
+                    <div className="relative rounded-lg overflow-hidden">
+                      <img
+                        src={`https://core-api-x41.shaheenplus.sa/storage/${selectedAuction.cover_image}`}
+                        alt={selectedAuction.title}
+                        className="w-full h-56 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() =>
+                          window.open(
+                            `https://core-api-x41.shaheenplus.sa/storage/${selectedAuction.cover_image}`,
+                            "_blank"
+                          )
+                        }
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src =
+                            "https://via.placeholder.com/600x300?text=صورة+رئيسية";
+                        }}
+                      />
+                      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                        الصورة الرئيسية
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAuction.images &&
+                    selectedAuction.images.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-gray-700 mb-2">
+                          الصور الإضافية ({selectedAuction.images.length})
+                        </h4>
+
+                        <div className="relative">
+                          {/* سهم التمرير لليسار */}
+                          {selectedAuction.images.length > 4 && (
+                            <button
+                              className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
+                              onClick={() =>
+                                document
+                                  .getElementById("auction-images-scroll")
+                                  .scrollBy({ left: -150, behavior: "smooth" })
+                              }
+                            >
+                              <FiChevronRight className="text-gray-700 text-lg" />
+                            </button>
+                          )}
+
+                          <div
+                            id="auction-images-scroll"
+                            className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide"
+                            style={{
+                              scrollbarWidth: "none",
+                              msOverflowStyle: "none",
+                            }}
+                          >
+                            {selectedAuction.images.map((img, index) => (
+                              <div key={img.id} className="flex-shrink-0 w-32">
+                                <div className="relative">
+                                  <img
+                                    src={`https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`}
+                                    alt={`صورة ${index + 1} - ${
+                                      selectedAuction.title
+                                    }`}
+                                    className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() =>
+                                      window.open(
+                                        `https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`,
+                                        "_blank"
+                                      )
+                                    }
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src =
+                                        "https://via.placeholder.com/128x96?text=صورة+إضافية";
+                                    }}
+                                  />
+                                  <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
+                                    {index + 1}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* سهم التمرير لليمين */}
+                          {selectedAuction.images.length > 4 && (
+                            <button
+                              className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
+                              onClick={() =>
+                                document
+                                  .getElementById("auction-images-scroll")
+                                  .scrollBy({ left: 150, behavior: "smooth" })
+                              }
+                            >
+                              <FiChevronLeft className="text-gray-700 text-lg" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                </div>
+
+                {/* باقي تفاصيل المزاد */}
                 {renderAuctionDetails(selectedAuction)}
               </div>
 

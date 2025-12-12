@@ -67,7 +67,7 @@ const AllInterests = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [copyStatus, setCopyStatus] = useState({});
 
-  // حالة المودال لعرض تفاصيل العقار
+  // حالة المودال لعرض تفاصيل الأرض
   const [propertyModal, setPropertyModal] = useState({
     show: false,
     property: null,
@@ -247,7 +247,7 @@ const AllInterests = () => {
     },
   });
 
-  // دالة لجلب تفاصيل العقار
+  // دالة لجلب تفاصيل الأرض
   const fetchPropertyDetails = async (propertyId) => {
     const token = localStorage.getItem("access_token");
 
@@ -275,7 +275,7 @@ const AllInterests = () => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`فشل في جلب تفاصيل العقار: ${errorText}`);
+      throw new Error(`فشل في جلب تفاصيل الأرض: ${errorText}`);
     }
 
     const result = await response.json();
@@ -289,7 +289,7 @@ const AllInterests = () => {
 
   // ========== دوال التحكم ==========
 
-  // فتح مودال تفاصيل العقار
+  // فتح مودال تفاصيل الأرض
   const openPropertyModal = async (propertyId) => {
     if (!propertyId) {
       alert("لا يوجد معرف للعقار");
@@ -310,8 +310,8 @@ const AllInterests = () => {
         loading: false,
       });
     } catch (error) {
-      console.error("خطأ في جلب تفاصيل العقار:", error);
-      alert("حدث خطأ أثناء جلب تفاصيل العقار: " + error.message);
+      console.error("خطأ في جلب تفاصيل الأرض:", error);
+      alert("حدث خطأ أثناء جلب تفاصيل الأرض: " + error.message);
       setPropertyModal({
         show: false,
         property: null,
@@ -320,7 +320,7 @@ const AllInterests = () => {
     }
   };
 
-  // إغلاق مودال تفاصيل العقار
+  // إغلاق مودال تفاصيل الأرض
   const closePropertyModal = () => {
     setPropertyModal({
       show: false,
@@ -556,7 +556,7 @@ const AllInterests = () => {
 
   // ========== دوال العرض ==========
 
-  // دالة لعرض تفاصيل العقار في المودال
+  // دالة لعرض تفاصيل الأرض في المودال
   const renderPropertyDetails = (property) => {
     if (!property) return null;
 
@@ -570,7 +570,7 @@ const AllInterests = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                عنوان العقار
+                عنوان الأرض
               </label>
               <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
                 <span className="text-gray-800">
@@ -586,7 +586,7 @@ const AllInterests = () => {
                     onClick={() =>
                       copyToClipboard(property.title, "property_title")
                     }
-                    title="نسخ عنوان العقار"
+                    title="نسخ عنوان الأرض"
                   >
                     <FiCopy size={16} />
                   </button>
@@ -1012,18 +1012,33 @@ const AllInterests = () => {
         {property.images && property.images.length > 0 && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              صور العقار ({property.images.length})
+              صور الأرض ({property.images.length})
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {property.images.map((image, index) => (
                 <div
                   key={image.id}
-                  className="border border-gray-200 rounded-lg p-4 text-center"
+                  className="border border-gray-200 rounded-lg overflow-hidden relative"
                 >
-                  <FiMap className="mx-auto text-gray-400 mb-2" size={24} />
-                  <span className="text-sm text-gray-600">
+                  <img
+                    src={`https://core-api-x41.shaheenplus.sa/storage/${image.image_path}`}
+                    alt={`صورة ${index + 1}`}
+                    className="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() =>
+                      window.open(
+                        `https://core-api-x41.shaheenplus.sa/storage/${image.image_path}`,
+                        "_blank"
+                      )
+                    }
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src =
+                        "https://via.placeholder.com/300x200?text=صورة+غير+متوفرة";
+                    }}
+                  />
+                  <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-2 py-1 rounded">
                     صورة {index + 1}
-                  </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1098,7 +1113,7 @@ const AllInterests = () => {
           <div className="flex items-center">
             <FiHome className="text-gray-500 ml-2" />
             <span className="text-sm font-medium text-gray-700">
-              العقار المهتم به
+              الأرضية المهتم به
             </span>
           </div>
           <div className="flex items-center">
@@ -1110,7 +1125,7 @@ const AllInterests = () => {
                 <button
                   className="p-1 rounded hover:bg-gray-200 transition-colors text-blue-600"
                   onClick={() => openPropertyModal(interest.property_id)}
-                  title="عرض تفاصيل العقار"
+                  title="عرض تفاصيل الأرض"
                 >
                   <FiEye size={16} />
                 </button>
@@ -1125,7 +1140,7 @@ const AllInterests = () => {
                   onClick={() =>
                     copyToClipboard(interest.property.title, "property_title")
                   }
-                  title="نسخ اسم العقار"
+                  title="نسخ اسم الأرض"
                 >
                   <FiCopy size={16} />
                 </button>
@@ -1731,14 +1746,14 @@ const AllInterests = () => {
         </div>
       )}
 
-      {/* مودال تفاصيل العقار */}
+      {/* مودال تفاصيل الأرض */}
       {propertyModal.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                 <FiMap className="ml-2" />
-                تفاصيل العقار
+                تفاصيل الأرض
               </h3>
               <button
                 className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -1762,7 +1777,7 @@ const AllInterests = () => {
                     ></div>
                   </div>
                   <p className="mt-4 text-gray-600">
-                    جاري تحميل تفاصيل العقار...
+                    جاري تحميل تفاصيل الأرض...
                   </p>
                 </div>
               ) : (

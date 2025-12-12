@@ -506,10 +506,10 @@ const LandRequests = () => {
       "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
 
     switch (status) {
-      case "open":
+      case "approved":
         return (
           <span className={`${baseClasses} bg-green-100 text-green-800`}>
-            نشط
+            مقبول
           </span>
         );
       case "pending":
@@ -760,7 +760,7 @@ const LandRequests = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 حالة المستخدم
               </label>
-              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+              <div className="text-sm text-green-900 bg-gray-50 p-2 rounded">
                 {getUserStatusBadge(user.status)}
               </div>
             </div>
@@ -772,14 +772,7 @@ const LandRequests = () => {
                 {getUserTypeBadge(user.user_type)}
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                رقم المستخدم
-              </label>
-              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                #{user.id}
-              </div>
-            </div>
+            <div></div>
           </div>
         </div>
 
@@ -1738,20 +1731,23 @@ const LandRequests = () => {
       {/* مودال تفاصيل المستخدم */}
       {userModal.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            {/* العنوان */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
                 <FiUser className="w-5 h-5 text-gray-500" />
                 تفاصيل المستخدم
               </h3>
               <button
-                className="text-gray-400 hover:text-gray-500 transition-colors"
+                className="text-gray-400 hover:text-gray-500 transition-colors text-2xl leading-none"
                 onClick={closeUserModal}
               >
                 ×
               </button>
             </div>
-            <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+
+            {/* محتوى المودال مع Scroll */}
+            <div className="p-4 overflow-y-auto flex-1">
               {userModal.loading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="flex space-x-2">
@@ -1773,6 +1769,8 @@ const LandRequests = () => {
                 renderUserDetails(userModal.user)
               )}
             </div>
+
+            {/* زر الإغلاق */}
             <div className="flex items-center justify-end p-4 border-t border-gray-200">
               <button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

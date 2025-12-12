@@ -82,7 +82,7 @@ const PendingLands = () => {
         break;
       case 'تم البيع':
         statusMessage = 'تم البيع';
-        confirmMessage = 'هل أنت متأكد من وضع علامة تم البيع على هذا الإعلان؟';
+        confirmMessage = 'هل أنت متأكد من تغيير الحالة على هذا الإعلان؟';
         break;
       default:
         return;
@@ -477,7 +477,7 @@ const PendingLands = () => {
                     disabled={actionLoading}
                   >
                     <FiShoppingCart />
-                    {actionLoading ? 'جاري المعالجة...' : 'تم البيع'}
+                    {actionLoading ? 'جاري المعالجة...' : 'تم تغيير حالة الأرض الى تم البيع'}
                   </button>
                   
                   <button 
