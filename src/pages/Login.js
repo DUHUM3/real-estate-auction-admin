@@ -11,7 +11,7 @@ import AuthController from '../utils/authController';
 3. دوال الخلفية والمثلثات (Background & Triangles)
 4. دوال التعامل مع النموذج (Form Handlers)
 5. الواجهة الرئيسية (Main UI)
-6. قسم الصورة (Image Section)
+6. قسم الشعار والترحيب (Logo & Welcome Section)
 7. قسم النموذج (Form Section)
 =================================================================================
 */
@@ -92,10 +92,11 @@ function LoginPage({ onLoginSuccess }) {
     
     trianglesContainer.innerHTML = '';
     
-    const triangleCount = 20;
+    const triangleCount = 25;
     const colors = [
       '#5DA7E1', '#4A90E2', '#357ABD', 
-      '#2A5D84', '#1E4A6D', '#16354d'
+      '#2A5D84', '#1E4A6D', '#16354d',
+      '#E3F2FD', '#BBDEFB', '#90CAF9'
     ];
     
     for (let i = 0; i < triangleCount; i++) {
@@ -104,7 +105,7 @@ function LoginPage({ onLoginSuccess }) {
       
       const size = Math.random() * 100 + 30;
       const left = Math.random() * 100;
-      const top = 50 + Math.random() * 50;
+      const top = Math.random() * 100;
       const color = colors[Math.floor(Math.random() * colors.length)];
       const rotation = Math.random() * 360;
       
@@ -247,55 +248,73 @@ function LoginPage({ onLoginSuccess }) {
   // ==================== 5. الواجهة الرئيسية ====================
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col lg:flex-row relative overflow-hidden">
       {/* خلفية المثلثات */}
       <div id="triangles-background" className="absolute inset-0 z-0"></div>
       
- {/* ==================== 6. قسم الصورة ==================== */}
-<div className="relative z-10 h-1/2 flex items-center justify-center">
-  <div className="relative w-full h-full flex items-center justify-center">
-    <img
-      src={process.env.PUBLIC_URL + "/images/cover2.webp"}
-      alt="صورة ترحيبية"
-      className="w-full h-full object-cover opacity-80"
-      onError={(e) => {
-        e.target.style.display = 'none';
-      }}
-    />
+      {/* ==================== 6. قسم الشعار والترحيب ==================== */}
+      <div className="relative z-10 lg:w-1/2 h-auto lg:h-screen flex flex-col items-center justify-center p-8 lg:p-12">
+        <div className="w-full max-w-lg text-center space-y-8">
+          {/* الشعار */}
+          <div className="mb-8 transform transition-transform duration-500 hover:scale-105">
+            <img
+              src={process.env.PUBLIC_URL + "/images/logo.webp"}
+              alt="شاهين بلس Logo"
+              className="h-28 md:h-40 w-auto mx-auto drop-shadow-2xl"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                // عرض بديل نصي إذا فشل تحميل الصورة
+                const altDiv = document.createElement('div');
+                altDiv.className = "text-4xl font-bold text-blue-700";
+                altDiv.textContent = "شاهين+";
+                e.target.parentNode.appendChild(altDiv);
+              }}
+            />
+          </div>
 
-  <div className="absolute inset-0 flex items-center justify-center">
-  <div className="text-center text-black space-y-4">
-    <div className="mb-6">
-      <img
-        src={process.env.PUBLIC_URL + "/images/logo.webp"}
-        alt="شاهين Logo"
-        className="h-100 w-auto mx-auto drop-shadow-2xl"
-        onError={(e) => {
-          e.target.style.display = 'none';
-        }}
-      />
-    </div>
-    <h2 className="text-3xl md:text-4xl font-bold drop-shadow-lg">
-      مرحباً بك في شاهين بلس
-    </h2>
-    <p className="text-lg md:text-xl opacity-90 drop-shadow-md">
-      نظام إدارة متطور وآمن
-    </p>
-  </div>
-</div>
-  </div>
-</div>
+          {/* رسالة الترحيب */}
+          <div className="space-y-6 animate-fade-in">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-800 leading-tight">
+              مرحباً بك في
+              <span className="block text-blue-600 mt-2">
+                شاهين بلس
+              </span>
+            </h1>
+            
+            <p className="text-lg md:text-xl text-gray-600 max-w-md mx-auto leading-relaxed">
+              نظام إدارة متطور وآمن يُمكّنك من التحكم الكامل في عملياتك
+            </p>
+            
+            <div className="pt-6 border-t border-gray-200">
+              <div className="flex flex-wrap justify-center gap-4">
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">آمن 100%</span>
+                </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">مشفر</span>
+                </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">سهل الاستخدام</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ==================== 7. قسم النموذج ==================== */}
-      <div className="relative z-10 h-1/2 bg-white flex items-center justify-center p-4">
+      <div className="relative z-10 lg:w-1/2 h-auto lg:h-screen bg-white flex items-center justify-center p-4 lg:p-8">
         <div className="w-full max-w-md mx-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 transform transition-all duration-300 hover:shadow-3xl">
             
             {/* رأس النموذج */}
             <div className="text-center mb-8">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
                 تسجيل الدخول
-              </h1>
+              </h2>
               <p className="text-gray-600 text-sm md:text-base">
                 أدخل بياناتك للمتابعة إلى لوحة التحكم
               </p>
@@ -417,9 +436,12 @@ function LoginPage({ onLoginSuccess }) {
             </form>
 
             {/* معلومات إضافية */}
-            <div className="mt-6 text-center">
-              <p className="text-xs text-gray-500">
+            <div className="mt-8 text-center border-t border-gray-100 pt-6">
+              <p className="text-xs text-gray-500 mb-2">
                 محمي بواسطة تشفير SSL وأحدث بروتوكولات الأمان
+              </p>
+              <p className="text-xs text-gray-400">
+                © {new Date().getFullYear()} شاهين بلس. جميع الحقوق محفوظة.
               </p>
             </div>
           </div>
