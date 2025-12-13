@@ -94,7 +94,12 @@ const LandRequests = () => {
     setIsRefreshing(true);
 
     try {
-      await refetch();
+      // إزالة جميع بيانات التخزين المؤقت
+      await queryClient.invalidateQueries(["landRequests"]);
+      await queryClient.refetchQueries(["landRequests"], { 
+        active: true,
+        exact: false 
+      });
       console.log("تم تحديث بيانات طلبات الأراضي بنجاح");
     } catch (error) {
       console.error("خطأ في التحديث:", error);
@@ -165,6 +170,9 @@ const LandRequests = () => {
 
     params.append("page", currentPage);
     params.append("per_page", 10);
+    
+    // إضافة timestamp لمنع التخزين المؤقت
+    params.append("_t", Date.now());
 
     return params.toString();
   };
@@ -186,6 +194,9 @@ const LandRequests = () => {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
       },
     });
 
@@ -218,7 +229,7 @@ const LandRequests = () => {
           cities: result.meta?.filters?.cities || [],
           purposes: ["sale", "investment"],
           types: ["residential", "commercial", "industrial", "agricultural"],
-          statuses: ["open", "close", "completed", "pending"], // تم تعديلها لتطابق المسموح
+          statuses: ["open", "close", "completed", "pending"],
         },
       };
     } else {
@@ -232,8 +243,11 @@ const LandRequests = () => {
     error,
     refetch,
   } = useQuery(["landRequests", filters, currentPage], fetchLandRequests, {
-    staleTime: 5 * 60 * 1000, // 5 دقائق
-    refetchOnWindowFocus: false,
+    cacheTime: 0, // عدم تخزين البيانات في الذاكرة المؤقتة
+    staleTime: 0, // اعتبار البيانات قديمة فوراً
+    refetchOnWindowFocus: true, // إعادة جلب البيانات عند التركيز على النافذة
+    refetchOnMount: true, // إعادة جلب البيانات عند تحميل المكون
+    keepPreviousData: false, // عدم الاحتفاظ بالبيانات السابقة
     onError: (error) => {
       console.error("خطأ في جلب طلبات الأراضي:", error);
       alert("حدث خطأ أثناء جلب البيانات: " + error.message);
@@ -250,12 +264,15 @@ const LandRequests = () => {
     }
 
     const response = await fetch(
-      `https://core-api-x41.shaheenplus.sa/api/admin/users/${userId}`,
+      `https://core-api-x41.shaheenplus.sa/api/admin/users/${userId}?_t=${Date.now()}`,
       {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0"
         },
       }
     );
@@ -365,12 +382,13 @@ const LandRequests = () => {
       return await response.json();
     },
     {
-      onSuccess: () => {
+      onSuccess: async () => {
         alert("تم تحديث حالة الطلب بنجاح");
-        refetch(); // إعادة تحميل البيانات
+        // إزالة التخزين المؤقت وإعادة جلب البيانات
+        await queryClient.invalidateQueries(["landRequests"]);
+        await refetch();
         setSelectedRequest(null);
         closeStatusModal();
-        queryClient.invalidateQueries(["landRequests"]);
       },
       onError: (error) => {
         alert(error.message);
@@ -394,6 +412,7 @@ const LandRequests = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    queryClient.invalidateQueries(["landRequests"]);
     refetch();
   };
 
@@ -415,6 +434,7 @@ const LandRequests = () => {
 
     setFilters(defaultFilters);
     setCurrentPage(1);
+    queryClient.invalidateQueries(["landRequests"]);
   };
 
   const openStatusModal = (requestId, newStatus) => {
@@ -593,7 +613,7 @@ const LandRequests = () => {
       case "pending":
         return "قيد المراجعة";
       default:
-        return "غير معروف"; // حالة افتراضية لأي قيمة غير موجودة
+        return "غير معروف";
     }
   };
 
@@ -602,13 +622,13 @@ const LandRequests = () => {
       case "open":
         return "bg-yellow-100 text-yellow-800";
       case "close":
-        return "bg-gray-100 text-gray-800";
+        return "bg-red-100 text-red-800";
       case "completed":
         return "bg-green-100 text-green-800";
       case "pending":
         return "bg-blue-100 text-blue-800";
       default:
-        return "bg-red-100 text-red-800"; // لون افتراضي للحالات غير المعروفة
+        return "bg-red-100 text-red-800";
     }
   };
 
@@ -1183,7 +1203,7 @@ const LandRequests = () => {
     cities: [],
     purposes: ["sale", "investment"],
     types: ["residential", "commercial", "industrial", "agricultural"],
-    statuses: ["open", "close", "completed", "pending"], // تم تعديلها هنا
+    statuses: ["open", "close", "completed", "pending"],
   };
 
   const loading = isLoading || isRefreshing || statusMutation.isLoading;
@@ -1817,4 +1837,4 @@ const LandRequests = () => {
   );
 };
 
-export default LandRequests;
+export default LandRequests;  
