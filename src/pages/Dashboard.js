@@ -1,3 +1,4 @@
+// Dashboard.js
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import {
@@ -18,6 +19,14 @@ import {
   FiTarget,
   FiAward
 } from 'react-icons/fi';
+import {
+  fetchDashboardStatistics,
+  formatNumber,
+  calculateGrowth,
+  isDataStale,
+  chartColors,
+  iconConfig
+} from '../services/DashboardAPI';
 
 const Dashboard = () => {
   const { state, dispatch } = useData();
@@ -29,14 +38,14 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!statistics) {
-      fetchStatistics();
+      fetchDashboardData();
     } else {
       setLastUpdated(state.dashboard.lastUpdated);
     }
   }, []);
 
-  const fetchStatistics = async (forceRefresh = false) => {
-    if (statistics && !forceRefresh && !isDataStale()) {
+  const fetchDashboardData = async (forceRefresh = false) => {
+    if (statistics && !forceRefresh && !isDataStale(state.dashboard.lastUpdated)) {
       return;
     }
 
@@ -44,66 +53,26 @@ const Dashboard = () => {
       dispatch({ type: 'SET_LOADING', payload: true });
       setLocalLoading(true);
       
-      const token = localStorage.getItem('access_token');
+      const result = await fetchDashboardStatistics();
 
-      if (!token) {
-        alert('لم يتم العثور على رمز الدخول. يرجى تسجيل الدخول مرة أخرى.');
-        window.location.href = '/login';
-        return;
-      }
-
-      const response = await fetch('https://core-api-x41.shaheenplus.sa/api/admin/dashboard/statistics', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.status === 401) {
-        alert('انتهت جلسة الدخول أو التوكن غير صالح');
-        localStorage.removeItem('access_token');
-        window.location.href = '/login';
-        return;
-      }
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.data) {
-          dispatch({
-            type: 'SET_DASHBOARD_DATA',
-            payload: result.data
-          });
-          setLastUpdated(new Date());
-        }
+      if (result.success && result.data) {
+        dispatch({
+          type: 'SET_DASHBOARD_DATA',
+          payload: result.data
+        });
+        setLastUpdated(new Date());
       }
     } catch (error) {
       console.error('خطأ في جلب الإحصائيات:', error);
+      alert(error.message || 'حدث خطأ أثناء جلب البيانات');
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
       setLocalLoading(false);
     }
   };
 
-  const isDataStale = () => {
-    if (!state.dashboard.lastUpdated) return true;
-    const now = new Date();
-    const lastUpdate = new Date(state.dashboard.lastUpdated);
-    const diffInMinutes = (now - lastUpdate) / (1000 * 60);
-    return diffInMinutes > 5;
-  };
-
   const handleRefresh = () => {
-    fetchStatistics(true);
-  };
-
-  const formatNumber = (num) => {
-    return new Intl.NumberFormat('ar-SA').format(num);
-  };
-
-  const calculateGrowth = (current, previous) => {
-    if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / previous) * 100;
+    fetchDashboardData(true);
   };
 
   // Stock Line Chart Component
@@ -328,7 +297,7 @@ const Dashboard = () => {
           <h3 className="text-xl font-bold text-gray-900 mb-2">فشل في تحميل البيانات</h3>
           <p className="text-gray-600 mb-6">حدث خطأ أثناء جلب الإحصائيات</p>
           <button 
-            onClick={fetchStatistics}
+            onClick={fetchDashboardData}
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300"
           >
             إعادة المحاولة

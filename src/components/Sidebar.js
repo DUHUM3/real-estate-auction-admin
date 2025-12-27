@@ -1,46 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  Home,
-  Users,
-  Map,
-  ShoppingCart,
-  BarChart2,
-  LogOut,
-  ChevronDown,
-  ChevronUp,
-  UserCheck,
-  MapPin,
-  Briefcase,
-  Clock,
-  CheckCircle,
-  Tag,
-  Heart,
-  Bell,
-  Shield,
-  Send,
-  CreditCard,
-  Menu,
-  X,
-  Search,
-  BookOpen,
-  Filter,
-  Building,
-  LandPlot,
-  FileText,
-  MessageCircle,
-  Settings,
-} from "lucide-react";
+
+// استيراد الأيقونات من الملف المنفصل
+import Icons from "../icons";
+// استيراد خدمة الـ API
+import { adminService } from "../services/SidebarApi";
 
 const Sidebar = () => {
   const location = useLocation();
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [userData, setUserData] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("userData");
     localStorage.removeItem("access_token");
+    localStorage.removeItem("admin_token");
     window.location.href = "/login";
   };
 
@@ -58,71 +34,63 @@ const Sidebar = () => {
 
   const closeSidebar = () => setIsSidebarOpen(false);
 
-  // بيانات القائمة الرئيسية
-  const menuItems = [
-    { icon: Search, text: "بحث وتصفية", path: "/search-filter" },
-    { icon: BookOpen, text: "صندوق الكتاب", path: "/document-box" },
-    { icon: Building, text: "المكتبة", path: "/library" },
-  ];
-
-  // بيانات القائمة الفرعية
-  const filterItems = [
-    { text: "المنطقة", path: "/area" },
-    { text: "السنة", path: "/year" },
-    { text: "نوع الأرض", path: "/land-type" },
-    { text: "الموضوع الأول", path: "/primary-subject" },
-    { text: "جميع الأراضي", path: "/all-lands" },
-    { text: "أكبر مساحة", path: "/largest-area" },
-    { text: "ترتيب حسب", path: "/sort-by" },
-  ];
-
-  // بيانات القائمة الإدارية
-  const adminMenuItems = [
-    { icon: Users, text: "إدارة المستخدمين", path: "/all-users" },
-    { icon: Map, text: "عرض جميع الأراضي", path: "/all-lands" },
-    { icon: Tag, text: "إدارة المزادات", path: "/all-auctions" },
-    { icon: Heart, text: "المهتمين بشراء الأراضي", path: "/inventory" },
-    { icon: ShoppingCart, text: "طلبات شراء الأراضي", path: "/land-requests" },
-    {
-      icon: Send,
-      text: "طلبات تسويق الأراضي لشركات المزاد",
-      path: "/auctions-requests",
-    },
-    { icon: Briefcase, text: "العملاء", path: "/clients-management" },
-    { icon: BarChart2, text: "التقارير", path: "/reports" },
-    { icon: MessageCircle, text: "تواصل معنا", path: "/contact" },
-    { icon: UserCheck, text: "إدارة حسابات الأدمن", path: "/admin" },
-    { icon: Shield, text: "سياسة الخصوصية", path: "/privacy-policy" },
-  ];
-
   // جلب بيانات المستخدم من الـ API عند التحميل
   useEffect(() => {
     const fetchProfile = async () => {
+      setLoading(true);
       try {
-        const token = localStorage.getItem("admin_token");
-        const res = await fetch(
-          "https://core-api-x41.shaheenplus.sa/api/admin/profile",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
-        );
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "حدث خطأ");
-        setUserData(data.data); // تخزين بيانات المستخدم
-        localStorage.setItem("userData", JSON.stringify(data.data)); // حفظ نسخة محلية
+        const data = await adminService.getProfile();
+        setUserData(data.data);
+        localStorage.setItem("userData", JSON.stringify(data.data));
       } catch (err) {
-        console.error(err.message);
-        // fallback لبيانات موجودة في localStorage
+        console.error("فشل في جلب بيانات الملف الشخصي:", err.message);
+        // محاولة استخدام البيانات المحفوظة محلياً
         const localUser = JSON.parse(localStorage.getItem("userData") || "{}");
         setUserData(localUser);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchProfile();
   }, []);
+
+  // بيانات القائمة الرئيسية
+  const menuItems = [
+    { icon: Icons.Search, text: "بحث وتصفية", path: "/search-filter" },
+    { icon: Icons.BookOpen, text: "صندوق الكتاب", path: "/document-box" },
+    { icon: Icons.Building, text: "المكتبة", path: "/library" },
+  ];
+
+  // بيانات القائمة الإدارية
+  const adminMenuItems = [
+    { icon: Icons.Users, text: "إدارة المستخدمين", path: "/all-users" },
+    { icon: Icons.Map, text: "عرض جميع الأراضي", path: "/all-lands" },
+    { icon: Icons.Tag, text: "إدارة المزادات", path: "/all-auctions" },
+    { icon: Icons.Heart, text: "المهتمين بشراء الأراضي", path: "/inventory" },
+    { icon: Icons.ShoppingCart, text: "طلبات شراء الأراضي", path: "/land-requests" },
+    {
+      icon: Icons.Send,
+      text: "طلبات تسويق الأراضي لشركات المزاد",
+      path: "/auctions-requests",
+    },
+    { icon: Icons.Briefcase, text: "العملاء", path: "/clients-management" },
+    { icon: Icons.BarChart2, text: "التقارير", path: "/reports" },
+    { icon: Icons.MessageCircle, text: "تواصل معنا", path: "/contact" },
+    { icon: Icons.UserCheck, text: "إدارة حسابات الأدمن", path: "/admin" },
+    { icon: Icons.Shield, text: "سياسة الخصوصية", path: "/privacy-policy" },
+  ];
+
+  // دالة لتنسيق دور المستخدم
+  const formatUserRole = (role) => {
+    const roles = {
+      ADMIN: "مدير",
+      SUPERADMIN: "مدير إدارة",
+      MODERATOR: "مسؤول النظام",
+      USER: "مستخدم",
+    };
+    return roles[role] || "مستخدم النظام";
+  };
 
   return (
     <>
@@ -130,8 +98,9 @@ const Sidebar = () => {
       <button
         onClick={toggleSidebar}
         className="lg:hidden fixed top-4 right-4 z-50 bg-blue-600 text-white p-2 rounded-md shadow-lg"
+        aria-label={isSidebarOpen ? "إغلاق القائمة" : "فتح القائمة"}
       >
-        {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        {isSidebarOpen ? <Icons.X size={24} /> : <Icons.Menu size={24} />}
       </button>
 
       {/* خلفية شفافة للشاشات الصغيرة */}
@@ -139,6 +108,7 @@ const Sidebar = () => {
         <div
           className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={closeSidebar}
+          aria-hidden="true"
         ></div>
       )}
 
@@ -208,25 +178,30 @@ const Sidebar = () => {
           {/* بطاقة معلومات المستخدم */}
           <div className="mt-auto px-4 mb-4">
             <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500">الحالة</span>
-                <div className="flex items-center">
-                  <span className="text-xs text-green-600 ml-1">نشط</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              {loading ? (
+                <div className="text-center py-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-xs text-gray-500 mt-2">جاري التحميل...</p>
                 </div>
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-800">
-                  {userData.full_name || "مستخدم النظام"}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {userData.role === "ADMIN"
-                    ? "مدير"
-                    : userData.role === "SUPERADMIN"
-                    ? "مدير إدارة"
-                    : "مسؤول النظام"}
-                </p>
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-500">الحالة</span>
+                    <div className="flex items-center">
+                      <span className="text-xs text-green-600 ml-1">نشط</span>
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-gray-800">
+                      {userData.full_name || "مستخدم النظام"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatUserRole(userData.role)}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -240,14 +215,14 @@ const Sidebar = () => {
               className="flex items-center justify-center px-3 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 flex-1 shadow-sm hover:shadow-md"
             >
               <span className="text-sm font-medium ml-2">الحساب البنكي</span>
-              <CreditCard className="w-4 h-4" />
+              <Icons.CreditCard className="w-4 h-4" />
             </Link>
             <button
               onClick={handleLogout}
               className="flex items-center justify-center px-3 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 flex-1 shadow-sm hover:shadow-md"
             >
               <span className="text-sm font-medium ml-2">تسجيل خروج</span>
-              <LogOut className="w-4 h-4" />
+              <Icons.LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>

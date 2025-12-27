@@ -1,3 +1,4 @@
+// ClientsManagement.js
 import React, { useState, useEffect } from 'react';
 import { 
   FiUser, 
@@ -20,25 +21,12 @@ import {
 } from 'react-icons/fi';
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
-
-/**
- * =============================================
- * إدارة العملاء المميزين - Clients Management
- * =============================================
- * 
- * الفهرس:
- * 1. State Management - إدارة الحالة
- * 2. API Functions - دوال API
- * 3. Event Handlers - معالجات الأحداث
- * 4. Helper Functions - دوال مساعدة
- * 5. UI Components - مكونات الواجهة
- *    - 5.1 Header Section - قسم الرأس
- *    - 5.2 Filter Section - قسم الفلاتر
- *    - 5.3 Add Client Modal - نافذة إضافة عميل
- *    - 5.4 Clients List - قائمة العملاء
- *    - 5.5 Client Details - تفاصيل العميل
- * 6. Main Component - المكون الرئيسي
- */
+import { 
+  fetchClients, 
+  addClient, 
+  deleteClient, 
+  formatDate 
+} from '../services/ClientsManagementApi';
 
 const ClientsManagement = () => {
   const queryClient = useQueryClient();
@@ -48,7 +36,6 @@ const ClientsManagement = () => {
   // 1. State Management - إدارة الحالة
   // ===========================================================================
   
-  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
   const getInitialFilters = () => {
     const savedFilters = localStorage.getItem('clientsFilters');
     if (savedFilters) {
@@ -70,57 +57,15 @@ const ClientsManagement = () => {
     logo: null
   });
 
-  // حفظ الفلاتر في localStorage عند تغييرها
   useEffect(() => {
     localStorage.setItem('clientsFilters', JSON.stringify(filters));
   }, [filters]);
 
   // ===========================================================================
-  // 2. API Functions - دوال API
+  // 2. استخدام React Query مع دوال API
   // ===========================================================================
   
   // جلب بيانات العملاء
-  const fetchClients = async () => {
-    const token = localStorage.getItem('access_token');
-      
-    if (!token) {
-      navigate('/login');
-      throw new Error('لم يتم العثور على رمز الدخول');
-    }
-
-    const response = await fetch('https://core-api-x41.shaheenplus.sa/api/admin/clients', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.status === 401) {
-      localStorage.removeItem('access_token');
-      navigate('/login');
-      throw new Error('انتهت جلسة الدخول أو التوكن غير صالح');
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`فشل في جلب العملاء: ${errorText}`);
-    }
-
-    const result = await response.json();
-    
-    if (result.success && Array.isArray(result.data)) {
-      return {
-        data: result.data,
-        count: result.count,
-        cache_info: result.cache_info
-      };
-    } else {
-      throw new Error(result.message || 'هيكل البيانات غير متوقع');
-    }
-  };
-
-  // استخدام React Query لجلب بيانات العملاء
   const { 
     data: clientsData, 
     isLoading, 
@@ -128,9 +73,9 @@ const ClientsManagement = () => {
     refetch 
   } = useQuery(
     ['clients', filters],
-    fetchClients,
+    () => fetchClients(filters, navigate),
     {
-      staleTime: 5 * 60 * 1000, // 5 دقائق
+      staleTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
       onError: (error) => {
         console.error('خطأ في جلب العملاء:', error);
@@ -139,41 +84,14 @@ const ClientsManagement = () => {
     }
   );
 
-  // استخدام useMutation لإضافة عميل جديد
+  // إضافة عميل جديد
   const addClientMutation = useMutation(
-    async (formData) => {
-      const token = localStorage.getItem('access_token');
-      const formDataToSend = new FormData();
-      
-      formDataToSend.append('name', formData.name);
-      if (formData.website) {
-        formDataToSend.append('website', formData.website);
-      }
-      if (formData.logo) {
-        formDataToSend.append('logo', formData.logo);
-      }
-
-      const response = await fetch('https://core-api-x41.shaheenplus.sa/api/admin/clients', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formDataToSend,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'فشل في إضافة العميل');
-      }
-
-      return await response.json();
-    },
+    (formData) => addClient(formData, navigate),
     {
       onSuccess: () => {
         alert('تم إضافة العميل بنجاح');
         setFormData({ name: '', website: '', logo: null });
         setShowAddForm(false);
-        refetch();
         queryClient.invalidateQueries(['clients']);
       },
       onError: (error) => {
@@ -182,30 +100,13 @@ const ClientsManagement = () => {
     }
   );
 
-  // استخدام useMutation لحذف عميل
+  // حذف عميل
   const deleteClientMutation = useMutation(
-    async (clientId) => {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`https://core-api-x41.shaheenplus.sa/api/admin/clients/${clientId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'فشل في حذف العميل');
-      }
-
-      return await response.json();
-    },
+    (clientId) => deleteClient(clientId, navigate),
     {
       onSuccess: () => {
         alert('تم حذف العميل بنجاح');
         setSelectedClient(null);
-        refetch();
         queryClient.invalidateQueries(['clients']);
       },
       onError: (error) => {
@@ -219,12 +120,10 @@ const ClientsManagement = () => {
   // ===========================================================================
   
   const handleFilterChange = (key, value) => {
-    const newFilters = {
-      ...filters,
+    setFilters(prev => ({
+      ...prev,
       [key]: value
-    };
-    
-    setFilters(newFilters);
+    }));
   };
 
   const handleSearch = (e) => {
@@ -233,16 +132,13 @@ const ClientsManagement = () => {
   };
 
   const clearFilters = () => {
-    const defaultFilters = {
+    setFilters({
       search: '',
       sort_by: 'created_at',
       sort_order: 'desc'
-    };
-    
-    setFilters(defaultFilters);
+    });
   };
 
-  // إضافة عميل جديد
   const handleAddClient = async (e) => {
     e.preventDefault();
     
@@ -254,7 +150,6 @@ const ClientsManagement = () => {
     addClientMutation.mutate(formData);
   };
 
-  // حذف عميل
   const handleDeleteClient = async (clientId) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا العميل؟')) {
       return;
@@ -263,17 +158,14 @@ const ClientsManagement = () => {
     deleteClientMutation.mutate(clientId);
   };
 
-  // معالجة اختيار ملف اللوجو
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // التحقق من نوع الملف
       if (!file.type.startsWith('image/')) {
         alert('يرجى اختيار ملف صورة فقط');
         return;
       }
       
-      // التحقق من حجم الملف (5MB كحد أقصى)
       if (file.size > 5 * 1024 * 1024) {
         alert('حجم الملف يجب أن يكون أقل من 5MB');
         return;
@@ -290,32 +182,15 @@ const ClientsManagement = () => {
   // 4. Helper Functions - دوال مساعدة
   // ===========================================================================
   
-  const formatDate = (dateString) => {
-    if (!dateString) return 'غير محدد';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // التحقق إذا كان هناك أي فلتر نشط
   const hasActiveFilters = filters.search;
-
-  // استخراج البيانات من نتيجة الاستعلام
   const clients = clientsData?.data || [];
   const count = clientsData?.count || 0;
-
   const loading = isLoading || addClientMutation.isLoading || deleteClientMutation.isLoading;
 
   // ===========================================================================
   // 5. UI Components - مكونات الواجهة
   // ===========================================================================
   
-  // 5.1 Client Details Renderer - عرض تفاصيل العميل
   const renderClientDetails = (client) => {
     return (
       <div className="mt-6 pt-6 border-t border-gray-200">
@@ -393,7 +268,7 @@ const ClientsManagement = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       
-      {/* 5.1 Header Section - قسم الرأس */}
+      {/* Header Section - قسم الرأس */}
       <div className="mb-8">
         <div className="flex items-center mb-2">
           <FiUser className="text-2xl text-blue-600 ml-3" />
@@ -402,7 +277,7 @@ const ClientsManagement = () => {
         <p className="text-gray-600">إدارة قائمة العملاء المميزين - العدد الإجمالي: {count}</p>
       </div>
 
-      {/* 5.2 Filter Section - قسم الفلاتر */}
+      {/* Filter Section - قسم الفلاتر */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
@@ -486,7 +361,7 @@ const ClientsManagement = () => {
         </div>
       </div>
 
-      {/* 5.3 Add Client Modal - نافذة إضافة عميل */}
+      {/* Add Client Modal - نافذة إضافة عميل */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -574,11 +449,11 @@ const ClientsManagement = () => {
         </div>
       )}
 
-      {/* 5.4 & 5.5 Clients List and Details - قائمة العملاء وتفاصيلهم */}
+      {/* Clients List and Details - قائمة العملاء وتفاصيلهم */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
           
-          {/* 5.4 Clients List - قائمة العملاء */}
+          {/* Clients List - قائمة العملاء */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-800">قائمة العملاء ({clients.length})</h3>
@@ -649,7 +524,7 @@ const ClientsManagement = () => {
             )}
           </div>
 
-          {/* 5.5 Client Details - تفاصيل العميل */}
+          {/* Client Details - تفاصيل العميل */}
           <div>
             {selectedClient ? (
               <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 h-full">

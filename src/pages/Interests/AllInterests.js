@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   FiUser,
-  FiHeart,
+  FiMap,
   FiCheck,
   FiX,
   FiMail,
@@ -9,366 +9,152 @@ import {
   FiCalendar,
   FiFileText,
   FiHome,
-  FiFilter,
   FiChevronRight,
   FiChevronLeft,
-  FiSearch,
-  FiSlash,
   FiMessageSquare,
   FiEdit,
   FiRefreshCw,
   FiEye,
-  FiMap,
-  FiMapPin,
+  FiNavigation,
+  FiTarget,
   FiLayers,
-  FiDollarSign,
-  FiCopy,
+  FiUsers,
+  FiGitPullRequest,
+  FiBriefcase,
+  FiAward,
+  FiInfo,
 } from "react-icons/fi";
 import { useQueryClient, useQuery, useMutation } from "react-query";
 import { useNavigate } from "react-router-dom";
 
-const AllInterests = () => {
+// استيراد المكونات والدوال من الملفات المنفصلة
+import LandRequestsFilters from "./InterestsFilters";
+import {
+  filtersManager,
+  fetchLandRequests,
+  fetchUserDetails,
+  updateLandRequestStatus,
+  formatDate,
+  getStatusBadge,
+  getUserStatusBadge,
+  getUserTypeBadge,
+  getStatusText,
+  getStatusColor,
+  getPurposeText,
+  getTypeText,
+  getStatusMessagePlaceholder,
+  FiGift,
+} from "../../services/landRequestsAPI";
+
+const LandRequests = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   // ========== الحالات والمتغيرات ==========
-
-  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
-  const getInitialFilters = () => {
-    const savedFilters = localStorage.getItem("interestsFilters");
-    if (savedFilters) {
-      return JSON.parse(savedFilters);
-    }
-    return {
-      search: "",
-      status: "all",
-      property_id: "all",
-      date_from: "",
-      date_to: "",
-      sort_by: "created_at",
-      sort_order: "desc",
-    };
-  };
-
-  const [filters, setFilters] = useState(getInitialFilters());
-  const [selectedInterest, setSelectedInterest] = useState(null);
+  const [filters, setFilters] = useState(filtersManager.getInitialFilters());
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const [currentPage, setCurrentPage] = useState(() => {
-    const savedPage = localStorage.getItem("interestsCurrentPage");
+    const savedPage = localStorage.getItem("landRequestsCurrentPage");
     return savedPage ? parseInt(savedPage) : 1;
   });
 
   const [statusModal, setStatusModal] = useState({
     show: false,
-    interestId: null,
+    requestId: null,
     newStatus: "",
     adminNote: "",
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [copyStatus, setCopyStatus] = useState({});
 
-  // حالة المودال لعرض تفاصيل الأرض
-  const [propertyModal, setPropertyModal] = useState({
+  // حالة المودال لعرض تفاصيل المستخدم
+  const [userModal, setUserModal] = useState({
     show: false,
-    property: null,
+    user: null,
     loading: false,
   });
 
-  // ========== الدوال الأساسية ==========
+  // حالة المودال لعرض العروض
+  const [offersModal, setOffersModal] = useState({
+    show: false,
+    offers: [],
+    loading: false,
+  });
 
-  // دالة نسخ النص إلى الحافظة
-  const copyToClipboard = async (text, fieldName) => {
-    if (!text) return;
+  // ========== تأثيرات ==========
+  // حفظ الفلاتر والصفحة في localStorage عند تغييرها
+  useEffect(() => {
+    filtersManager.saveFilters(filters);
+  }, [filters]);
 
-    try {
-      await navigator.clipboard.writeText(text.toString());
+  useEffect(() => {
+    localStorage.setItem("landRequestsCurrentPage", currentPage.toString());
+  }, [currentPage]);
 
-      setCopyStatus((prev) => ({
-        ...prev,
-        [fieldName]: true,
-      }));
-
-      setTimeout(() => {
-        setCopyStatus((prev) => ({
-          ...prev,
-          [fieldName]: false,
-        }));
-      }, 2000);
-    } catch (err) {
-      console.error("فشل في نسخ النص: ", err);
-      // استخدام الطريقة القديمة كبديل
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-
-      setCopyStatus((prev) => ({
-        ...prev,
-        [fieldName]: true,
-      }));
-
-      setTimeout(() => {
-        setCopyStatus((prev) => ({
-          ...prev,
-          [fieldName]: false,
-        }));
-      }, 2000);
+  // استعادة الطلب المحدد من localStorage إذا كان موجوداً
+  useEffect(() => {
+    const savedSelectedRequest = localStorage.getItem("selectedLandRequest");
+    if (savedSelectedRequest) {
+      setSelectedRequest(JSON.parse(savedSelectedRequest));
     }
-  };
+  }, []);
 
+  // حفظ الطلب المحدد في localStorage
+  useEffect(() => {
+    if (selectedRequest) {
+      localStorage.setItem(
+        "selectedLandRequest",
+        JSON.stringify(selectedRequest)
+      );
+    } else {
+      localStorage.removeItem("selectedLandRequest");
+    }
+  }, [selectedRequest]);
+
+  // ========== دوال التحديث ==========
   const handleRefresh = async () => {
+    console.log("بدء تحديث بيانات طلبات الأراضي...");
     setIsRefreshing(true);
 
     try {
-      await refetch();
+      // إزالة جميع بيانات التخزين المؤقت
+      await queryClient.invalidateQueries(["landRequests"]);
+      await queryClient.refetchQueries(["landRequests"], { 
+        active: true,
+        exact: false 
+      });
+      console.log("تم تحديث بيانات طلبات الأراضي بنجاح");
     } catch (error) {
       console.error("خطأ في التحديث:", error);
+      alert("حدث خطأ أثناء تحديث البيانات: " + error.message);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  // حفظ الفلاتر والصفحة في localStorage عند تغييرها
-  useEffect(() => {
-    localStorage.setItem("interestsFilters", JSON.stringify(filters));
-  }, [filters]);
-
-  useEffect(() => {
-    localStorage.setItem("interestsCurrentPage", currentPage.toString());
-  }, [currentPage]);
-
-  // استعادة الاهتمام المحدد من localStorage إذا كان موجوداً
-  useEffect(() => {
-    const savedSelectedInterest = localStorage.getItem("selectedInterest");
-    if (savedSelectedInterest) {
-      setSelectedInterest(JSON.parse(savedSelectedInterest));
-    }
-  }, []);
-
-  // حفظ الاهتمام المحدد في localStorage
-  useEffect(() => {
-    if (selectedInterest) {
-      localStorage.setItem(
-        "selectedInterest",
-        JSON.stringify(selectedInterest)
-      );
-    } else {
-      localStorage.removeItem("selectedInterest");
-    }
-  }, [selectedInterest]);
-
-  // ========== الاستعلامات والبيانات ==========
-
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-
-    if (filters.search.trim()) params.append("search", filters.search.trim());
-    if (filters.status !== "all") params.append("status", filters.status);
-    if (filters.property_id !== "all")
-      params.append("property_id", filters.property_id);
-    if (filters.date_from) params.append("date_from", filters.date_from);
-    if (filters.date_to) params.append("date_to", filters.date_to);
-    if (filters.sort_by) params.append("sort_by", filters.sort_by);
-    if (filters.sort_order) params.append("sort_order", filters.sort_order);
-
-    params.append("page", currentPage);
-    params.append("per_page", 10);
-
-    return params.toString();
-  };
-
-  // استخدام React Query لجلب بيانات طلبات الاهتمام
-  const fetchInterests = async () => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      navigate("/login");
-      throw new Error("لم يتم العثور على رمز الدخول");
-    }
-
-    const queryString = buildQueryString();
-    const url = `https://core-api-x41.shaheenplus.sa/api/admin/interests?${queryString}`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.status === 401) {
-      localStorage.removeItem("access_token");
-      navigate("/login");
-      throw new Error("انتهت جلسة الدخول أو التوكن غير صالح");
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`فشل في جلب طلبات الاهتمام: ${errorText}`);
-    }
-
-    const result = await response.json();
-
-    if (result.success && result.data) {
-      return {
-        data: result.data.interests || [],
-        pagination: result.data.pagination || {
-          current_page: currentPage,
-          last_page: 1,
-          per_page: 10,
-          total: 0,
-          from: 0,
-          to: 0,
-        },
-        filtersData: result.data.filters || {
-          status_options: [],
-          properties: [],
-        },
-      };
-    } else {
-      throw new Error(result.message || "هيكل البيانات غير متوقع");
-    }
-  };
-
+  // ========== React Query ==========
   const {
-    data: interestsData,
+    data: landRequestsData,
     isLoading,
     error,
     refetch,
-  } = useQuery(["interests", filters, currentPage], fetchInterests, {
-    staleTime: 5 * 60 * 1000, // 5 دقائق
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error("خطأ في جلب طلبات الاهتمام:", error);
-      alert("حدث خطأ أثناء جلب البيانات: " + error.message);
-    },
-  });
-
-  // دالة لجلب تفاصيل الأرض
-  const fetchPropertyDetails = async (propertyId) => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      navigate("/login");
-      throw new Error("لم يتم العثور على رمز الدخول");
-    }
-
-    const response = await fetch(
-      `https://core-api-x41.shaheenplus.sa/api/admin/properties/${propertyId}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (response.status === 401) {
-      localStorage.removeItem("access_token");
-      navigate("/login");
-      throw new Error("انتهت جلسة الدخول أو التوكن غير صالح");
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`فشل في جلب تفاصيل الأرض: ${errorText}`);
-    }
-
-    const result = await response.json();
-
-    if (result.success && result.data) {
-      return result.data;
-    } else {
-      throw new Error(result.message || "هيكل البيانات غير متوقع");
-    }
-  };
-
-  // ========== دوال التحكم ==========
-
-  // فتح مودال تفاصيل الأرض
-  const openPropertyModal = async (propertyId) => {
-    if (!propertyId) {
-      alert("لا يوجد معرف للعقار");
-      return;
-    }
-
-    setPropertyModal({
-      show: true,
-      property: null,
-      loading: true,
-    });
-
-    try {
-      const propertyDetails = await fetchPropertyDetails(propertyId);
-      setPropertyModal({
-        show: true,
-        property: propertyDetails,
-        loading: false,
-      });
-    } catch (error) {
-      console.error("خطأ في جلب تفاصيل الأرض:", error);
-      alert("حدث خطأ أثناء جلب تفاصيل الأرض: " + error.message);
-      setPropertyModal({
-        show: false,
-        property: null,
-        loading: false,
-      });
-    }
-  };
-
-  // إغلاق مودال تفاصيل الأرض
-  const closePropertyModal = () => {
-    setPropertyModal({
-      show: false,
-      property: null,
-      loading: false,
-    });
-  };
-
-  // استخدام useMutation لتحديث حالة الاهتمام
-  const statusMutation = useMutation(
-    async ({ interestId, status, adminNote }) => {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `https://core-api-x41.shaheenplus.sa/api/admin/interests/${interestId}/status`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            status: status,
-            admin_note: adminNote.trim() || undefined,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "فشل في تحديث حالة الاهتمام");
-      }
-
-      return await response.json();
-    },
+  } = useQuery(
+    ["landRequests", filters, currentPage],
+    () => fetchLandRequests(filters, currentPage, navigate),
     {
-      onSuccess: () => {
-        alert("تم تحديث حالة الاهتمام بنجاح");
-        refetch();
-        setSelectedInterest(null);
-        closeStatusModal();
-        queryClient.invalidateQueries(["interests"]);
-      },
+      cacheTime: 0,
+      staleTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      keepPreviousData: false,
       onError: (error) => {
-        alert(error.message);
+        console.error("خطأ في جلب طلبات الأراضي:", error);
+        alert("حدث خطأ أثناء جلب البيانات: " + error.message);
       },
     }
   );
 
+  // ========== دوال التحكم في الفلاتر ==========
   const handleFilterChange = (key, value) => {
     const newFilters = {
       ...filters,
@@ -377,6 +163,7 @@ const AllInterests = () => {
 
     setFilters(newFilters);
 
+    // إعادة ضبط الصفحة عند تغيير الفلاتر
     if (key !== "page" && currentPage !== 1) {
       setCurrentPage(1);
     }
@@ -384,28 +171,76 @@ const AllInterests = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    queryClient.invalidateQueries(["landRequests"]);
     refetch();
   };
 
   const clearFilters = () => {
-    const defaultFilters = {
-      search: "",
-      status: "all",
-      property_id: "all",
-      date_from: "",
-      date_to: "",
-      sort_by: "created_at",
-      sort_order: "desc",
-    };
-
+    const defaultFilters = filtersManager.clearFilters();
     setFilters(defaultFilters);
     setCurrentPage(1);
+    queryClient.invalidateQueries(["landRequests"]);
   };
 
-  const openStatusModal = (interestId, newStatus) => {
+  // ========== دوال المودالات ==========
+  const openUserModal = async (userId) => {
+    if (!userId) {
+      alert("لا يوجد معرف للمستخدم");
+      return;
+    }
+
+    setUserModal({
+      show: true,
+      user: null,
+      loading: true,
+    });
+
+    try {
+      const userDetails = await fetchUserDetails(userId, navigate);
+      setUserModal({
+        show: true,
+        user: userDetails,
+        loading: false,
+      });
+    } catch (error) {
+      console.error("خطأ في جلب تفاصيل المستخدم:", error);
+      alert("حدث خطأ أثناء جلب تفاصيل المستخدم: " + error.message);
+      setUserModal({
+        show: false,
+        user: null,
+        loading: false,
+      });
+    }
+  };
+
+  const closeUserModal = () => {
+    setUserModal({
+      show: false,
+      user: null,
+      loading: false,
+    });
+  };
+
+  const openOffersModal = (offers) => {
+    setOffersModal({
+      show: true,
+      offers: offers || [],
+      loading: false,
+    });
+  };
+
+  const closeOffersModal = () => {
+    setOffersModal({
+      show: false,
+      offers: [],
+      loading: false,
+    });
+  };
+
+  const openStatusModal = (requestId, newStatus) => {
     setStatusModal({
       show: true,
-      interestId,
+      requestId,
       newStatus,
       adminNote: "",
     });
@@ -414,839 +249,76 @@ const AllInterests = () => {
   const closeStatusModal = () => {
     setStatusModal({
       show: false,
-      interestId: null,
+      requestId: null,
       newStatus: "",
       adminNote: "",
     });
   };
 
+  // ========== تحديث الحالة ==========
+  const statusMutation = useMutation(
+    ({ requestId, status, adminNote }) =>
+      updateLandRequestStatus(requestId, status, adminNote),
+    {
+      onSuccess: async () => {
+        alert("تم تحديث حالة الطلب بنجاح");
+        // إزالة التخزين المؤقت وإعادة جلب البيانات
+        await queryClient.invalidateQueries(["landRequests"]);
+        await refetch();
+        setSelectedRequest(null);
+        closeStatusModal();
+      },
+      onError: (error) => {
+        alert(error.message);
+      },
+    }
+  );
+
   const handleStatusUpdate = async () => {
-    if (!statusModal.interestId || !statusModal.newStatus) {
+    if (!statusModal.requestId || !statusModal.newStatus) {
       alert("بيانات غير مكتملة");
       return;
     }
 
-    if (
-      !window.confirm(
-        `هل أنت متأكد من تغيير الحالة إلى "${getStatusText(
-          statusModal.newStatus
-        )}"؟`
-      )
-    ) {
-      return;
-    }
-
     statusMutation.mutate({
-      interestId: statusModal.interestId,
+      requestId: statusModal.requestId,
       status: statusModal.newStatus,
       adminNote: statusModal.adminNote,
     });
   };
 
-  // تحديث الصفحة الحالية
+  // ========== دالة الباجينيشن ==========
   const updatePagination = (newPage) => {
     setCurrentPage(newPage);
   };
 
-  // ========== دوال المساعدة ==========
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "غير محدد";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-SA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getStatusBadge = (status) => {
-    const baseClasses = "px-3 py-1 rounded-full text-sm font-medium";
-
-    switch (status) {
-      case "قيد المراجعة":
-        return (
-          <span
-            className={`${baseClasses} bg-yellow-100 text-yellow-800 border border-yellow-200`}
-          >
-            قيد المراجعة
-          </span>
-        );
-      case "تمت المراجعة":
-        return (
-          <span
-            className={`${baseClasses} bg-green-100 text-green-800 border border-green-200`}
-          >
-            تمت المراجعة
-          </span>
-        );
-      case "تم التواصل":
-        return (
-          <span
-            className={`${baseClasses} bg-blue-100 text-blue-800 border border-blue-200`}
-          >
-            تم التواصل
-          </span>
-        );
-      case "ملغي":
-        return (
-          <span
-            className={`${baseClasses} bg-red-100 text-red-800 border border-red-200`}
-          >
-            ملغي
-          </span>
-        );
-      default:
-        return (
-          <span
-            className={`${baseClasses} bg-gray-100 text-gray-800 border border-gray-200`}
-          >
-            {status}
-          </span>
-        );
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case "قيد المراجعة":
-        return "قيد المراجعة";
-      case "تمت المراجعة":
-        return "تمت المراجعة";
-      case "تم التواصل":
-        return "تم التواصل";
-      case "ملغي":
-        return "ملغي";
-      default:
-        return status;
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "قيد المراجعة":
-        return "yellow";
-      case "تمت المراجعة":
-        return "green";
-      case "تم التواصل":
-        return "blue";
-      case "ملغي":
-        return "red";
-      default:
-        return "gray";
-    }
-  };
-
-  const getStatusMessagePlaceholder = (status) => {
-    switch (status) {
-      case "تمت المراجعة":
-        return "اكتب رسالة للمهتم توضح الخطوات القادمة...";
-      case "تم التواصل":
-        return "اكتب ملاحظات حول عملية التواصل...";
-      case "ملغي":
-        return "اكتب سبب إلغاء طلب الاهتمام...";
-      case "قيد المراجعة":
-        return "اكتب ملاحظات إضافية حول المراجعة...";
-      default:
-        return "اكتب ملاحظات إضافية...";
-    }
-  };
-
-  // ========== دوال العرض ==========
-
-  // دالة لعرض تفاصيل الأرض في المودال
-  const renderPropertyDetails = (property) => {
-    if (!property) return null;
-
-    return (
-      <div className="space-y-6">
-        {/* المعلومات الأساسية */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-            المعلومات الأساسية
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                عنوان الأرض
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                <span className="text-gray-800">
-                  {property.title || "غير متوفر"}
-                </span>
-                {property.title && (
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                      copyStatus["property_title"]
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                    onClick={() =>
-                      copyToClipboard(property.title, "property_title")
-                    }
-                    title="نسخ عنوان الأرض"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                رقم الإعلان
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                <span className="text-gray-800">
-                  {property.announcement_number || "غير متوفر"}
-                </span>
-                {property.announcement_number && (
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                      copyStatus["announcement_number"]
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                    onClick={() =>
-                      copyToClipboard(
-                        property.announcement_number,
-                        "announcement_number"
-                      )
-                    }
-                    title="نسخ رقم الإعلان"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                نوع الأرض
-              </label>
-              <div
-                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                  property.land_type === "سكني"
-                    ? "bg-blue-100 text-blue-800"
-                    : property.land_type === "تجاري"
-                    ? "bg-purple-100 text-purple-800"
-                    : "bg-green-100 text-green-800"
-                }`}
-              >
-                {property.land_type || "غير محدد"}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                الغرض
-              </label>
-              <div
-                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                  property.purpose === "بيع"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-indigo-100 text-indigo-800"
-                }`}
-              >
-                {property.purpose || "غير محدد"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* الموقع والمساحة */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-            الموقع والمساحة
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                المنطقة
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                <span className="text-gray-800">
-                  {property.region || "غير متوفر"}
-                </span>
-                {property.region && (
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                      copyStatus["property_region"]
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                    onClick={() =>
-                      copyToClipboard(property.region, "property_region")
-                    }
-                    title="نسخ المنطقة"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                المدينة
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                <span className="text-gray-800">
-                  {property.city || "غير متوفر"}
-                </span>
-                {property.city && (
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                      copyStatus["property_city"]
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                    onClick={() =>
-                      copyToClipboard(property.city, "property_city")
-                    }
-                    title="نسخ المدينة"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                المساحة الكلية
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                <span className="text-gray-800">{property.total_area} م²</span>
-                <button
-                  className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                    copyStatus["property_area"]
-                      ? "text-green-600"
-                      : "text-gray-500"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(
-                      `${property.total_area} م²`,
-                      "property_area"
-                    )
-                  }
-                  title="نسخ المساحة الكلية"
-                >
-                  <FiCopy size={16} />
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                الإحداثيات
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                <span className="text-gray-800">
-                  {property.geo_location_text || "غير متوفر"}
-                </span>
-                {property.geo_location_text && (
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                      copyStatus["geo_location"]
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                    onClick={() =>
-                      copyToClipboard(
-                        property.geo_location_text,
-                        "geo_location"
-                      )
-                    }
-                    title="نسخ الإحداثيات"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* المعلومات المالية */}
-        {(property.price_per_sqm || property.estimated_investment_value) && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              المعلومات المالية
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {property.price_per_sqm && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    سعر المتر
-                  </label>
-                  <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                    <span className="text-gray-800">
-                      {property.price_per_sqm} ريال/م²
-                    </span>
-                    <button
-                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                        copyStatus["price_per_sqm"]
-                          ? "text-green-600"
-                          : "text-gray-500"
-                      }`}
-                      onClick={() =>
-                        copyToClipboard(
-                          `${property.price_per_sqm} ريال/م²`,
-                          "price_per_sqm"
-                        )
-                      }
-                      title="نسخ سعر المتر"
-                    >
-                      <FiCopy size={16} />
-                    </button>
-                  </div>
-                </div>
-              )}
-              {property.estimated_investment_value && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    القيمة الاستثمارية
-                  </label>
-                  <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                    <span className="text-gray-800">
-                      {property.estimated_investment_value} ريال
-                    </span>
-                    <button
-                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                        copyStatus["investment_value"]
-                          ? "text-green-600"
-                          : "text-gray-500"
-                      }`}
-                      onClick={() =>
-                        copyToClipboard(
-                          `${property.estimated_investment_value} ريال`,
-                          "investment_value"
-                        )
-                      }
-                      title="نسخ القيمة الاستثمارية"
-                    >
-                      <FiCopy size={16} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* المعلومات القانونية */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-            المعلومات القانونية
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                رقم الصك
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                <span className="text-gray-800">
-                  {property.deed_number || "غير متوفر"}
-                </span>
-                {property.deed_number && (
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                      copyStatus["deed_number"]
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                    onClick={() =>
-                      copyToClipboard(property.deed_number, "deed_number")
-                    }
-                    title="نسخ رقم الصك"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-            {property.agency_number && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  رقم الوكالة
-                </label>
-                <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                  <span className="text-gray-800">
-                    {property.agency_number}
-                  </span>
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                      copyStatus["agency_number"]
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                    onClick={() =>
-                      copyToClipboard(property.agency_number, "agency_number")
-                    }
-                    title="نسخ رقم الوكالة"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* الوصف */}
-        {property.description && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              الوصف
-            </h4>
-            <div className="flex items-start justify-between bg-gray-50 rounded-md p-4">
-              <p className="text-gray-800 flex-1">{property.description}</p>
-              <button
-                className={`p-1 rounded hover:bg-gray-200 transition-colors ml-2 ${
-                  copyStatus["property_description"]
-                    ? "text-green-600"
-                    : "text-gray-500"
-                }`}
-                onClick={() =>
-                  copyToClipboard(property.description, "property_description")
-                }
-                title="نسخ الوصف"
-              >
-                <FiCopy size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* معلومات المالك */}
-        {property.user && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              معلومات المالك
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  اسم المالك
-                </label>
-                <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                  <span className="text-gray-800">
-                    {property.user.full_name || "غير متوفر"}
-                  </span>
-                  {property.user.full_name && (
-                    <button
-                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                        copyStatus["owner_name"]
-                          ? "text-green-600"
-                          : "text-gray-500"
-                      }`}
-                      onClick={() =>
-                        copyToClipboard(property.user.full_name, "owner_name")
-                      }
-                      title="نسخ اسم المالك"
-                    >
-                      <FiCopy size={16} />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  البريد الإلكتروني
-                </label>
-                <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                  <span className="text-gray-800">
-                    {property.user.email || "غير متوفر"}
-                  </span>
-                  {property.user.email && (
-                    <button
-                      className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                        copyStatus["owner_email"]
-                          ? "text-green-600"
-                          : "text-gray-500"
-                      }`}
-                      onClick={() =>
-                        copyToClipboard(property.user.email, "owner_email")
-                      }
-                      title="نسخ البريد الإلكتروني"
-                    >
-                      <FiCopy size={16} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                رقم الهاتف
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 rounded-md p-3">
-                <span className="text-gray-800">
-                  {property.user.phone || "غير متوفر"}
-                </span>
-                {property.user.phone && (
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                      copyStatus["owner_phone"]
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }`}
-                    onClick={() =>
-                      copyToClipboard(property.user.phone, "owner_phone")
-                    }
-                    title="نسخ رقم الهاتف"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* الصور */}
-        {property.images && property.images.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              صور الأرض ({property.images.length})
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {property.images.map((image, index) => (
-                <div
-                  key={image.id}
-                  className="border border-gray-200 rounded-lg overflow-hidden relative"
-                >
-                  <img
-                    src={`https://core-api-x41.shaheenplus.sa/storage/${image.image_path}`}
-                    alt={`صورة ${index + 1}`}
-                    className="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() =>
-                      window.open(
-                        `https://core-api-x41.shaheenplus.sa/storage/${image.image_path}`,
-                        "_blank"
-                      )
-                    }
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src =
-                        "https://via.placeholder.com/300x200?text=صورة+غير+متوفرة";
-                    }}
-                  />
-                  <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                    صورة {index + 1}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderInterestDetails = (interest) => {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center">
-            <FiUser className="text-gray-500 ml-2" />
-            <span className="text-sm font-medium text-gray-700">
-              اسم المهتم
-            </span>
-          </div>
-          <span className="text-gray-900 font-medium">
-            {interest.full_name}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center">
-            <FiMail className="text-gray-500 ml-2" />
-            <span className="text-sm font-medium text-gray-700">
-              البريد الإلكتروني
-            </span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-gray-900 font-medium mr-2">
-              {interest.email}
-            </span>
-            <button
-              className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                copyStatus["email"] ? "text-green-600" : "text-gray-500"
-              }`}
-              onClick={() => copyToClipboard(interest.email, "email")}
-              title="نسخ البريد الإلكتروني"
-            >
-              <FiCopy size={16} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center">
-            <FiPhone className="text-gray-500 ml-2" />
-            <span className="text-sm font-medium text-gray-700">
-              رقم الهاتف
-            </span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-gray-900 font-medium mr-2">
-              {interest.phone}
-            </span>
-            <button
-              className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                copyStatus["phone"] ? "text-green-600" : "text-gray-500"
-              }`}
-              onClick={() => copyToClipboard(interest.phone, "phone")}
-              title="نسخ رقم الهاتف"
-            >
-              <FiCopy size={16} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center">
-            <FiHome className="text-gray-500 ml-2" />
-            <span className="text-sm font-medium text-gray-700">
-              الأرضية المهتم به
-            </span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-gray-900 font-medium mr-2">
-              {interest.property?.title || "غير محدد"}
-            </span>
-            <div className="flex space-x-1 space-x-reverse">
-              {interest.property_id && (
-                <button
-                  className="p-1 rounded hover:bg-gray-200 transition-colors text-blue-600"
-                  onClick={() => openPropertyModal(interest.property_id)}
-                  title="عرض تفاصيل الأرض"
-                >
-                  <FiEye size={16} />
-                </button>
-              )}
-              {interest.property?.title && (
-                <button
-                  className={`p-1 rounded hover:bg-gray-200 transition-colors ${
-                    copyStatus["property_title"]
-                      ? "text-green-600"
-                      : "text-gray-500"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(interest.property.title, "property_title")
-                  }
-                  title="نسخ اسم الأرض"
-                >
-                  <FiCopy size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-          <span className="text-sm font-medium text-gray-700">الحالة</span>
-          {getStatusBadge(interest.status)}
-        </div>
-
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center">
-            <FiCalendar className="text-gray-500 ml-2" />
-            <span className="text-sm font-medium text-gray-700">
-              تاريخ الاهتمام
-            </span>
-          </div>
-          <span className="text-gray-900">
-            {formatDate(interest.created_at)}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center">
-            <FiCalendar className="text-gray-500 ml-2" />
-            <span className="text-sm font-medium text-gray-700">آخر تحديث</span>
-          </div>
-          <span className="text-gray-900">
-            {formatDate(interest.updated_at)}
-          </span>
-        </div>
-
-        <div className="bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center mb-2">
-            <FiMessageSquare className="text-gray-500 ml-2" />
-            <span className="text-sm font-medium text-gray-700">
-              رسالة المهتم
-            </span>
-          </div>
-          <div className="bg-white rounded-md p-3 border border-gray-200">
-            <p className="text-gray-800">
-              {interest.message || "لا توجد رسالة"}
-            </p>
-          </div>
-        </div>
-
-        {interest.admin_notes && (
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center mb-2">
-              <FiEdit className="text-gray-500 ml-2" />
-              <span className="text-sm font-medium text-gray-700">
-                ملاحظات المسؤول
-              </span>
-            </div>
-            <div className="flex items-center justify-between bg-white rounded-md p-3 border border-gray-200">
-              <p className="text-gray-800 flex-1">{interest.admin_notes}</p>
-              <button
-                className={`p-1 rounded hover:bg-gray-200 transition-colors ml-2 ${
-                  copyStatus["admin_notes"] ? "text-green-600" : "text-gray-500"
-                }`}
-                onClick={() =>
-                  copyToClipboard(interest.admin_notes, "admin_notes")
-                }
-                title="نسخ ملاحظات المسؤول"
-              >
-                <FiCopy size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ========== الباجينيشن ==========
-
-  // إنشاء أزرار الباجينيشن
   const renderPagination = () => {
     if (
-      !interestsData ||
-      !interestsData.pagination ||
-      interestsData.pagination.last_page <= 1
+      !landRequestsData ||
+      !landRequestsData.pagination ||
+      landRequestsData.pagination.last_page <= 1
     )
       return null;
 
     const pages = [];
-    const pagination = interestsData.pagination;
+    const pagination = landRequestsData.pagination;
 
     pages.push(
       <button
         key="prev"
-        className={`flex items-center justify-center w-10 h-10 rounded-md border ${
+        className={`inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md ${
           currentPage === 1
-            ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : "bg-white text-gray-700 hover:bg-gray-50"
         }`}
         onClick={() => currentPage > 1 && updatePagination(currentPage - 1)}
         disabled={currentPage === 1}
       >
-        <FiChevronRight />
+        <FiChevronRight className="w-4 h-4" />
       </button>
     );
 
+    // أزرار الصفحات
     const showPages = [];
     showPages.push(1);
 
@@ -1277,7 +349,7 @@ const AllInterests = () => {
         pages.push(
           <span
             key={page}
-            className="flex items-center justify-center w-10 h-10 text-gray-500"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
           >
             ...
           </span>
@@ -1286,10 +358,10 @@ const AllInterests = () => {
         pages.push(
           <button
             key={page}
-            className={`flex items-center justify-center w-10 h-10 rounded-md border ${
+            className={`inline-flex items-center px-3 py-2 border text-sm font-medium rounded-md ${
               currentPage === page
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
             }`}
             onClick={() => updatePagination(page)}
           >
@@ -1299,13 +371,14 @@ const AllInterests = () => {
       }
     });
 
+    // زر الصفحة التالية
     pages.push(
       <button
         key="next"
-        className={`flex items-center justify-center w-10 h-10 rounded-md border ${
+        className={`inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md ${
           currentPage === pagination.last_page
-            ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : "bg-white text-gray-700 hover:bg-gray-50"
         }`}
         onClick={() =>
           currentPage < pagination.last_page &&
@@ -1313,181 +386,481 @@ const AllInterests = () => {
         }
         disabled={currentPage === pagination.last_page}
       >
-        <FiChevronLeft />
+        <FiChevronLeft className="w-4 h-4" />
       </button>
     );
 
     return pages;
   };
 
-  // ========== المتغيرات المساعدة ==========
+  // ========== دوال المساعدة للعرض ==========
+  // دالة لترجمة أسماء الحقول في تفاصيل المستخدم
+  const getUserDetailFieldLabel = (fieldName) => {
+    const labels = {
+      id: "رقم المعرف",
+      user_id: "رقم المستخدم",
+      national_id: "رقم الهوية",
+      commercial_registration: "السجل التجاري",
+      license_number: "رقم الترخيص",
+      agency_number: "رقم الوكالة",
+      deed_number: "رقم الصك",
+      bank_account: "الحساب البنكي",
+      address: "العنوان",
+      city: "المدينة",
+      region: "المنطقة",
+      created_at: "تاريخ الإنشاء",
+      updated_at: "تاريخ التحديث",
+    };
 
+    return labels[fieldName] || fieldName;
+  };
+
+  // دالة لعرض تفاصيل المستخدم في المودال بناءً على الهيكل الجديد
+  const renderUserDetails = (user) => {
+    if (!user) return null;
+
+    // تحديد نوع المستخدم والتفاصيل المرتبطة به
+    const getUserTypeDetails = () => {
+      const userType = user.user_type;
+      const details = user.details || {};
+
+      switch (userType) {
+        case "مالك":
+          return {
+            icon: <FiUser className="w-4 h-4" />,
+            title: "معلومات المالك",
+            data: details.land_owner,
+          };
+        case "وكيل شرعي":
+          return {
+            icon: <FiBriefcase className="w-4 h-4" />,
+            title: "معلومات الوكيل الشرعي",
+            data: details.legal_agent,
+          };
+        case "شركة":
+          return {
+            icon: <FiAward className="w-4 h-4" />,
+            title: "معلومات الشركة",
+            data: details.business_entity,
+          };
+        case "وسيط عقاري":
+          return {
+            icon: <FiAward className="w-4 h-4" />,
+            title: "معلومات الوسيط العقاري",
+            data: details.real_estate_broker,
+          };
+        case "شركة مزاد":
+          return {
+            icon: <FiGift className="w-4 h-4" />,
+            title: "معلومات شركة المزاد",
+            data: details.auction_company,
+          };
+        default:
+          return {
+            icon: <FiUser className="w-4 h-4" />,
+            title: "معلومات المستخدم",
+            data: null,
+          };
+      }
+    };
+
+    const userTypeDetails = getUserTypeDetails();
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h4 className="text-lg font-medium text-gray-900 mb-4">
+            المعلومات الأساسية
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                الاسم الكامل
+              </label>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                {user.full_name || "غير متوفر"}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                البريد الإلكتروني
+              </label>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                {user.email || "غير متوفر"}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                رقم الهاتف
+              </label>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                {user.phone || "غير متوفر"}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                حالة المستخدم
+              </label>
+              <div className="text-sm text-green-900 bg-gray-50 p-2 rounded">
+                {getUserStatusBadge(user.status)}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                نوع المستخدم
+              </label>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                {getUserTypeBadge(user.user_type)}
+              </div>
+            </div>
+            <div></div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h4 className="text-lg font-medium text-gray-900 mb-4">
+            معلومات التسجيل
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                تاريخ التسجيل
+              </label>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                {formatDate(user.created_at)}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                آخر تحديث
+              </label>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                {formatDate(user.updated_at)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {user.admin_message && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h4 className="text-lg font-medium text-gray-900 mb-4">
+              رسالة المسؤول
+            </h4>
+            <div className="text-sm text-gray-900 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              {user.admin_message}
+            </div>
+          </div>
+        )}
+
+        {/* عرض التفاصيل الخاصة بنوع المستخدم */}
+        {userTypeDetails.data && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              {userTypeDetails.icon}
+              {userTypeDetails.title}
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.entries(userTypeDetails.data).map(
+                ([key, value]) =>
+                  value && (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getUserDetailFieldLabel(key)}
+                      </label>
+                      <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                        {value}
+                      </div>
+                    </div>
+                  )
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* إذا لم تكن هناك تفاصيل إضافية */}
+        {!userTypeDetails.data && user.user_type && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              {userTypeDetails.icon}
+              {userTypeDetails.title}
+            </h4>
+            <div className="text-center py-8">
+              <FiInfo className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-sm text-gray-500">
+                لا توجد تفاصيل إضافية متاحة
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // دالة لعرض العروض في المودال
+  const renderOffers = (offers) => {
+    if (!offers || offers.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <FiUsers className="mx-auto h-12 w-12 text-gray-400" />
+          <p className="mt-2 text-sm text-gray-500">لا توجد عروض لهذا الطلب</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {offers.map((offer, index) => (
+          <div
+            key={offer.offer_id || index}
+            className="bg-white border border-gray-200 rounded-lg p-4"
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-2">
+                <FiUser className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-900">
+                  {offer.offer_user?.name || "مستخدم غير معروف"}
+                </span>
+              </div>
+              <span className="text-xs text-gray-500">
+                {formatDate(offer.created_at)}
+              </span>
+            </div>
+            <div className="flex items-start gap-2 mb-3">
+              <FiMessageSquare className="w-4 h-4 text-gray-500 mt-0.5" />
+              <p className="text-sm text-gray-700 flex-1">{offer.message}</p>
+            </div>
+            <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+              <span className="flex items-center gap-1">
+                <FiMail className="w-3 h-3" />
+                {offer.offer_user?.email || "غير متوفر"}
+              </span>
+              <span className="flex items-center gap-1">
+                <FiPhone className="w-3 h-3" />
+                {offer.offer_user?.phone || "غير متوفر"}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderRequestDetails = (request) => {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <FiUser className="w-5 h-5 text-gray-500" />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-700">
+                اسم مقدم الطلب
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-900">
+                  {request.user?.name || request.user?.full_name || "غير معروف"}
+                </span>
+                {request.user?.id && (
+                  <button
+                    className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                    onClick={() => openUserModal(request.user.id)}
+                    title="عرض تفاصيل المستخدم"
+                  >
+                    <FiEye className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <FiMail className="w-5 h-5 text-gray-500" />
+            <div>
+              <div className="text-sm font-medium text-gray-700">
+                البريد الإلكتروني
+              </div>
+              <div className="text-gray-900">
+                {request.user?.email || "غير متوفر"}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <FiPhone className="w-5 h-5 text-gray-500" />
+            <div>
+              <div className="text-sm font-medium text-gray-700">
+                رقم الهاتف
+              </div>
+              <div className="text-gray-900">
+                {request.user?.phone || "غير متوفر"}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <FiNavigation className="w-5 h-5 text-gray-500" />
+            <div>
+              <div className="text-sm font-medium text-gray-700">المنطقة</div>
+              <div className="text-gray-900">{request.region}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <FiHome className="w-5 h-5 text-gray-500" />
+            <div>
+              <div className="text-sm font-medium text-gray-700">المدينة</div>
+              <div className="text-gray-900">{request.city}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <FiTarget className="w-5 h-5 text-gray-500" />
+            <div>
+              <div className="text-sm font-medium text-gray-700">الغرض</div>
+              <div className="text-gray-900">
+                {getPurposeText(request.purpose)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <FiLayers className="w-5 h-5 text-gray-500" />
+            <div>
+              <div className="text-sm font-medium text-gray-700">النوع</div>
+              <div className="text-gray-900">{getTypeText(request.type)}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div>
+              <div className="text-sm font-medium text-gray-700">المساحة</div>
+              <div className="text-gray-900">{request.area} م²</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div>
+              <div className="text-sm font-medium text-gray-700">
+                عدد العروض
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-900">
+                  {request.offers?.length || 0} عرض
+                </span>
+                {request.offers && request.offers.length > 0 && (
+                  <button
+                    className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                    onClick={() => openOffersModal(request.offers)}
+                    title="عرض العروض"
+                  >
+                    <FiGitPullRequest className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div>
+              <div className="text-sm font-medium text-gray-700">الحالة</div>
+              <div className="text-gray-900">
+                {getStatusBadge(request.status)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <FiCalendar className="w-5 h-5 text-gray-500" />
+            <div>
+              <div className="text-sm font-medium text-gray-700">
+                تاريخ الطلب
+              </div>
+              <div className="text-gray-900">
+                {formatDate(request.created_at)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <FiMessageSquare className="w-5 h-5 text-gray-500" />
+            <div className="text-sm font-medium text-gray-700">الوصف</div>
+          </div>
+          <div className="text-gray-900 bg-white p-3 rounded border">
+            {request.description || "لا يوجد وصف"}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ========== تحضير البيانات ==========
+ const requests = landRequestsData?.data || [];
+const pagination = landRequestsData?.pagination || {
+  current_page: currentPage,
+  last_page: 1,
+  per_page: 10,
+  total: 0,
+  from: 0,
+  to: 0,
+};
+
+// إنشاء بيانات الفلاتر مع الخيارات المناسبة
+const filtersData = {
+  status_options: [
+    { value: "all", label: "جميع الحالات" },
+    { value: "open", label: "مفتوحة" },
+    { value: "pending", label: "قيد المراجعة" },
+    { value: "completed", label: "مكتملة" },
+    { value: "close", label: "مغلقة" }
+  ],
+  // يمكنك إضافة خيارات أخرى هنا إذا كنت تحتاجها
+  ...landRequestsData?.filtersData
+};
   // التحقق إذا كان هناك أي فلتر نشط
   const hasActiveFilters =
     filters.search ||
     filters.status !== "all" ||
-    filters.property_id !== "all" ||
+    filters.region !== "all" ||
+    filters.city !== "all" ||
+    filters.purpose !== "all" ||
+    filters.type !== "all" ||
+    filters.area_min ||
+    filters.area_max ||
     filters.date_from ||
     filters.date_to;
-
-  // استخراج البيانات من نتيجة الاستعلام
-  const interests = interestsData?.data || [];
-  const pagination = interestsData?.pagination || {
-    current_page: currentPage,
-    last_page: 1,
-    per_page: 10,
-    total: 0,
-    from: 0,
-    to: 0,
-  };
-  const filtersData = interestsData?.filtersData || {
-    status_options: [],
-    properties: [],
-  };
 
   const loading = isLoading || isRefreshing || statusMutation.isLoading;
 
   // ========== واجهة المستخدم ==========
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      {/* شريط البحث والتصفية */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <FiFilter className="text-blue-600 ml-2" />
-            <span className="text-lg font-semibold text-gray-800">
-              أدوات البحث والتصفية:
-            </span>
-          </div>
+      {/* الفلاتر */}
+      <LandRequestsFilters
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onSearch={handleSearch}
+        onClearFilters={clearFilters}
+        filtersData={filtersData}
+        loading={loading}
+        hasActiveFilters={hasActiveFilters}
+        handleRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+        getPurposeText={getPurposeText}
+        getTypeText={getTypeText}
+        getStatusText={getStatusText}
+      />
 
-          {hasActiveFilters && (
-            <button
-              className="flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
-              onClick={clearFilters}
-            >
-              <FiSlash className="ml-1" />
-              مسح الفلاتر
-            </button>
-          )}
-        </div>
-
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="ابحث بالاسم أو البريد الإلكتروني أو الرسالة..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              بحث
-            </button>
-            <button
-              className="flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-              onClick={handleRefresh}
-              disabled={isRefreshing || loading}
-            >
-              <FiRefreshCw
-                className={`ml-2 ${isRefreshing ? "animate-spin" : ""}`}
-              />
-              {isRefreshing ? "جاري التحديث..." : "تحديث البيانات"}
-            </button>
-          </div>
-        </form>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              الحالة:
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange("status", e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">جميع الحالات</option>
-              {filtersData.status_options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              من تاريخ:
-            </label>
-            <input
-              type="date"
-              value={filters.date_from}
-              onChange={(e) => handleFilterChange("date_from", e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              إلى تاريخ:
-            </label>
-            <input
-              type="date"
-              value={filters.date_to}
-              onChange={(e) => handleFilterChange("date_to", e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ترتيب حسب:
-            </label>
-            <select
-              value={filters.sort_by}
-              onChange={(e) => handleFilterChange("sort_by", e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="created_at">تاريخ الاهتمام</option>
-              <option value="full_name">اسم المستخدم</option>
-              <option value="status">الحالة</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              الاتجاه:
-            </label>
-            <select
-              value={filters.sort_order}
-              onChange={(e) => handleFilterChange("sort_order", e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="desc">تنازلي</option>
-              <option value="asc">تصاعدي</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* المحتوى الرئيسي */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* قائمة طلبات الاهتمام */}
+        {/* قائمة طلبات الأراضي */}
         <div className="xl:col-span-2">
-          <div className="bg-blue-50 rounded-xl shadow-sm border border-blue-200">
-            <div className="p-6 border-b border-blue-200">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="text-xl font-semibold text-gray-800 mb-2 sm:mb-0">
-                  قائمة طلبات الاهتمام ({interests.length})
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  قائمة طلبات الأراضي ({requests.length})
                 </h3>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-500">
                   {pagination.total > 0 ? (
                     <>
                       عرض {pagination.from} إلى {pagination.to} من{" "}
@@ -1501,172 +874,204 @@ const AllInterests = () => {
               </div>
             </div>
 
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="flex space-x-2">
-                  <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
-                </div>
-                <p className="mt-4 text-gray-600">جاري تحميل البيانات...</p>
-              </div>
-            ) : interests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FiHeart className="text-gray-400 mb-4" size={48} />
-                <p className="text-gray-600 text-lg mb-4">لا توجد نتائج</p>
-                {hasActiveFilters && (
-                  <button
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    onClick={clearFilters}
-                  >
-                    مسح الفلاتر
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="divide-y divide-blue-200">
-                  {interests.map((interest) => (
+            <div className="p-4">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
                     <div
-                      key={interest.id}
-                      className={`p-6 cursor-pointer transition-colors ${
-                        selectedInterest?.id === interest.id
-                          ? "bg-blue-100 border-r-4 border-r-blue-600"
-                          : "hover:bg-blue-50"
-                      }`}
-                      onClick={() => setSelectedInterest(interest)}
+                      className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                  </div>
+                  <p className="mt-4 text-sm text-gray-500">
+                    جاري تحميل البيانات...
+                  </p>
+                </div>
+              ) : requests.length === 0 ? (
+                <div className="text-center py-12">
+                  <FiMap className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">لا توجد نتائج</p>
+                  {hasActiveFilters && (
+                    <button
+                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      onClick={clearFilters}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-4 space-x-reverse">
-                          <div className="flex-shrink-0">
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                              <FiUser className="text-blue-600" size={20} />
+                      مسح الفلاتر
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {requests.map((request) => (
+                      <div
+                        key={request.id}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                          selectedRequest?.id === request.id
+                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                        onClick={() => setSelectedRequest(request)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                              <FiUser className="w-5 h-5 text-gray-500" />
                             </div>
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 space-x-reverse mb-2">
-                              <h4 className="text-lg font-semibold text-gray-800">
-                                {interest.full_name}
-                              </h4>
-                              {getStatusBadge(interest.status)}
-                            </div>
-                            <p className="text-gray-600 mb-2">
-                              {interest.property?.title}
-                            </p>
-                            <div className="flex items-center text-sm text-gray-500 mb-2">
-                              <FiCalendar className="ml-1" size={14} />
-                              <span>{formatDate(interest.created_at)}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-500">
-                              <FiMessageSquare className="ml-1" size={14} />
-                              <span className="truncate">
-                                {interest.message?.substring(0, 60)}...
-                              </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="text-sm font-medium text-gray-900 truncate">
+                                  {request.user?.name ||
+                                    request.user?.full_name ||
+                                    "مستخدم غير معروف"}
+                                </h4>
+                                <div
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                                    request.status
+                                  )}`}
+                                >
+                                  {getStatusText(request.status)}
+                                </div>
+                              </div>
+                              <div className="space-y-1 text-xs text-gray-500">
+                                <div className="flex items-center gap-1">
+                                  <FiNavigation className="w-3 h-3" />
+                                  <span>
+                                    {request.region} - {request.city}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <FiTarget className="w-3 h-3" />
+                                  <span>
+                                    {getPurposeText(request.purpose)} -{" "}
+                                    {getTypeText(request.type)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <FiCalendar className="w-3 h-3" />
+                                  <span>{formatDate(request.created_at)}</span>
+                                </div>
+                                {request.description && (
+                                  <div className="flex items-start gap-1">
+                                    <FiMessageSquare className="w-3 h-3 mt-0.5" />
+                                    <span className="line-clamp-1">
+                                      {request.description}
+                                    </span>
+                                  </div>
+                                )}
+                                {request.offers &&
+                                  request.offers.length > 0 && (
+                                    <div className="flex items-center gap-1 text-blue-600">
+                                      <FiGitPullRequest className="w-3 h-3" />
+                                      <span>{request.offers.length} عرض</span>
+                                    </div>
+                                  )}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* الباجينيشن */}
-                {pagination.last_page > 1 && (
-                  <div className="p-6 border-t border-blue-200">
-                    <div className="flex items-center justify-center space-x-2 space-x-reverse">
-                      {renderPagination()}
-                    </div>
+                    ))}
                   </div>
-                )}
-              </>
-            )}
+
+                  {/* الباجينيشن */}
+                  {pagination.last_page > 1 && (
+                    <div className="mt-6 flex items-center justify-center">
+                      <div className="flex items-center space-x-1">
+                        {renderPagination()}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
-        {/* تفاصيل طلب الاهتمام */}
+
+        {/* تفاصيل الطلب */}
         <div className="xl:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6">
-            {selectedInterest ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-6">
+            {selectedRequest ? (
               <div>
-                <div className="p-6 border-b border-gray-200">
+                <div className="p-4 border-b border-gray-200">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-semibold text-gray-800">
-                      تفاصيل طلب الاهتمام
+                    <h3 className="text-lg font-medium text-gray-900">
+                      تفاصيل طلب الأرض
                     </h3>
-                    <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      ID: {selectedInterest.id}
+                    <span className="text-sm text-gray-500">
+                      ID: {selectedRequest.id}
                     </span>
                   </div>
                 </div>
 
-                <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-                  {renderInterestDetails(selectedInterest)}
+                <div className="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+                  {renderRequestDetails(selectedRequest)}
                 </div>
 
-                <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 border-t border-gray-200">
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* زر إكمال */}
                     <button
-                      className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
-                        openStatusModal(selectedInterest.id, "تمت المراجعة")
+                        openStatusModal(selectedRequest.id, "completed")
                       }
                       disabled={
-                        selectedInterest.status === "تمت المراجعة" || loading
+                        selectedRequest.status === "completed" || loading
                       }
                     >
-                      <FiCheck className="ml-1" size={16} />
-                      تمت المراجعة
+                      <FiCheck className="w-4 h-4" />
+                      إكمال
                     </button>
 
+                    {/* زر قيد المراجعة */}
                     <button
-                      className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-yellow-600 text-white text-sm rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
-                        openStatusModal(selectedInterest.id, "تم التواصل")
+                        openStatusModal(selectedRequest.id, "pending")
                       }
-                      disabled={
-                        selectedInterest.status === "تم التواصل" || loading
-                      }
+                      disabled={selectedRequest.status === "pending" || loading}
                     >
-                      <FiPhone className="ml-1" size={16} />
-                      تم التواصل
-                    </button>
-
-                    <button
-                      className="flex items-center justify-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() =>
-                        openStatusModal(selectedInterest.id, "قيد المراجعة")
-                      }
-                      disabled={
-                        selectedInterest.status === "قيد المراجعة" || loading
-                      }
-                    >
-                      <FiFileText className="ml-1" size={16} />
+                      <FiFileText className="w-4 h-4" />
                       قيد المراجعة
                     </button>
 
+                    {/* زر إغلاق */}
                     <button
-                      className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
-                        openStatusModal(selectedInterest.id, "ملغي")
+                        openStatusModal(selectedRequest.id, "close")
                       }
-                      disabled={selectedInterest.status === "ملغي" || loading}
+                      disabled={selectedRequest.status === "close" || loading}
                     >
-                      <FiX className="ml-1" size={16} />
-                      إلغاء
+                      <FiX className="w-4 h-4" />
+                      إغلاق
+                    </button>
+
+                    {/* زر إعادة فتح */}
+                    <button
+                      className="inline-flex items-center justify-center gap-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() =>
+                        openStatusModal(selectedRequest.id, "open")
+                      }
+                      disabled={selectedRequest.status === "open" || loading}
+                    >
+                      <FiRefreshCw className="w-4 h-4" />
+                      إعادة فتح
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FiHeart className="text-gray-400 mb-4" size={48} />
-                <p className="text-gray-600 text-lg">
-                  اختر طلب اهتمام لعرض التفاصيل
+              <div className="text-center py-12">
+                <FiMap className="mx-auto h-12 w-12 text-gray-400" />
+                <p className="mt-2 text-sm text-gray-500">
+                  اختر طلب أرض لعرض التفاصيل
                 </p>
               </div>
             )}
@@ -1679,26 +1084,32 @@ const AllInterests = () => {
       {/* مودال تغيير الحالة */}
       {statusModal.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                <FiEdit className="ml-2" />
-                تغيير حالة الاهتمام
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                <FiEdit className="w-5 h-5 text-gray-500" />
+                تغيير حالة الطلب
               </h3>
               <button
-                className="text-gray-400 hover:text-gray-600 text-2xl"
+                className="text-gray-400 hover:text-gray-500 transition-colors"
                 onClick={closeStatusModal}
               >
                 ×
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   الحالة الجديدة
                 </label>
                 <div className="p-3 bg-gray-50 rounded-lg">
-                  {getStatusBadge(statusModal.newStatus)}
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                      statusModal.newStatus
+                    )}`}
+                  >
+                    {getStatusText(statusModal.newStatus)}
+                  </span>
                 </div>
               </div>
 
@@ -1714,31 +1125,31 @@ const AllInterests = () => {
                       adminNote: e.target.value,
                     }))
                   }
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   rows="4"
                   placeholder={getStatusMessagePlaceholder(
                     statusModal.newStatus
                   )}
                 />
-                <div className="text-sm text-gray-500 mt-1">
+                <div className="mt-1 text-xs text-gray-500">
                   هذه الرسالة ستظهر للمستخدم كتفسير لتغيير الحالة
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-end space-x-3 space-x-reverse p-6 border-t border-gray-200">
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200">
               <button
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 onClick={closeStatusModal}
                 disabled={loading}
               >
                 إلغاء
               </button>
               <button
-                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 onClick={handleStatusUpdate}
                 disabled={loading}
               >
-                <FiCheck className="ml-1" />
+                <FiCheck className="w-4 h-4" />
                 {loading ? "جاري الحفظ..." : "تأكيد التغيير"}
               </button>
             </div>
@@ -1746,24 +1157,27 @@ const AllInterests = () => {
         </div>
       )}
 
-      {/* مودال تفاصيل الأرض */}
-      {propertyModal.show && (
+      {/* مودال تفاصيل المستخدم */}
+      {userModal.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                <FiMap className="ml-2" />
-                تفاصيل الأرض
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            {/* العنوان */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                <FiUser className="w-5 h-5 text-gray-500" />
+                تفاصيل المستخدم
               </h3>
               <button
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-                onClick={closePropertyModal}
+                className="text-gray-400 hover:text-gray-500 transition-colors text-2xl leading-none"
+                onClick={closeUserModal}
               >
                 ×
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              {propertyModal.loading ? (
+
+            {/* محتوى المودال مع Scroll */}
+            <div className="p-4 overflow-y-auto flex-1">
+              {userModal.loading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="flex space-x-2">
                     <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
@@ -1776,18 +1190,51 @@ const AllInterests = () => {
                       style={{ animationDelay: "0.2s" }}
                     ></div>
                   </div>
-                  <p className="mt-4 text-gray-600">
-                    جاري تحميل تفاصيل الأرض...
+                  <p className="mt-4 text-sm text-gray-500">
+                    جاري تحميل تفاصيل المستخدم...
                   </p>
                 </div>
               ) : (
-                renderPropertyDetails(propertyModal.property)
+                renderUserDetails(userModal.user)
               )}
             </div>
-            <div className="flex items-center justify-end p-6 border-t border-gray-200">
+
+            {/* زر الإغلاق */}
+            <div className="flex items-center justify-end p-4 border-t border-gray-200">
               <button
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                onClick={closePropertyModal}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={closeUserModal}
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مودال عرض العروض */}
+      {offersModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                <FiGitPullRequest className="w-5 h-5 text-gray-500" />
+                العروض المقدمة للطلب
+              </h3>
+              <button
+                className="text-gray-400 hover:text-gray-500 transition-colors"
+                onClick={closeOffersModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+              {renderOffers(offersModal.offers)}
+            </div>
+            <div className="flex items-center justify-end p-4 border-t border-gray-200">
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={closeOffersModal}
               >
                 إغلاق
               </button>
@@ -1799,4 +1246,4 @@ const AllInterests = () => {
   );
 };
 
-export default AllInterests;
+export default LandRequests;

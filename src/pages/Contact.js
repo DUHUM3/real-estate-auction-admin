@@ -1,4 +1,15 @@
+// ContactsPage.js
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  fetchContacts,
+  fetchContactDetails,
+  deleteContact,
+  markAsContacted,
+  getAttachmentUrl,
+  formatDate,
+  truncateText,
+  getStatusConfig
+} from "../services/ContactsApi";
 
 const ContactsPage = () => {
   const [contacts, setContacts] = useState([]);
@@ -24,53 +35,18 @@ const ContactsPage = () => {
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // API base URL
-  const API_BASE_URL = "https://core-api-x41.shaheenplus.sa";
-
-  // بناء query parameters ديناميكي
-  const buildQueryParams = useCallback((filters, page = 1) => {
-    const params = new URLSearchParams();
-
-    if (filters.search) params.append("search", filters.search);
-    if (filters.status) params.append("status", filters.status);
-    if (filters.start_date) params.append("start_date", filters.start_date);
-    if (filters.end_date) params.append("end_date", filters.end_date);
-    if (filters.sort_by) params.append("sort_by", filters.sort_by);
-    if (filters.sort_order) params.append("sort_order", filters.sort_order);
-    if (filters.per_page) params.append("per_page", filters.per_page);
-    params.append("page", page);
-
-    return params.toString();
-  }, []);
-
-  const fetchContacts = useCallback(
+  // جلب جهات الاتصال
+  const fetchContactsData = useCallback(
     async (page = 1) => {
       setLoading(true);
       setError(null);
 
       try {
-        const token = localStorage.getItem("access_token");
-        const queryParams = buildQueryParams(filters, page);
-
-        const response = await fetch(
-          `${API_BASE_URL}/api/admin/contacts?${queryParams}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!response.ok) throw new Error("فشل في جلب البيانات");
-
-        const result = await response.json();
+        const result = await fetchContacts(filters, page);
 
         if (result.success) {
           setContacts(result.data);
           setPagination(result.meta);
-        } else {
-          throw new Error(result.message || "خطأ غير معروف");
         }
       } catch (err) {
         setError(err.message);
@@ -80,13 +56,13 @@ const ContactsPage = () => {
         setRefreshing(false);
       }
     },
-    [filters, buildQueryParams]
+    [filters]
   );
 
   // تحديث البيانات يدوياً
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchContacts(pagination.current_page);
+    fetchContactsData(pagination.current_page);
   };
 
   // استخدام debounce للبحث
@@ -96,7 +72,7 @@ const ContactsPage = () => {
     }
 
     const timeout = setTimeout(() => {
-      fetchContacts(1);
+      fetchContactsData(1);
     }, 500);
 
     setSearchTimeout(timeout);
@@ -111,7 +87,7 @@ const ContactsPage = () => {
   // إعادة الجلب عند تغيير الفلاتر الأخرى
   useEffect(() => {
     if (filters.search === "" && filters.status === "") {
-      fetchContacts(1);
+      fetchContactsData(1);
     }
   }, [
     filters.start_date,
@@ -129,7 +105,7 @@ const ContactsPage = () => {
   };
 
   const handleApplyFilters = () => {
-    fetchContacts(1);
+    fetchContactsData(1);
   };
 
   const handleResetFilters = () => {
@@ -147,29 +123,11 @@ const ContactsPage = () => {
   const handleDelete = async (id) => {
     if (window.confirm("هل أنت متأكد من حذف هذه الرسالة؟")) {
       try {
-        const token = localStorage.getItem("access_token");
-        const response = await fetch(
-          `${API_BASE_URL}/api/admin/contacts/${id}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!response.ok) throw new Error("فشل في حذف الرسالة");
-
-        const result = await response.json();
-
-        if (result.success) {
-          fetchContacts(pagination.current_page);
-          if (selectedContact && selectedContact.id === id) {
-            setShowModal(false);
-          }
-        } else {
-          throw new Error(result.message || "خطأ غير معروف");
+        await deleteContact(id);
+        fetchContactsData(pagination.current_page);
+        
+        if (selectedContact && selectedContact.id === id) {
+          setShowModal(false);
         }
       } catch (err) {
         setError("فشل في حذف الرسالة");
@@ -180,25 +138,12 @@ const ContactsPage = () => {
 
   const handleViewDetails = async (id) => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(`${API_BASE_URL}/api/admin/contacts/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) throw new Error("فشل في جلب تفاصيل الرسالة");
-
-      const result = await response.json();
+      const result = await fetchContactDetails(id);
 
       if (result.success) {
         setSelectedContact(result.data);
         setShowModal(true);
-        // تحديث القائمة بعد تغيير الحالة
-        fetchContacts(pagination.current_page);
-      } else {
-        throw new Error(result.message || "خطأ غير معروف");
+        fetchContactsData(pagination.current_page);
       }
     } catch (err) {
       setError("فشل في جلب تفاصيل الرسالة");
@@ -208,38 +153,20 @@ const ContactsPage = () => {
 
   const handleMarkAsContacted = async (id) => {
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `${API_BASE_URL}/api/admin/${id}/mark-contacted`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      await markAsContacted(id);
 
-      if (!response.ok) throw new Error("فشل في تغيير حالة الرسالة");
-
-      const result = await response.json();
-
-      if (result.success) {
-        // تحديث البيانات فوراً
-        if (selectedContact && selectedContact.id === id) {
-          setSelectedContact((prev) => ({
-            ...prev,
-            status: "تم التواصل",
-          }));
-        }
-
-        // تحديث القائمة
-        fetchContacts(pagination.current_page);
-
-        alert('تم تغيير حالة الرسالة إلى "تم التواصل" بنجاح');
-      } else {
-        throw new Error(result.message || "خطأ غير معروف");
+      // تحديث البيانات فوراً
+      if (selectedContact && selectedContact.id === id) {
+        setSelectedContact((prev) => ({
+          ...prev,
+          status: "تم التواصل",
+        }));
       }
+
+      // تحديث القائمة
+      fetchContactsData(pagination.current_page);
+
+      alert('تم تغيير حالة الرسالة إلى "تم التواصل" بنجاح');
     } catch (err) {
       setError("فشل في تغيير حالة الرسالة");
       console.error("خطأ في تغيير حالة الرسالة:", err);
@@ -247,39 +174,14 @@ const ContactsPage = () => {
   };
 
   const handlePageChange = (page) => {
-    fetchContacts(page);
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("ar-EG", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const truncateText = (text, maxLength = 50) => {
-    if (!text) return "";
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
+    fetchContactsData(page);
   };
 
   const getStatusBadge = (status) => {
-    const statusConfig = {
-      مقروءة: { color: "bg-green-100 text-green-800", label: "مقروءة" },
-      "غير مقروءة": {
-        color: "bg-yellow-100 text-yellow-800",
-        label: "غير مقروءة",
-      },
-      "تم التواصل": { color: "bg-blue-100 text-blue-800", label: "تم التواصل" },
-    };
-
-    const config = statusConfig[status] || statusConfig["غير مقروءة"];
+    const config = getStatusConfig(status);
     return (
       <span
-        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.color}`}
+        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.badgeColor}`}
       >
         {config.label}
       </span>
@@ -333,7 +235,7 @@ const ContactsPage = () => {
             <h3 className="text-red-800 font-medium">خطأ</h3>
             <p className="text-red-700 text-sm">{error}</p>
             <button
-              onClick={() => fetchContacts(1)}
+              onClick={() => fetchContactsData(1)}
               className="mt-2 bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700 transition-colors"
             >
               إعادة المحاولة
@@ -798,7 +700,7 @@ const ContactsPage = () => {
                   </label>
                   <div className="mt-2">
                     <a
-                      href={`${API_BASE_URL}/storage/${selectedContact.file_path}`}
+                      href={getAttachmentUrl(selectedContact.file_path)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"

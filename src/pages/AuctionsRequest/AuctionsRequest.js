@@ -1,30 +1,20 @@
 import React, { useState, useEffect } from "react";
-import {
-  FiUser,
-  FiMap,
-  FiCheck,
-  FiX,
-  FiMail,
-  FiPhone,
-  FiCalendar,
-  FiFileText,
-  FiHome,
-  FiFilter,
-  FiChevronRight,
-  FiChevronLeft,
-  FiSearch,
-  FiSlash,
-  FiMessageSquare,
-  FiEdit,
-  FiRefreshCw,
-  FiNavigation,
-  FiTarget,
-  FiLayers,
-  FiImage,
-  FiClock,
-} from "react-icons/fi";
+import Icons from "../../icons/index";
 import { useQueryClient, useQuery, useMutation } from "react-query";
 import { useNavigate } from "react-router-dom";
+import MarketingFilters from "./AuctionsMarketingFilters";
+
+// استيراد جميع دوال API من الملف المنفصل
+import {
+  filtersManager,
+  fetchMarketingRequests,
+  updateRequestStatus,
+  getImageUrl,
+  formatDate,
+  getStatusText,
+  getStatusColor,
+  getStatusBadge,
+} from "../../services/marketingRequestsApi";
 
 const MarketingRequests = () => {
   const queryClient = useQueryClient();
@@ -33,28 +23,7 @@ const MarketingRequests = () => {
   // =============================================
   // 1. المتغيرات والحالات
   // =============================================
-
-  // استرجاع الفلاتر المحفوظة أو استخدام القيم الافتراضية
-  const getInitialFilters = () => {
-    const savedFilters = localStorage.getItem("marketingRequestsFilters");
-    if (savedFilters) {
-      return JSON.parse(savedFilters);
-    }
-    return {
-      search: "",
-      region: "all",
-      city: "all",
-      status: "all",
-      start_date: "",
-      end_date: "",
-      sort_by: "created_at",
-      sort_order: "desc",
-      page: 1,
-      per_page: 10,
-    };
-  };
-
-  const [filters, setFilters] = useState(getInitialFilters());
+  const [filters, setFilters] = useState(filtersManager.getInitialFilters());
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [statusModal, setStatusModal] = useState({
     show: false,
@@ -67,56 +36,33 @@ const MarketingRequests = () => {
     images: [],
   });
 
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev, [key]: value };
-
-      // إعادة ضبط الصفحة عند تغيير أي فلتر آخر غير الصفحة
-      if (key !== "page" && prev.page !== 1) {
-        newFilters.page = 1;
-      }
-
-      return newFilters;
-    });
+  // =============================================
+  // 2. معالجة الفلاتر
+  // =============================================
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
+  const handleSearch = () => {
     refetch();
   };
 
-  // 🔥 الحل: دالة مسح الفلاتر المحدثة
   const clearFilters = () => {
-    const defaultFilters = {
-      search: "",
-      region: "all",
-      city: "all",
-      status: "all",
-      start_date: "",
-      end_date: "",
-      sort_by: "created_at",
-      sort_order: "desc",
-      page: 1,
-      per_page: 10,
-    };
-
+    const defaultFilters = filtersManager.clearFilters();
     setFilters(defaultFilters);
-    localStorage.removeItem("marketingRequestsFilters");
-
-    // استخدام setTimeout لضمان تحديث state أولاً ثم إعادة الجلب
+    
     setTimeout(() => {
       refetch();
     }, 0);
   };
 
-  // 🔥 الحل: دالة تحديث البيانات المحسنة
   const handleRefresh = () => {
     refetch();
   };
 
   // حفظ الفلاتر في localStorage عند تغييرها
   useEffect(() => {
-    localStorage.setItem("marketingRequestsFilters", JSON.stringify(filters));
+    filtersManager.saveFilters(filters);
   }, [filters]);
 
   // إعادة جلب البيانات عند تغيير الفلاتر
@@ -125,155 +71,36 @@ const MarketingRequests = () => {
   }, [filters]);
 
   // =============================================
-  // 2. دوال جلب البيانات
+  // 3. جلب البيانات باستخدام React Query
   // =============================================
-
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-
-    if (filters.status && filters.status !== "all")
-      params.append("status", filters.status);
-    if (filters.search) params.append("search", filters.search);
-    if (filters.region && filters.region !== "all")
-      params.append("region", filters.region);
-    if (filters.city && filters.city !== "all")
-      params.append("city", filters.city);
-    if (filters.start_date) params.append("start_date", filters.start_date);
-    if (filters.end_date) params.append("end_date", filters.end_date);
-    if (filters.sort_by) params.append("sort_by", filters.sort_by);
-
-    params.append("page", filters.page || 1);
-    params.append("per_page", filters.per_page || 10);
-
-    return params.toString();
-  };
-
-  // استخدام React Query لجلب بيانات طلبات التسويق
-  const fetchMarketingRequests = async () => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      navigate("/login");
-      throw new Error("لم يتم العثور على رمز الدخول");
-    }
-    const queryString = buildQueryString();
-    const url = `https://core-api-x41.shaheenplus.sa/api/admin/auction-requests?${queryString}`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) throw new Error("فشل في جلب البيانات");
-
-    if (response.status === 401) {
-      localStorage.removeItem("access_token");
-      navigate("/login");
-      throw new Error("انتهت جلسة الدخول أو التوكن غير صالح");
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`فشل في جلب طلبات التسويق: ${errorText}`);
-    }
-
-    const result = await response.json();
-
-    if (result.auction_requests) {
-      // استخراج المناطق والمدن المتاحة من البيانات
-      const regions = [
-        ...new Set(
-          result.auction_requests.map((req) => req.region).filter(Boolean)
-        ),
-      ];
-      const cities = [
-        ...new Set(
-          result.auction_requests.map((req) => req.city).filter(Boolean)
-        ),
-      ];
-
-      return {
-        data: result.auction_requests,
-        pagination: {
-          current_page: filters.page,
-          last_page: Math.ceil(
-            result.auction_requests.length / filters.per_page
-          ),
-          per_page: filters.per_page,
-          total: result.auction_requests.length,
-          from: (filters.page - 1) * filters.per_page + 1,
-          to: Math.min(
-            filters.page * filters.per_page,
-            result.auction_requests.length
-          ),
-        },
-        filtersData: {
-          regions,
-          cities,
-          statuses: [
-            { value: "under_review", label: "قيد المراجعة" },
-            { value: "reviewed", label: "تمت المراجعة" },
-            { value: "auctioned", label: "تم عرض العفار في شركة المزادات" },
-            { value: "rejected", label: "مرفوض" },
-          ],
-        },
-      };
-    } else {
-      throw new Error(result.message || "هيكل البيانات غير متوقع");
-    }
-  };
-
   const {
     data: marketingRequestsData,
     isLoading,
     error,
     refetch,
-  } = useQuery(["marketingRequests", filters], fetchMarketingRequests, {
-    staleTime: 0, // البيانات تعتبر قديمة فوراً
-    cacheTime: 0, // التخلص من الكاش بعد فترة قصيرة
-    refetchOnWindowFocus: true,
-    refetchOnMount: "always", // كل مرة نركب المكون، يعيد جلب البيانات من السيرفر
-  });
+  } = useQuery(
+    ["marketingRequests", filters],
+    () => fetchMarketingRequests(filters, navigate),
+    {
+      staleTime: 0,
+      cacheTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnMount: "always",
+    }
+  );
 
-  // ✅ استخدام useMutation لتحديث حالة الطلب (نسخة محسّنة وآمنة)
+  // =============================================
+  // 4. تحديث حالة الطلب
+  // =============================================
   const statusMutation = useMutation(
-    async ({ requestId, status, message }) => {
-      const token = localStorage.getItem("access_token");
-
-      const requestBody = { status };
-      if (status === "rejected" && message) {
-        requestBody.message = message;
-      }
-
-      const response = await fetch(
-        `https://core-api-x41.shaheenplus.sa/api/admin/auction-requests/${requestId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "حدث خطأ أثناء تحديث الحالة");
-      }
-
-      return data;
-    },
+    ({ requestId, status, message }) =>
+      updateRequestStatus(requestId, status, message),
     {
       onSuccess: (data) => {
         alert(data.message || "تم تحديث حالة الطلب بنجاح");
         setSelectedRequest(null);
         closeStatusModal();
 
-        // 🔥 تحديث العنصر مباشرة في الـ state بدون إعادة fetch كامل
         queryClient.setQueryData(["marketingRequests", filters], (oldData) => {
           if (!oldData) return oldData;
 
@@ -292,11 +119,9 @@ const MarketingRequests = () => {
     }
   );
 
-  // =====================================================
-  // ⚙️ معالجة الحالات والإجراءات
-  // =====================================================
-
-  // فتح نافذة تغيير الحالة
+  // =============================================
+  // 5. دوال معالجة الحالات والإجراءات
+  // =============================================
   const openStatusModal = (requestId, newStatus) => {
     setStatusModal({
       show: true,
@@ -306,7 +131,6 @@ const MarketingRequests = () => {
     });
   };
 
-  // إغلاق نافذة الحالة
   const closeStatusModal = () => {
     setStatusModal({
       show: false,
@@ -316,7 +140,6 @@ const MarketingRequests = () => {
     });
   };
 
-  // تحديث الحالة فعليًا
   const handleStatusUpdate = async () => {
     if (!statusModal.requestId || !statusModal.newStatus) {
       alert("بيانات غير مكتملة");
@@ -349,16 +172,15 @@ const MarketingRequests = () => {
       },
       {
         onSuccess: (data) => {
-          queryClient.invalidateQueries(["marketingRequests"]); // يجبر جلب جديد من السيرفر
+          queryClient.invalidateQueries(["marketingRequests"]);
           closeStatusModal();
         },
       }
     );
   };
 
-  // 🔥 الحل: إضافة الدوال المفقودة
   const updatePagination = (page) => {
-    handleFilterChange("page", page);
+    setFilters((prev) => ({ ...prev, page }));
   };
 
   const openImageModal = (images) => {
@@ -376,95 +198,8 @@ const MarketingRequests = () => {
   };
 
   // =============================================
-  // 5. دوال المساعدة
+  // 6. دالة إنشاء الباجينيشن (تبقى في المكون لأنها تستخدم الـ JSX)
   // =============================================
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "غير محدد";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ar-SA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "under_review":
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-            قيد المراجعة
-          </span>
-        );
-      case "reviewed":
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-            تمت المراجعة
-          </span>
-        );
-      case "auctioned":
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-            تم عرض العفار في شركة المزادات
-          </span>
-        );
-      case "rejected":
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-            مرفوض
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-            {status}
-          </span>
-        );
-    }
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case "under_review":
-        return "قيد المراجعة";
-      case "reviewed":
-        return "تمت المراجعة";
-      case "auctioned":
-        return "تم عرض العقار في شركة المزادات";
-      case "rejected":
-        return "مرفوض";
-      default:
-        return status;
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "under_review":
-        return "text-yellow-600 bg-yellow-50 border-yellow-200";
-      case "reviewed":
-        return "text-blue-600 bg-blue-50 border-blue-200";
-      case "auctioned":
-        return "text-purple-600 bg-purple-50 border-purple-200";
-      case "rejected":
-        return "text-red-600 bg-red-50 border-red-200";
-      default:
-        return "text-gray-600 bg-gray-50 border-gray-200";
-    }
-  };
-
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return "";
-    if (imagePath.startsWith("http")) {
-      return imagePath;
-    }
-    return `https://core-api-x41.shaheenplus.sa/storage/${imagePath}`;
-  };
-
-  // إنشاء أزرار الباجينيشن
   const renderPagination = () => {
     if (
       !marketingRequestsData ||
@@ -490,7 +225,7 @@ const MarketingRequests = () => {
         }
         disabled={pagination.current_page === 1}
       >
-        <FiChevronRight className="w-4 h-4" />
+        <Icons.FiChevronRight className="w-4 h-4" />
       </button>
     );
 
@@ -560,7 +295,7 @@ const MarketingRequests = () => {
         }
         disabled={pagination.current_page === pagination.last_page}
       >
-        <FiChevronLeft className="w-4 h-4" />
+        <Icons.FiChevronLeft className="w-4 h-4" />
       </button>
     );
 
@@ -568,17 +303,8 @@ const MarketingRequests = () => {
   };
 
   // =============================================
-  // 6. واجهة المستخدم الرئيسية
+  // 7. تحضير البيانات للعرض
   // =============================================
-
-  const hasActiveFilters =
-    filters.search ||
-    filters.region !== "all" ||
-    filters.city !== "all" ||
-    filters.status !== "all" ||
-    filters.start_date ||
-    filters.end_date;
-
   const requests = marketingRequestsData?.data || [];
   const pagination = marketingRequestsData?.pagination || {
     current_page: filters.page,
@@ -596,6 +322,9 @@ const MarketingRequests = () => {
 
   const loading = isLoading || statusMutation.isLoading;
 
+  // =============================================
+  // 8. واجهة المستخدم
+  // =============================================
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* رأس الصفحة */}
@@ -603,7 +332,7 @@ const MarketingRequests = () => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3 space-x-reverse">
             <div className="p-3 bg-blue-100 rounded-xl">
-              <FiTarget className="w-6 h-6 text-blue-600" />
+              <Icons.FiTarget className="w-6 h-6 text-blue-600" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -621,7 +350,7 @@ const MarketingRequests = () => {
             onClick={handleRefresh}
             disabled={loading}
           >
-            <FiRefreshCw
+            <Icons.FiRefreshCw
               className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
             />
             <span>تحديث البيانات</span>
@@ -629,178 +358,18 @@ const MarketingRequests = () => {
         </div>
       </div>
 
-      {/* قسم الفلاتر والبحث */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <FiFilter className="w-5 h-5 text-gray-500" />
-              <span className="font-medium text-gray-700">
-                أدوات البحث والتصفية
-              </span>
-            </div>
-
-            {hasActiveFilters && (
-              <button
-                className="flex items-center space-x-2 space-x-reverse px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                onClick={clearFilters}
-              >
-                <FiSlash className="w-4 h-4" />
-                <span>مسح الفلاتر</span>
-              </button>
-            )}
-          </div>
-
-          {/* شريط البحث */}
-          <form onSubmit={handleSearch} className="mb-4">
-            <div className="flex space-x-3 space-x-reverse">
-              <div className="flex-1 relative">
-                <FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="ابحث باسم المستخدم أو الوصف..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <button
-                type="submit"
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-              >
-                بحث
-              </button>
-            </div>
-          </form>
-          {/* عناصر التصفية */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* فلتر المنطقة */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                المنطقة
-              </label>
-              <select
-                value={filters.region}
-                onChange={(e) => handleFilterChange("region", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                <option value="all">جميع المناطق</option>
-                <option value="الرياض">الرياض</option>
-                <option value="مكة المكرمة">مكة المكرمة</option>
-                <option value="المدينة المنورة">المدينة المنورة</option>
-                <option value="القصيم">القصيم</option>
-                <option value="الشرقية">الشرقية</option>
-                <option value="عسير">عسير</option>
-                <option value="تبوك">تبوك</option>
-                <option value="حائل">حائل</option>
-                <option value="الحدود الشمالية">الحدود الشمالية</option>
-                <option value="جازان">جازان</option>
-                <option value="نجران">نجران</option>
-                <option value="الباحة">الباحة</option>
-                <option value="الجوف">الجوف</option>
-                {filtersData.regions.map((region) => (
-                  <option key={region} value={region}>
-                    {region}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* فلتر المدينة */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                المدينة
-              </label>
-              <select
-                value={filters.city}
-                onChange={(e) => handleFilterChange("city", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                <option value="all">جميع المدن</option>
-                <option value="الرياض">الرياض</option>
-                <option value="جدة">جدة</option>
-                <option value="مكة المكرمة">مكة المكرمة</option>
-                <option value="المدينة المنورة">المدينة المنورة</option>
-                <option value="الدمام">الدمام</option>
-                <option value="الخبر">الخبر</option>
-                <option value="الظهران">الظهران</option>
-                <option value="القطيف">القطيف</option>
-                {filtersData.cities.map((city) => (
-                  <option key={city} value={city}>
-                    {city}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* فلتر الحالة */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                الحالة
-              </label>
-              <select
-                value={filters.status}
-                onChange={(e) => handleFilterChange("status", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                <option value="all">جميع الحالات</option>
-                <option value="under_review">قيد المراجعة</option>
-                <option value="reviewed">تمت المراجعة</option>
-                <option value="auctioned">
-                  تم عرض المزاد في شركة المزادات
-                </option>
-                <option value="rejected">مرفوض</option>
-              </select>
-            </div>
-
-            {/* فلتر الترتيب */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ترتيب حسب
-              </label>
-              <select
-                value={filters.sort_by}
-                onChange={(e) => handleFilterChange("sort_by", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                <option value="created_at">تاريخ الطلب</option>
-                <option value="region">المنطقة</option>
-              </select>
-            </div>
-          </div>
-
-          {/* تواريخ البداية والنهاية */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                من تاريخ
-              </label>
-              <input
-                type="date"
-                value={filters.start_date}
-                onChange={(e) =>
-                  handleFilterChange("start_date", e.target.value)
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                إلى تاريخ
-              </label>
-              <input
-                type="date"
-                value={filters.end_date}
-                onChange={(e) => handleFilterChange("end_date", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* الفلاتر */}
+      <MarketingFilters
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onSearch={handleSearch}
+        onClearFilters={clearFilters}
+        filtersData={filtersData}
+        loading={loading}
+      />
 
       {/* محتوى الصفحة الرئيسي */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
         {/* قائمة الطلبات */}
         <div className="xl:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -844,18 +413,10 @@ const MarketingRequests = () => {
                 </div>
               ) : requests.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <FiTarget className="w-16 h-16 text-gray-300 mb-4" />
+                  <Icons.FiTarget className="w-16 h-16 text-gray-300 mb-4" />
                   <p className="text-gray-500 text-lg mb-4">
                     لا توجد طلبات تسويق
                   </p>
-                  {hasActiveFilters && (
-                    <button
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      onClick={clearFilters}
-                    >
-                      مسح الفلاتر
-                    </button>
-                  )}
                 </div>
               ) : (
                 <>
@@ -873,7 +434,7 @@ const MarketingRequests = () => {
                         <div className="flex items-start space-x-4 space-x-reverse">
                           <div className="flex-shrink-0">
                             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                              <FiUser className="w-6 h-6 text-blue-600" />
+                              <Icons.FiUser className="w-6 h-6 text-blue-600" />
                             </div>
                           </div>
 
@@ -895,24 +456,24 @@ const MarketingRequests = () => {
 
                             <div className="space-y-1 text-sm text-gray-600">
                               <div className="flex items-center space-x-2 space-x-reverse">
-                                <FiMail className="w-4 h-4" />
+                                <Icons.FiMail className="w-4 h-4" />
                                 <span>{request.user?.email}</span>
                               </div>
 
                               <div className="flex items-center space-x-2 space-x-reverse">
-                                <FiNavigation className="w-4 h-4" />
+                                <Icons.FiNavigation className="w-4 h-4" />
                                 <span>
                                   {request.region} - {request.city}
                                 </span>
                               </div>
 
                               <div className="flex items-center space-x-2 space-x-reverse">
-                                <FiCalendar className="w-4 h-4" />
+                                <Icons.FiCalendar className="w-4 h-4" />
                                 <span>{formatDate(request.created_at)}</span>
                               </div>
 
                               <div className="flex items-start space-x-2 space-x-reverse">
-                                <FiMessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <Icons.FiMessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" />
                                 <span className="line-clamp-1">
                                   {request.description?.substring(0, 100)}...
                                 </span>
@@ -920,7 +481,7 @@ const MarketingRequests = () => {
 
                               {request.images && request.images.length > 0 && (
                                 <div className="flex items-center space-x-2 space-x-reverse">
-                                  <FiImage className="w-4 h-4" />
+                                  <Icons.FiImage className="w-4 h-4" />
                                   <span>
                                     {request.images.length} صورة مرفوعة
                                   </span>
@@ -969,7 +530,7 @@ const MarketingRequests = () => {
                     </h4>
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <FiUser className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <Icons.FiUser className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <div>
                           <p className="text-sm text-gray-500">الاسم</p>
                           <p className="font-medium">
@@ -979,7 +540,7 @@ const MarketingRequests = () => {
                       </div>
 
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <FiMail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <Icons.FiMail className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <div>
                           <p className="text-sm text-gray-500">
                             البريد الإلكتروني
@@ -991,7 +552,7 @@ const MarketingRequests = () => {
                       </div>
 
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <FiPhone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <Icons.FiPhone className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <div>
                           <p className="text-sm text-gray-500">رقم الهاتف</p>
                           <p className="font-medium">
@@ -1023,7 +584,7 @@ const MarketingRequests = () => {
                     </h4>
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <FiNavigation className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <Icons.FiNavigation className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <div>
                           <p className="text-sm text-gray-500">المنطقة</p>
                           <p className="font-medium">
@@ -1033,7 +594,7 @@ const MarketingRequests = () => {
                       </div>
 
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <FiHome className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <Icons.FiHome className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <div>
                           <p className="text-sm text-gray-500">المدينة</p>
                           <p className="font-medium">{selectedRequest.city}</p>
@@ -1055,7 +616,7 @@ const MarketingRequests = () => {
                       </div>
 
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <FiCalendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <Icons.FiCalendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <div>
                           <p className="text-sm text-gray-500">تاريخ الطلب</p>
                           <p className="font-medium">
@@ -1118,7 +679,7 @@ const MarketingRequests = () => {
                                 }}
                               />
                               <div className="hidden w-full h-full flex-col items-center justify-center bg-gray-200 text-gray-500">
-                                <FiImage className="w-6 h-6 mb-1" />
+                                <Icons.FiImage className="w-6 h-6 mb-1" />
                                 <span className="text-xs">
                                   تعذر تحميل الصورة
                                 </span>
@@ -1133,7 +694,6 @@ const MarketingRequests = () => {
                 {/* أزرار الإجراءات */}
                 <div className="p-6 border-t border-gray-200">
                   <div className="flex flex-col space-y-3">
-                    {/* زر: قيد المراجعة */}
                     <button
                       className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
@@ -1143,11 +703,10 @@ const MarketingRequests = () => {
                         selectedRequest.status === "under_review" || loading
                       }
                     >
-                      <FiClock className="w-4 h-4" />
+                      <Icons.FiClock className="w-4 h-4" />
                       <span>قيد المراجعة</span>
                     </button>
 
-                    {/* زر: تمت المراجعة */}
                     <button
                       className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
@@ -1157,11 +716,10 @@ const MarketingRequests = () => {
                         selectedRequest.status === "reviewed" || loading
                       }
                     >
-                      <FiCheck className="w-4 h-4" />
+                      <Icons.FiCheck className="w-4 h-4" />
                       <span>تمت المراجعة</span>
                     </button>
 
-                    {/* زر: عرض المزاد في شركة المزادات */}
                     <button
                       className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
@@ -1171,11 +729,10 @@ const MarketingRequests = () => {
                         selectedRequest.status === "auctioned" || loading
                       }
                     >
-                      <FiTarget className="w-4 h-4" />
+                      <Icons.FiTarget className="w-4 h-4" />
                       <span>تم عرض العقار في شركة المزادات</span>
                     </button>
 
-                    {/* زر: رفض الطلب */}
                     <button
                       className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
@@ -1185,7 +742,7 @@ const MarketingRequests = () => {
                         selectedRequest.status === "rejected" || loading
                       }
                     >
-                      <FiX className="w-4 h-4" />
+                      <Icons.FiX className="w-4 h-4" />
                       <span>رفض الطلب</span>
                     </button>
                   </div>
@@ -1193,7 +750,7 @@ const MarketingRequests = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FiTarget className="w-16 h-16 text-gray-300 mb-4" />
+                <Icons.FiTarget className="w-16 h-16 text-gray-300 mb-4" />
                 <p className="text-gray-500">اختر طلب تسويق لعرض التفاصيل</p>
               </div>
             )}
@@ -1202,7 +759,7 @@ const MarketingRequests = () => {
       </div>
 
       {/* ============================================= */}
-      {/* 7. المودالات */}
+      {/* 9. المودالات */}
       {/* ============================================= */}
 
       {/* مودال تغيير الحالة */}
@@ -1211,7 +768,7 @@ const MarketingRequests = () => {
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center space-x-3 space-x-reverse">
-                <FiEdit className="w-5 h-5 text-blue-600" />
+                <Icons.FiEdit className="w-5 h-5 text-blue-600" />
                 <h3 className="text-lg font-semibold text-gray-900">
                   تغيير حالة الطلب
                 </h3>
@@ -1220,12 +777,11 @@ const MarketingRequests = () => {
                 className="text-gray-400 hover:text-gray-500 transition-colors"
                 onClick={closeStatusModal}
               >
-                <FiX className="w-5 h-5" />
+                <Icons.FiX className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-6 space-y-4">
-              {/* الحالة الجديدة */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   الحالة الجديدة
@@ -1247,7 +803,6 @@ const MarketingRequests = () => {
                 </div>
               </div>
 
-              {/* سبب الرفض فقط عند الحالة rejected */}
               {statusModal.newStatus === "rejected" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1268,7 +823,6 @@ const MarketingRequests = () => {
                 </div>
               )}
 
-              {/* رسالة التأكيد */}
               <div className="bg-blue-50 p-4 rounded-lg">
                 <p className="text-blue-700 text-sm">
                   هل أنت متأكد من تغيير حالة هذا الطلب إلى{" "}
@@ -1277,7 +831,6 @@ const MarketingRequests = () => {
               </div>
             </div>
 
-            {/* الأزرار */}
             <div className="flex items-center justify-end space-x-3 space-x-reverse p-6 border-t border-gray-200">
               <button
                 className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
@@ -1295,7 +848,7 @@ const MarketingRequests = () => {
                     !statusModal.rejectionMessage.trim())
                 }
               >
-                <FiCheck className="w-4 h-4 inline ml-1" />
+                <Icons.FiCheck className="w-4 h-4 inline ml-1" />
                 {loading ? "جاري الحفظ..." : "تأكيد التغيير"}
               </button>
             </div>
@@ -1309,7 +862,7 @@ const MarketingRequests = () => {
           <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center space-x-3 space-x-reverse">
-                <FiImage className="w-5 h-5 text-blue-600" />
+                <Icons.FiImage className="w-5 h-5 text-blue-600" />
                 <h3 className="text-lg font-semibold text-gray-900">
                   معرض الصور
                 </h3>
@@ -1318,7 +871,7 @@ const MarketingRequests = () => {
                 className="text-gray-400 hover:text-gray-500 transition-colors"
                 onClick={closeImageModal}
               >
-                <FiX className="w-5 h-5" />
+                <Icons.FiX className="w-5 h-5" />
               </button>
             </div>
 
@@ -1339,7 +892,7 @@ const MarketingRequests = () => {
                       }}
                     />
                     <div className="hidden w-full h-64 flex-col items-center justify-center bg-gray-200 text-gray-500">
-                      <FiImage className="w-12 h-12 mb-2" />
+                      <Icons.FiImage className="w-12 h-12 mb-2" />
                       <span>تعذر تحميل الصورة</span>
                     </div>
                   </div>

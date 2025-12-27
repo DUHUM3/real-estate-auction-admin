@@ -18,6 +18,16 @@ import {
   Users,
 } from "lucide-react";
 
+// استيراد دوال API
+import {
+  fetchAdminsAPI,
+  fetchProfileAPI,
+  deleteAdminAPI,
+  registerAdminAPI,
+  updateProfileAPI,
+  changePasswordAPI,
+} from "../services/AdminApi";
+
 // ============ المكونات المنفصلة ============
 
 // مكون حقل الإدخال
@@ -693,182 +703,89 @@ const AdminPanel = () => {
     [checkPasswordStrength]
   );
 
-  // جلب قائمة المدراء
+  // جلب قائمة المدراء باستخدام API المنفصل
   const fetchAdmins = useCallback(async () => {
     setLoading(true);
-    try {
-      const token = localStorage.getItem("admin_token");
-      const response = await fetch(
-        "https://core-api-x41.shaheenplus.sa/api/admin/all-admins",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "حدث خطأ في جلب البيانات");
-      }
-
-      setAdmins(data.data || data || []);
-    } catch (error) {
-      setMessage({ type: "error", text: error.message });
+    setMessage({ type: "", text: "" });
+    
+    const result = await fetchAdminsAPI();
+    
+    if (result.success) {
+      setAdmins(result.data);
+    } else {
+      setMessage({ type: "error", text: result.error });
       setTimeout(() => {
         setMessage({ type: "", text: "" });
       }, 3000);
-    } finally {
-      setLoading(false);
     }
+    
+    setLoading(false);
   }, []);
 
-  // جلب بيانات البروفايل
+  // جلب بيانات البروفايل باستخدام API المنفصل
   const fetchProfile = useCallback(async () => {
     setLoading(true);
-    try {
-      const token = localStorage.getItem("admin_token");
-      const response = await fetch(
-        "https://core-api-x41.shaheenplus.sa/api/admin/profile",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "حدث خطأ في جلب البيانات");
-      }
-
-      const profile = {
-        full_name: data.data.full_name || "",
-        email: data.data.email || "",
-        phone: data.data.phone || "",
-      };
-
-      setProfileData(profile);
-      setEditProfileData(profile);
-    } catch (error) {
-      setMessage({ type: "error", text: error.message });
+    setMessage({ type: "", text: "" });
+    
+    const result = await fetchProfileAPI();
+    
+    if (result.success) {
+      setProfileData(result.data);
+      setEditProfileData(result.data);
+    } else {
+      setMessage({ type: "error", text: result.error });
       setTimeout(() => {
         setMessage({ type: "", text: "" });
       }, 3000);
-    } finally {
-      setLoading(false);
     }
+    
+    setLoading(false);
   }, []);
 
-  // حذف مدير
+  // حذف مدير باستخدام API المنفصل
   const handleDeleteAdmin = useCallback(
     async (adminId) => {
       setLoading(true);
       setMessage({ type: "", text: "" });
 
-      try {
-        const token = localStorage.getItem("admin_token");
-        const response = await fetch(
-          "https://core-api-x41.shaheenplus.sa/api/admin/delete-account",
-          {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              admin_id: adminId,
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "حدث خطأ أثناء حذف المدير");
-        }
-
+      const result = await deleteAdminAPI(adminId);
+      
+      if (result.success) {
         setMessage({ type: "success", text: "تم حذف المدير بنجاح! ✅" });
-
-        // تحديث القائمة بعد الحذف
-        fetchAdmins();
-      } catch (error) {
-        setMessage({ type: "error", text: error.message });
-      } finally {
-        setLoading(false);
-        setTimeout(() => {
-          setMessage({ type: "", text: "" });
-        }, 3000);
+        fetchAdmins(); // تحديث القائمة بعد الحذف
+      } else {
+        setMessage({ type: "error", text: result.error });
       }
+      
+      setLoading(false);
+      setTimeout(() => {
+        setMessage({ type: "", text: "" });
+      }, 3000);
     },
     [fetchAdmins]
   );
 
-  // تسجيل مدير جديد
+  // تسجيل مدير جديد باستخدام API المنفصل
   const handleRegisterSubmit = useCallback(
     async (e) => {
       e.preventDefault();
       setMessage({ type: "", text: "" });
-      setTimeout(() => {
-        setMessage({ type: "", text: "" });
-      }, 3000);
 
       if (formData.password !== formData.password_confirmation) {
         setMessage({ type: "error", text: "كلمات المرور غير متطابقة" });
         setTimeout(() => {
           setMessage({ type: "", text: "" });
         }, 3000);
-
         return;
       }
 
       setLoading(true);
-
-      try {
-        const response = await fetch(
-          "https://core-api-x41.shaheenplus.sa/api/admin/register",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              // ✅ إضافة الـ Authorization
-              Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-            },
-            body: JSON.stringify({
-              full_name: formData.full_name,
-              email: formData.email,
-              phone: formData.phone,
-              password: formData.password,
-              password_confirmation: formData.password_confirmation,
-              role: "ADMIN", // أو "SUPERADMIN" حسب ما تريد إنشاءه
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (data.errors) {
-            const firstErrorKey = Object.keys(data.errors)[0];
-            const firstErrorMessage = data.errors[firstErrorKey][0];
-            throw new Error(firstErrorMessage);
-          }
-          throw new Error(data.message || "حدث خطأ أثناء التسجيل");
-        }
-
+      const result = await registerAdminAPI(formData);
+      
+      if (result.success) {
         setMessage({ type: "success", text: "تم تسجيل المدير بنجاح! 🎉" });
-        setTimeout(() => {
-          setMessage({ type: "", text: "" });
-        }, 3000);
-
+        
+        // إعادة تعيين النموذج
         setFormData({
           full_name: "",
           email: "",
@@ -877,104 +794,73 @@ const AdminPanel = () => {
           password_confirmation: "",
         });
         setPasswordStrength(0);
-
+        
         // تحديث قائمة المدراء بعد التسجيل
         fetchAdmins();
-      } catch (error) {
-        setMessage({ type: "error", text: error.message });
-      } finally {
-        setLoading(false);
+      } else {
+        setMessage({ type: "error", text: result.error });
       }
+      
+      setLoading(false);
+      setTimeout(() => {
+        setMessage({ type: "", text: "" });
+      }, 3000);
     },
     [formData, fetchAdmins]
   );
 
-  // تحديث البروفايل
+  // تحديث البروفايل باستخدام API المنفصل
   const handleProfileUpdate = useCallback(
     async (e) => {
       e.preventDefault();
       setMessage({ type: "", text: "" });
       setLoading(true);
 
-      try {
-        const token = localStorage.getItem("admin_token");
-
-        // استخراج فقط الحقول التي تغيّرت
-        const updatedFields = {};
-        Object.keys(editProfileData).forEach((key) => {
-          if (
-            editProfileData[key] !== profileData[key] &&
-            editProfileData[key] !== ""
-          ) {
-            updatedFields[key] = editProfileData[key];
-          }
-        });
-
-        // لو لم يتغير أي شيء
-        if (Object.keys(updatedFields).length === 0) {
-          setMessage({ type: "error", text: "لم يتم تعديل أي بيانات." });
-          setTimeout(() => {
-            setMessage({ type: "", text: "" });
-          }, 3000);
-
-          setLoading(false);
-          return;
+      // استخراج فقط الحقول التي تغيّرت
+      const updatedFields = {};
+      Object.keys(editProfileData).forEach((key) => {
+        if (
+          editProfileData[key] !== profileData[key] &&
+          editProfileData[key] !== ""
+        ) {
+          updatedFields[key] = editProfileData[key];
         }
+      });
 
-        const response = await fetch(
-          "https://core-api-x41.shaheenplus.sa/api/admin/profile",
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(updatedFields),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (data.errors) {
-            const firstErrorKey = Object.keys(data.errors)[0];
-            const firstErrorMessage = data.errors[firstErrorKey][0];
-            throw new Error(firstErrorMessage);
-          }
-          throw new Error(data.message || "حدث خطأ أثناء التحديث");
-        }
-
-        setMessage({ type: "success", text: "تم تحديث البيانات بنجاح! ✨" });
-        // اجعل الرسالة تختفي بعد 3 ثواني
+      // لو لم يتغير أي شيء
+      if (Object.keys(updatedFields).length === 0) {
+        setMessage({ type: "error", text: "لم يتم تعديل أي بيانات." });
         setTimeout(() => {
           setMessage({ type: "", text: "" });
         }, 3000);
+        setLoading(false);
+        return;
+      }
 
+      const result = await updateProfileAPI(updatedFields);
+      
+      if (result.success) {
+        setMessage({ type: "success", text: "تم تحديث البيانات بنجاح! ✨" });
         // تحديث البيانات الحالية فقط بالحقول التي تغيّرت
         setProfileData((prev) => ({ ...prev, ...updatedFields }));
-
         setIsEditingProfile(false);
-      } catch (error) {
-        setMessage({ type: "error", text: error.message });
-        setTimeout(() => {
-          setMessage({ type: "", text: "" });
-        }, 3000);
-      } finally {
-        setLoading(false);
+      } else {
+        setMessage({ type: "error", text: result.error });
       }
+      
+      setLoading(false);
+      setTimeout(() => {
+        setMessage({ type: "", text: "" });
+      }, 3000);
     },
     [editProfileData, profileData]
   );
 
-  // تغيير كلمة المرور
+  // تغيير كلمة المرور باستخدام API المنفصل
   const handlePasswordChangeSubmit = useCallback(
     async (e) => {
       e.preventDefault();
       setMessage({ type: "", text: "" });
-      setTimeout(() => {
-        setMessage({ type: "", text: "" });
-      }, 3000);
 
       if (
         passwordData.new_password !== passwordData.new_password_confirmation
@@ -987,51 +873,24 @@ const AdminPanel = () => {
       }
 
       setLoading(true);
-
-      try {
-        const token = localStorage.getItem("admin_token");
-        const response = await fetch(
-          "https://core-api-x41.shaheenplus.sa/api/admin/change-password",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(passwordData),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (data.errors) {
-            const firstErrorKey = Object.keys(data.errors)[0];
-            const firstErrorMessage = data.errors[firstErrorKey][0];
-            throw new Error(firstErrorMessage);
-          }
-          throw new Error(data.message || "حدث خطأ أثناء تغيير كلمة المرور");
-        }
-
+      const result = await changePasswordAPI(passwordData);
+      
+      if (result.success) {
         setMessage({ type: "success", text: "تم تغيير كلمة المرور بنجاح! 🔐" });
-        setTimeout(() => {
-          setMessage({ type: "", text: "" });
-        }, 3000);
         setPasswordData({
           current_password: "",
           new_password: "",
           new_password_confirmation: "",
         });
         setPasswordStrength(0);
-      } catch (error) {
-        setMessage({ type: "error", text: error.message });
-        setTimeout(() => {
-          setMessage({ type: "", text: "" });
-        }, 3000);
-      } finally {
-        setLoading(false);
+      } else {
+        setMessage({ type: "error", text: result.error });
       }
+      
+      setLoading(false);
+      setTimeout(() => {
+        setMessage({ type: "", text: "" });
+      }, 3000);
     },
     [passwordData]
   );

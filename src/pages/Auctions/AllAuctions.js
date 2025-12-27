@@ -1,54 +1,16 @@
 import React, { useState, useEffect } from "react";
-import {
-  FiCalendar,
-  FiClock,
-  FiMapPin,
-  FiUser,
-  FiVideo,
-  FiImage,
-  FiFilter,
-  FiChevronRight,
-  FiChevronLeft,
-  FiExternalLink,
-  FiSearch,
-  FiSlash,
-  FiCheck,
-  FiX,
-  FiRefreshCw,
-  FiEye,
-  FiEdit,
-  FiCopy,
-} from "react-icons/fi";
-import { useQueryClient, useQuery, useMutation } from "react-query";
+import Icons from "../../icons/index";
 import { useNavigate } from "react-router-dom";
-
-/**
- * =============================================
- * فهرس المكون - Component Index
- * =============================================
- *
- * 1. State Management - إدارة الحالة
- * 2. Effects - التأثيرات الجانبية
- * 3. Clipboard Functions - دوال الحافظة
- * 4. Modal Handlers - معالجات النوافذ المنبثقة
- * 5. API Functions - دوال API
- * 6. Filter Functions - دوال التصفية
- * 7. Action Handlers - معالجات الأحداث
- * 8. Helper Functions - الدوال المساعدة
- * 9. Render Functions - دوال التصيير
- * 10. Main Component Return - العنصر الرئيسي
- *
- * =============================================
- */
+import SearchFilters from "./AuctionFilters";
+import { auctionApi, useAuctionQueries } from "../../services/AuctionApi";
 
 const AllAuctions = () => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
+  
+  // استخدام Custom Hooks من API
+  const { useFetchAuctions, useApproveAuction, useRejectAuction } = useAuctionQueries();
 
-  // ===============================
-  // 1. State Management - إدارة الحالة
-  // ===============================
-
+  // إدارة الحالة
   const getInitialFilters = () => {
     const savedFilters = localStorage.getItem("auctionsFilters");
     if (savedFilters) {
@@ -64,6 +26,7 @@ const AllAuctions = () => {
       sort_direction: "desc",
     };
   };
+
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState(getInitialFilters());
   const [selectedAuction, setSelectedAuction] = useState(null);
@@ -85,10 +48,18 @@ const AllAuctions = () => {
     owner: null,
   });
 
-  // ===============================
-  // 2. Effects - التأثيرات الجانبية
-  // ===============================
+  // استخدام Queries
+  const {
+    data: auctionsData,
+    isLoading,
+    error,
+    refetch,
+  } = useFetchAuctions(filters, currentPage);
 
+  const approveMutation = useApproveAuction();
+  const rejectMutation = useRejectAuction();
+
+  // التأثيرات الجانبية
   useEffect(() => {
     localStorage.setItem("auctionsFilters", JSON.stringify(filters));
   }, [filters]);
@@ -112,10 +83,7 @@ const AllAuctions = () => {
     }
   }, [selectedAuction]);
 
-  // ===============================
-  // 3. Clipboard Functions - دوال الحافظة
-  // ===============================
-
+  // دوال الحافظة
   const copyToClipboard = async (text, fieldName) => {
     if (!text) return;
 
@@ -156,10 +124,7 @@ const AllAuctions = () => {
     }
   };
 
-  // ===============================
-  // 4. Modal Handlers - معالجات النوافذ المنبثقة
-  // ===============================
-
+  // معالجات النوافذ المنبثقة
   const handleRefresh = async () => {
     console.log("بدء تحديث بيانات المزادات...");
     setIsRefreshing(true);
@@ -204,193 +169,7 @@ const AllAuctions = () => {
     });
   };
 
-  // ===============================
-  // 5. API Functions - دوال API
-  // ===============================
-
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-
-    if (filters.search.trim()) params.append("search", filters.search.trim());
-    if (filters.status !== "all") params.append("status", filters.status);
-    if (filters.region !== "all") params.append("region", filters.region);
-    if (filters.city !== "all") params.append("city", filters.city);
-    if (filters.date) params.append("date", filters.date);
-    if (filters.sort_field) params.append("sort_field", filters.sort_field);
-    if (filters.sort_direction)
-      params.append("sort_direction", filters.sort_direction);
-
-    params.append("page", currentPage);
-    params.append("per_page", filters.per_page); // ⚠️ استخدام القيمة من الفلاتر
-
-    return params.toString();
-  };
-
-  const fetchAuctions = async () => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      navigate("/login");
-      throw new Error("لم يتم العثور على رمز الدخول");
-    }
-
-    const queryString = buildQueryString();
-    const url = `https://core-api-x41.shaheenplus.sa/api/admin/auctions?${queryString}`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.status === 401) {
-      localStorage.removeItem("access_token");
-      navigate("/login");
-      throw new Error("انتهت جلسة الدخول أو التوكن غير صالح");
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`فشل في جلب المزادات: ${errorText}`);
-    }
-
-    const result = await response.json();
-
-    console.log("API Response:", result);
-
-    // التعديل الرئيسي هنا
-    if (result.success) {
-      return {
-        data: result.data || [],
-        pagination: result.pagination || {
-          current_page: currentPage,
-          last_page: 1,
-          per_page: 10,
-          total: result.data?.length || 0,
-          from: 1,
-          to: result.data?.length || 0,
-        },
-      };
-    } else {
-      throw new Error(result.message || "فشل في جلب البيانات");
-    }
-  };
-  const {
-    data: auctionsData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery(["auctions", filters, currentPage], fetchAuctions, {
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    onError: (error) => {
-      console.error("خطأ في جلب المزادات:", error);
-      alert("حدث خطأ أثناء جلب البيانات: " + error.message);
-    },
-  });
-  // طلب قبول المزاد
-  const approveMutation = useMutation(
-    async (auctionId) => {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("لم يتم العثور على رمز الدخول");
-
-      const response = await fetch(
-        `https://core-api-x41.shaheenplus.sa/api/admin/auctions/${auctionId}/approve`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        console.error("خطأ في تحليل JSON:", jsonError);
-        throw new Error("استجابة غير صالحة من الخادم");
-      }
-
-      if (!response.ok) {
-        throw new Error(result.message || "فشل في قبول المزاد");
-      }
-      if (!result.success) {
-        throw new Error(result.message || "فشل في قبول المزاد");
-      }
-
-      return result;
-    },
-    {
-      onSuccess: () => {
-        alert("تم قبول المزاد بنجاح");
-        setSelectedAuction(null);
-        closeRejectModal?.();
-        queryClient.invalidateQueries(["auctions"]); // هذا يكفي للتحديث الفوري
-      },
-      onError: (error) => {
-        alert(error.message);
-      },
-    }
-  );
-
-  // طلب رفض المزاد
-  const rejectMutation = useMutation(
-    async ({ auctionId, reason }) => {
-      const token = localStorage.getItem("access_token");
-      if (!token) throw new Error("لم يتم العثور على رمز الدخول");
-
-      const response = await fetch(
-        `https://core-api-x41.shaheenplus.sa/api/admin/auctions/${auctionId}/reject`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            reason: reason || "سبب الرفض غير محدد",
-          }),
-        }
-      );
-
-      let result;
-      try {
-        result = await response.json();
-      } catch (jsonError) {
-        console.error("خطأ في تحليل JSON:", jsonError);
-        throw new Error("استجابة غير صالحة من الخادم");
-      }
-
-      if (!response.ok) {
-        throw new Error(result.message || "فشل في رفض المزاد");
-      }
-      if (!result.success) {
-        throw new Error(result.message || "فشل في رفض المزاد");
-      }
-
-      return result;
-    },
-    {
-      onSuccess: () => {
-        alert("تم رفض المزاد بنجاح");
-        refetch(); // تحديث البيانات فوراً
-        setSelectedAuction(null);
-        closeRejectModal();
-        queryClient.invalidateQueries(["auctions"]); // مسح الكاش والتحديث الفوري
-      },
-      onError: (error) => {
-        alert(error.message);
-      },
-    }
-  );
-  // ===============================
-  // 6. Filter Functions - دوال التصفية
-  // ===============================
-
+  // دوال التصفية
   const handleFilterChange = (key, value) => {
     const newFilters = {
       ...filters,
@@ -424,15 +203,20 @@ const AllAuctions = () => {
     setCurrentPage(1);
   };
 
-  // ===============================
-  // 7. Action Handlers - معالجات الأحداث
-  // ===============================
-
+  // معالجات الأحداث
   const handleApprove = async (auctionId) => {
     if (!window.confirm("هل أنت متأكد من قبول هذا المزاد؟")) {
       return;
     }
-    approveMutation.mutate(auctionId);
+    
+    try {
+      await approveMutation.mutateAsync(auctionId);
+      alert("تم قبول المزاد بنجاح");
+      setSelectedAuction(null);
+      closeRejectModal?.();
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
   const handleReject = async () => {
@@ -445,20 +229,25 @@ const AllAuctions = () => {
       return;
     }
 
-    rejectMutation.mutate({
-      auctionId: rejectModal.auctionId,
-      reason: rejectModal.reason,
-    });
+    try {
+      await rejectMutation.mutateAsync({
+        auctionId: rejectModal.auctionId,
+        reason: rejectModal.reason,
+      });
+      alert("تم رفض المزاد بنجاح");
+      refetch();
+      setSelectedAuction(null);
+      closeRejectModal();
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
   const updatePagination = (newPage) => {
     setCurrentPage(newPage);
   };
 
-  // ===============================
-  // 8. Helper Functions - الدوال المساعدة
-  // ===============================
-
+  // الدوال المساعدة
   const formatDate = (dateString) => {
     if (!dateString) return "غير محدد";
     const date = new Date(dateString);
@@ -536,10 +325,7 @@ const AllAuctions = () => {
     }
   };
 
-  // ===============================
-  // 9. Render Functions - دوال التصيير
-  // ===============================
-
+  // دوال التصيير
   const renderOwnerDetails = (owner) => {
     if (!owner) return null;
 
@@ -570,7 +356,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ اسم الشركة"
                   >
-                    <FiCopy size={16} />
+                    <Icons.FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -595,7 +381,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ البريد الإلكتروني"
                   >
-                    <FiCopy size={16} />
+                    <Icons.FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -620,7 +406,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ رقم الهاتف"
                   >
-                    <FiCopy size={16} />
+                    <Icons.FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -645,7 +431,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ اسم المسؤول"
                   >
-                    <FiCopy size={16} />
+                    <Icons.FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -681,7 +467,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ السجل التجاري"
                   >
-                    <FiCopy size={16} />
+                    <Icons.FiCopy size={16} />
                   </button>
                 </div>
               </div>
@@ -705,7 +491,7 @@ const AllAuctions = () => {
                       }
                       title="نسخ رقم الترخيص"
                     >
-                      <FiCopy size={16} />
+                      <Icons.FiCopy size={16} />
                     </button>
                   </div>
                 </div>
@@ -734,7 +520,7 @@ const AllAuctions = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <FiUser size={16} />
+              <Icons.FiUser size={16} />
               الشركة المنظمة
             </label>
             <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
@@ -749,7 +535,7 @@ const AllAuctions = () => {
                   onClick={() => openOwnerModal(auction.company)}
                   title="عرض تفاصيل الشركة"
                 >
-                  <FiEye size={16} />
+                  <Icons.FiEye size={16} />
                 </button>
                 <button
                   className={`p-1 rounded transition-colors ${
@@ -766,7 +552,7 @@ const AllAuctions = () => {
                   }
                   title="نسخ اسم الشركة"
                 >
-                  <FiCopy size={16} />
+                  <Icons.FiCopy size={16} />
                 </button>
               </div>
             </div>
@@ -792,7 +578,7 @@ const AllAuctions = () => {
                   }
                   title="نسخ البريد الإلكتروني"
                 >
-                  <FiCopy size={16} />
+                  <Icons.FiCopy size={16} />
                 </button>
               )}
             </div>
@@ -818,7 +604,7 @@ const AllAuctions = () => {
                   }
                   title="نسخ رقم الهاتف"
                 >
-                  <FiCopy size={16} />
+                  <Icons.FiCopy size={16} />
                 </button>
               )}
             </div>
@@ -835,7 +621,7 @@ const AllAuctions = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <FiCalendar size={16} />
+              <Icons.FiCalendar size={16} />
               تاريخ المزاد
             </label>
             <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
@@ -857,7 +643,7 @@ const AllAuctions = () => {
                   }
                   title="نسخ تاريخ المزاد"
                 >
-                  <FiCopy size={16} />
+                  <Icons.FiCopy size={16} />
                 </button>
               )}
             </div>
@@ -865,7 +651,7 @@ const AllAuctions = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <FiClock size={16} />
+              <Icons.FiClock size={16} />
               وقت البدء
             </label>
             <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
@@ -884,7 +670,7 @@ const AllAuctions = () => {
                   }
                   title="نسخ وقت البدء"
                 >
-                  <FiCopy size={16} />
+                  <Icons.FiCopy size={16} />
                 </button>
               )}
             </div>
@@ -892,7 +678,7 @@ const AllAuctions = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <FiMapPin size={16} />
+              <Icons.FiMapPin size={16} />
               العنوان
             </label>
             <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
@@ -947,7 +733,7 @@ const AllAuctions = () => {
                   }
                   title="نسخ الإحداثيات"
                 >
-                  <FiCopy size={16} />
+                  <Icons.FiCopy size={16} />
                 </button>
               </div>
             </div>
@@ -956,7 +742,7 @@ const AllAuctions = () => {
           {auction.intro_link && (
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                <FiExternalLink size={16} />
+                <Icons.FiExternalLink size={16} />
                 رابط التعريف
               </label>
               <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
@@ -979,7 +765,7 @@ const AllAuctions = () => {
                   }
                   title="نسخ رابط التعريف"
                 >
-                  <FiCopy size={16} />
+                  <Icons.FiCopy size={16} />
                 </button>
               </div>
             </div>
@@ -1006,7 +792,7 @@ const AllAuctions = () => {
                   }
                   title="نسخ سبب الرفض"
                 >
-                  <FiCopy size={16} />
+                  <Icons.FiCopy size={16} />
                 </button>
               </div>
             </div>
@@ -1014,7 +800,7 @@ const AllAuctions = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <FiCalendar size={16} />
+              <Icons.FiCalendar size={16} />
               تاريخ الإنشاء
             </label>
             <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
@@ -1046,7 +832,7 @@ const AllAuctions = () => {
                   key={video.id || index}
                   className="flex flex-col items-center p-3 bg-white rounded border"
                 >
-                  <FiVideo className="text-gray-500 mb-1" size={24} />
+                  <Icons.FiVideo className="text-gray-500 mb-1" size={24} />
                   <span className="text-sm text-gray-700">
                     فيديو {index + 1}
                   </span>
@@ -1072,7 +858,7 @@ const AllAuctions = () => {
     const pages = [];
     const pagination = auctionsData.pagination;
 
-    console.log("Pagination data:", pagination); // للتتبع
+    console.log("Pagination data:", pagination);
 
     // زر السابق
     pages.push(
@@ -1086,7 +872,7 @@ const AllAuctions = () => {
         onClick={() => currentPage > 1 && updatePagination(currentPage - 1)}
         disabled={currentPage === 1}
       >
-        <FiChevronRight size={18} />
+        <Icons.FiChevronRight size={18} />
       </button>
     );
 
@@ -1132,7 +918,7 @@ const AllAuctions = () => {
 
     // الصفحات الوسيطة
     for (let i = startPage; i <= endPage; i++) {
-      if (i === 1 && startPage > 1) continue; // تجنب تكرار الصفحة الأولى
+      if (i === 1 && startPage > 1) continue;
 
       pages.push(
         <button
@@ -1188,7 +974,7 @@ const AllAuctions = () => {
         }
         disabled={currentPage === totalPages}
       >
-        <FiChevronLeft size={18} />
+        <Icons.FiChevronLeft size={18} />
       </button>
     );
 
@@ -1198,17 +984,8 @@ const AllAuctions = () => {
       </div>
     );
   };
-  // ===============================
-  // 10. Main Component Return - العنصر الرئيسي
-  // ===============================
 
-  const hasActiveFilters =
-    filters.search ||
-    filters.status !== "all" ||
-    filters.region !== "all" ||
-    filters.city !== "all" ||
-    filters.date;
-
+  // بيانات المكون
   const auctions = auctionsData?.data || [];
   const pagination = auctionsData?.pagination || {
     current_page: currentPage,
@@ -1219,13 +996,12 @@ const AllAuctions = () => {
     to: 0,
   };
 
-  // الآن يمكنك استخدام console.log بعد التعريف
   console.log("=== DEBUG INFO ===");
   console.log("Auctions data:", auctionsData);
   console.log("Pagination object:", auctionsData?.pagination);
   console.log("Last page:", auctionsData?.pagination?.last_page);
   console.log("Current page:", currentPage);
-  console.log("Auctions count:", auctions.length); // ✅ الآن آمن
+  console.log("Auctions count:", auctions.length);
   console.log("==================");
 
   const loading =
@@ -1234,237 +1010,30 @@ const AllAuctions = () => {
     approveMutation.isLoading ||
     rejectMutation.isLoading;
 
+  // حساب hasActiveFilters محلياً
+  const hasActiveFilters =
+    filters.search ||
+    filters.status !== "all" ||
+    filters.region !== "all" ||
+    filters.city !== "all" ||
+    filters.date;
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      {/* Filter Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
-        {/* الخلفية الخاصة بشريط الأدوات فقط */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FiFilter className="text-blue-600" size={22} />
-            <span className="text-lg font-semibold text-gray-800">
-              أدوات البحث والتصفية:
-            </span>
-          </div>
-          {hasActiveFilters && (
-            <button
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-50 text-red-700 rounded border border-red-200 hover:bg-red-100 transition-colors"
-              onClick={clearFilters}
-            >
-              <FiSlash size={16} />
-              مسح الفلاتر
-            </button>
-          )}
-        </div>
-        <form onSubmit={handleSearch} className="p-4 border-b border-gray-200">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1 relative">
-              <FiSearch
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={18}
-              />
-              <input
-                type="text"
-                placeholder="ابحث باسم المزاد أو الوصف..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              بحث
-            </button>
-            <button
-              type="button"
-              className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-              onClick={handleRefresh}
-              disabled={isRefreshing || loading}
-            >
-              <FiRefreshCw
-                className={isRefreshing ? "animate-spin" : ""}
-                size={18}
-              />
-              {isRefreshing ? "جاري التحديث..." : "تحديث البيانات"}
-            </button>
-          </div>
-        </form>
-
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              الحالة:
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange("status", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">جميع الحالات</option>
-              <option value="مفتوح">مفتوح</option>
-              <option value="قيد المراجعة">قيد المراجعة</option>
-              <option value="مغلق">مغلق</option>
-              <option value="مرفوض">مرفوض</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              المنطقة:
-            </label>
-            <select
-              value={filters.region}
-              onChange={(e) => handleFilterChange("region", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">جميع المناطق</option>
-              <option value="الرياض">الرياض</option>
-              <option value="مكة المكرمة">مكة المكرمة</option>
-              <option value="المدينة المنورة">المدينة المنورة</option>
-              <option value="القصيم">القصيم</option>
-              <option value="الشرقية">الشرقية</option>
-              <option value="عسير">عسير</option>
-              <option value="تبوك">تبوك</option>
-              <option value="حائل">حائل</option>
-              <option value="الحدود الشمالية">الحدود الشمالية</option>
-              <option value="جازان">جازان</option>
-              <option value="نجران">نجران</option>
-              <option value="الباحة">الباحة</option>
-              <option value="الجوف">الجوف</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              المدينة:
-            </label>
-            <select
-              value={filters.city}
-              onChange={(e) => handleFilterChange("city", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">جميع المدن</option>
-              <option value="الرياض">الرياض</option>
-              <option value="جدة">جدة</option>
-              <option value="مكة المكرمة">مكة المكرمة</option>
-              <option value="المدينة المنورة">المدينة المنورة</option>
-              <option value="الدمام">الدمام</option>
-              <option value="الخبر">الخبر</option>
-              <option value="الظهران">الظهران</option>
-              <option value="الجبيل">الجبيل</option>
-              <option value="القطيف">القطيف</option>
-              <option value="تبوك">تبوك</option>
-              <option value="حائل">حائل</option>
-              <option value="بريدة">بريدة</option>
-              <option value="عنيزة">عنيزة</option>
-              <option value="الرس">الرس</option>
-              <option value="خميس مشيط">خميس مشيط</option>
-              <option value="أبها">أبها</option>
-              <option value="نجران">نجران</option>
-              <option value="جازان">جازان</option>
-              <option value="بيشة">بيشة</option>
-              <option value="الباحة">الباحة</option>
-              <option value="سكاكا">سكاكا</option>
-              <option value="عرعر">عرعر</option>
-              <option value="القريات">القريات</option>
-              <option value="ينبع">ينبع</option>
-              <option value="رابغ">رابغ</option>
-              <option value="الطائف">الطائف</option>
-              <option value="محايل عسير">محايل عسير</option>
-              <option value="بلجرشي">بلجرشي</option>
-              <option value="صبيا">صبيا</option>
-              <option value="أحد رفيدة">أحد رفيدة</option>
-              <option value="تثليث">تثليث</option>
-              <option value="المجمعة">المجمعة</option>
-              <option value="الزلفي">الزلفي</option>
-              <option value="حوطة بني تميم">حوطة بني تميم</option>
-              <option value="الأحساء">الأحساء</option>
-              <option value="بقيق">بقيق</option>
-              <option value="رأس تنورة">رأس تنورة</option>
-              <option value="سيهات">سيهات</option>
-              <option value="صفوى">صفوى</option>
-              <option value="تاروت">تاروت</option>
-              <option value="النعيرية">النعيرية</option>
-              <option value="قرية العليا">قرية العليا</option>
-              <option value="الخرج">الخرج</option>
-              <option value="الدوادمي">الدوادمي</option>
-              <option value="القويعية">القويعية</option>
-              <option value="وادي الدواسر">وادي الدواسر</option>
-              <option value="الافلاج">الأفلاج</option>
-              <option value="رنية">رنية</option>
-              <option value="بيش">بيش</option>
-              <option value="الدرب">الدرب</option>
-              <option value="العارضة">العارضة</option>
-              <option value="أملج">أملج</option>
-              <option value="ضباء">ضباء</option>
-              <option value="الوجه">الوجه</option>
-              <option value="العلا">العلا</option>
-              <option value="خيبر">خيبر</option>
-              <option value="البدائع">البدائع</option>
-              <option value="الأسياح">الأسياح</option>
-              <option value="رياض الخبراء">رياض الخبراء</option>
-              <option value="النبهانية">النبهانية</option>
-              <option value="ضرما">ضرما</option>
-              <option value="حوطة سدير">حوطة سدير</option>
-              <option value="تمير">تمير</option>
-              <option value="الحوطة">الحوطة</option>
-              <option value="الحريق">الحريق</option>
-              <option value="شقراء">شقراء</option>
-              <option value="عفيف">عفيف</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              تاريخ المزاد:
-            </label>
-            <input
-              type="date"
-              value={filters.date}
-              onChange={(e) => handleFilterChange("date", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ترتيب حسب:
-            </label>
-            <select
-              value={filters.sort_field}
-              onChange={(e) => handleFilterChange("sort_field", e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="created_at">تاريخ الإنشاء</option>
-              <option value="auction_date">تاريخ المزاد</option>
-              <option value="title">اسم المزاد</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              الاتجاه:
-            </label>
-            <select
-              value={filters.sort_direction}
-              onChange={(e) =>
-                handleFilterChange("sort_direction", e.target.value)
-              }
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="desc">تنازلي</option>
-              <option value="asc">تصاعدي</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Filter Section - استخدام المكون المنفصل */}
+      <SearchFilters
+        filters={filters}
+        handleFilterChange={handleFilterChange}
+        handleSearch={handleSearch}
+        handleRefresh={handleRefresh}
+        clearFilters={clearFilters}
+        isRefreshing={isRefreshing}
+        loading={loading}
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Auctions List */}
         <div className="xl:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          {/* شريط العنوان مع الخلفية الزرقاء */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-xl font-semibold text-gray-800 mb-2 sm:mb-0">
               قائمة المزادات ({pagination.total || 0})
@@ -1506,7 +1075,7 @@ const AllAuctions = () => {
             </div>
           ) : auctions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <FiCalendar className="text-gray-400 mb-4" size={48} />
+              <Icons.FiCalendar className="text-gray-400 mb-4" size={48} />
               <p className="text-gray-600 text-lg mb-4">لا توجد مزادات</p>
               {hasActiveFilters && (
                 <button
@@ -1532,7 +1101,7 @@ const AllAuctions = () => {
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <FiCalendar className="text-blue-600" size={20} />
+                        <Icons.FiCalendar className="text-blue-600" size={20} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-lg font-medium text-gray-900 truncate">
@@ -1543,17 +1112,17 @@ const AllAuctions = () => {
                         </p>
                         <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
-                            <FiCalendar size={14} />
+                            <Icons.FiCalendar size={14} />
                             {formatDate(auction.auction_date)} -{" "}
                             {formatTime(auction.start_time)}
                           </span>
                           <span className="flex items-center gap-1">
-                            <FiMapPin size={14} />
+                            <Icons.FiMapPin size={14} />
                             {auction.address || "غير محدد"}
                           </span>
                           {auction.region && (
                             <span className="flex items-center gap-1">
-                              <FiMapPin size={14} />
+                              <Icons.FiMapPin size={14} />
                               {auction.region}
                             </span>
                           )}
@@ -1598,7 +1167,6 @@ const AllAuctions = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {selectedAuction ? (
             <div className="h-full flex flex-col">
-              {/* شريط عنوان المزاد باللون الأزرق المتدرج */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-gray-800">
                   تفاصيل المزاد
@@ -1608,9 +1176,7 @@ const AllAuctions = () => {
                 </span>
               </div>
 
-              {/* محتوى تفاصيل المزاد مع scroll عند الحاجة */}
               <div className="flex-1 overflow-y-auto p-4">
-                {/* عرض الصور في أعلى التفاصيل */}
                 <div className="space-y-4 mb-6">
                   {selectedAuction.cover_image && (
                     <div className="relative rounded-lg overflow-hidden">
@@ -1644,7 +1210,6 @@ const AllAuctions = () => {
                         </h4>
 
                         <div className="relative">
-                          {/* سهم التمرير لليسار */}
                           {selectedAuction.images.length > 4 && (
                             <button
                               className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
@@ -1654,7 +1219,7 @@ const AllAuctions = () => {
                                   .scrollBy({ left: -150, behavior: "smooth" })
                               }
                             >
-                              <FiChevronRight className="text-gray-700 text-lg" />
+                              <Icons.FiChevronRight className="text-gray-700 text-lg" />
                             </button>
                           )}
 
@@ -1695,7 +1260,6 @@ const AllAuctions = () => {
                             ))}
                           </div>
 
-                          {/* سهم التمرير لليمين */}
                           {selectedAuction.images.length > 4 && (
                             <button
                               className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
@@ -1705,7 +1269,7 @@ const AllAuctions = () => {
                                   .scrollBy({ left: 150, behavior: "smooth" })
                               }
                             >
-                              <FiChevronLeft className="text-gray-700 text-lg" />
+                              <Icons.FiChevronLeft className="text-gray-700 text-lg" />
                             </button>
                           )}
                         </div>
@@ -1713,11 +1277,9 @@ const AllAuctions = () => {
                     )}
                 </div>
 
-                {/* باقي تفاصيل المزاد */}
                 {renderAuctionDetails(selectedAuction)}
               </div>
 
-              {/* أزرار التحكم حسب حالة المزاد */}
               <div className="p-4 border-t border-gray-200">
                 <div className="flex flex-wrap gap-2">
                   {selectedAuction.status === "قيد المراجعة" && (
@@ -1727,7 +1289,7 @@ const AllAuctions = () => {
                         onClick={() => handleApprove(selectedAuction.id)}
                         disabled={loading}
                       >
-                        <FiCheck size={18} />
+                        <Icons.FiCheck size={18} />
                         {loading ? "جاري المعالجة..." : "قبول المزاد"}
                       </button>
 
@@ -1736,7 +1298,7 @@ const AllAuctions = () => {
                         onClick={() => openRejectModal(selectedAuction.id)}
                         disabled={loading}
                       >
-                        <FiX size={18} />
+                        <Icons.FiX size={18} />
                         {loading ? "جاري المعالجة..." : "رفض المزاد"}
                       </button>
                     </>
@@ -1747,7 +1309,7 @@ const AllAuctions = () => {
                       onClick={() => handleApprove(selectedAuction.id)}
                       disabled={loading}
                     >
-                      <FiCheck size={18} />
+                      <Icons.FiCheck size={18} />
                       {loading ? "جاري المعالجة..." : "قبول المزاد"}
                     </button>
                   )}
@@ -1757,7 +1319,7 @@ const AllAuctions = () => {
                       onClick={() => openRejectModal(selectedAuction.id)}
                       disabled={loading}
                     >
-                      <FiX size={18} />
+                      <Icons.FiX size={18} />
                       {loading ? "جاري المعالجة..." : "رفض المزاد"}
                     </button>
                   )}
@@ -1766,7 +1328,7 @@ const AllAuctions = () => {
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center py-12 text-center">
-              <FiCalendar className="text-gray-400 mb-4" size={48} />
+              <Icons.FiCalendar className="text-gray-400 mb-4" size={48} />
               <p className="text-gray-600 text-lg">اختر مزادًا لعرض التفاصيل</p>
             </div>
           )}
@@ -1775,11 +1337,11 @@ const AllAuctions = () => {
 
       {/* Reject Modal */}
       {rejectModal.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="Icons.FiXed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <FiEdit size={20} />
+                <Icons.FiEdit size={20} />
                 رفض المزاد
               </h3>
               <button
@@ -1824,7 +1386,7 @@ const AllAuctions = () => {
                 onClick={handleReject}
                 disabled={loading}
               >
-                <FiX size={18} />
+                <Icons.FiX size={18} />
                 {loading ? "جاري الحفظ..." : "تأكيد الرفض"}
               </button>
             </div>
@@ -1834,11 +1396,11 @@ const AllAuctions = () => {
 
       {/* Owner Modal */}
       {ownerModal.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="Icons.FiXed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <FiUser size={20} />
+                <Icons.FiUser size={20} />
                 تفاصيل الشركة
               </h3>
               <button
