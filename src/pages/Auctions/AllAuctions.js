@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import SearchFilters from "./AuctionFilters";
-import { auctionApi, useAuctionQueries } from "../../Services/AuctionApi";
+import { auctionApi, useAuctionQueries } from "../../services/AuctionApi";
 
 import { 
   FiCopy, 

@@ -38,7 +38,7 @@ import {
   getImageUrl,
   copyText,
   openImageInNewWindow,
-} from "../../Services/landsAPI";
+} from "../../services/landsAPI";
 
 const AllLands = () => {
   const queryClient = useQueryClient();

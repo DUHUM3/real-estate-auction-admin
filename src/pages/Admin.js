@@ -26,7 +26,7 @@ import {
   registerAdminAPI,
   updateProfileAPI,
   changePasswordAPI,
-} from "../Services/AdminApi";
+} from "../services/AdminApi";
 
 // ============ المكونات المنفصلة ============
 

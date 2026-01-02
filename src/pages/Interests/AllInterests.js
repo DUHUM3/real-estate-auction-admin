@@ -22,7 +22,7 @@ import {
   FiCopy,
 } from "react-icons/fi";
 import { useQuery } from "react-query";
-import { useInterestsAPI } from "../../Services/interestsAPI";
+import { useInterestsAPI } from "../../services/interestsAPI";
 
 const AllInterests = () => {
   const {

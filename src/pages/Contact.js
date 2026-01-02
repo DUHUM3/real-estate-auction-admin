@@ -9,7 +9,7 @@ import {
   formatDate,
   truncateText,
   getStatusConfig
-} from "../Services/ContactsApi";
+} from "../services/ContactsApi";
 
 const ContactsPage = () => {
   const [contacts, setContacts] = useState([]);
