@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 // استيراد الأيقونات من الملف المنفصل
 import Icons from "../icons";
 // استيراد خدمة الـ API
-import { adminService } from "../Services/SidebarApi";
+import { adminService } from "../Services/SidebarApi.js";
 
 const Sidebar = () => {
   const location = useLocation();
