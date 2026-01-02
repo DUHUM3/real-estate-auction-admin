@@ -18,7 +18,7 @@ import {
 import { useQueryClient, useQuery, useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import UsersFilters from './UsersFilters';
-import { usersApi, usersUtils } from '../../services/usersApi';
+import { usersApi, usersUtils } from '../../Services/usersApi';
 
 const AllUsers = () => {
   // =============================================

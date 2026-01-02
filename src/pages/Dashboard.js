@@ -26,7 +26,7 @@ import {
   isDataStale,
   chartColors,
   iconConfig
-} from '../services/DashboardAPI';
+} from '../Services/DashboardAPI';
 
 const Dashboard = () => {
   const { state, dispatch } = useData();

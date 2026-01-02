@@ -26,7 +26,7 @@ import {
   addClient, 
   deleteClient, 
   formatDate 
-} from '../services/ClientsManagementApi';
+} from '../Services/ClientsManagementApi';
 
 const ClientsManagement = () => {
   const queryClient = useQueryClient();

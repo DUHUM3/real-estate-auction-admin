@@ -14,7 +14,7 @@ import {
   getStatusText,
   getStatusColor,
   getStatusBadge,
-} from "../../services/marketingRequestsApi";
+} from "../../Services/marketingRequestsApi";
 
 const MarketingRequests = () => {
   const queryClient = useQueryClient();

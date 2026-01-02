@@ -1,16 +1,32 @@
 import React, { useState, useEffect } from "react";
-import Icons from "../../icons/index";
 import { useNavigate } from "react-router-dom";
 import SearchFilters from "./AuctionFilters";
-import { auctionApi, useAuctionQueries } from "../../services/AuctionApi";
+import { auctionApi, useAuctionQueries } from "../../Services/AuctionApi";
+
+import { 
+  FiCopy, 
+  FiCalendar, 
+  FiMapPin, 
+  FiEye, 
+  FiUser, 
+  FiImage, 
+  FiVideo, 
+  FiMaximize2, 
+  FiChevronRight, 
+  FiChevronLeft, 
+  FiCheck, 
+  FiX, 
+  FiEdit 
+} from 'react-icons/fi';
+
+
+
 
 const AllAuctions = () => {
   const navigate = useNavigate();
   
-  // استخدام Custom Hooks من API
   const { useFetchAuctions, useApproveAuction, useRejectAuction } = useAuctionQueries();
 
-  // إدارة الحالة
   const getInitialFilters = () => {
     const savedFilters = localStorage.getItem("auctionsFilters");
     if (savedFilters) {
@@ -26,7 +42,7 @@ const AllAuctions = () => {
       sort_direction: "desc",
     };
   };
-
+  
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState(getInitialFilters());
   const [selectedAuction, setSelectedAuction] = useState(null);
@@ -48,7 +64,13 @@ const AllAuctions = () => {
     owner: null,
   });
 
-  // استخدام Queries
+  const [mediaModal, setMediaModal] = useState({
+    show: false,
+    type: null, // 'image' or 'video'
+    items: [],
+    currentIndex: 0,
+  });
+
   const {
     data: auctionsData,
     isLoading,
@@ -59,7 +81,6 @@ const AllAuctions = () => {
   const approveMutation = useApproveAuction();
   const rejectMutation = useRejectAuction();
 
-  // التأثيرات الجانبية
   useEffect(() => {
     localStorage.setItem("auctionsFilters", JSON.stringify(filters));
   }, [filters]);
@@ -82,8 +103,8 @@ const AllAuctions = () => {
       localStorage.removeItem("selectedAuction");
     }
   }, [selectedAuction]);
+  
 
-  // دوال الحافظة
   const copyToClipboard = async (text, fieldName) => {
     if (!text) return;
 
@@ -124,7 +145,6 @@ const AllAuctions = () => {
     }
   };
 
-  // معالجات النوافذ المنبثقة
   const handleRefresh = async () => {
     console.log("بدء تحديث بيانات المزادات...");
     setIsRefreshing(true);
@@ -169,7 +189,24 @@ const AllAuctions = () => {
     });
   };
 
-  // دوال التصفية
+  const openMediaModal = (type, items, startIndex = 0) => {
+    setMediaModal({
+      show: true,
+      type,
+      items,
+      currentIndex: startIndex,
+    });
+  };
+
+  const closeMediaModal = () => {
+    setMediaModal({
+      show: false,
+      type: null,
+      items: [],
+      currentIndex: 0,
+    });
+  };
+
   const handleFilterChange = (key, value) => {
     const newFilters = {
       ...filters,
@@ -203,7 +240,6 @@ const AllAuctions = () => {
     setCurrentPage(1);
   };
 
-  // معالجات الأحداث
   const handleApprove = async (auctionId) => {
     if (!window.confirm("هل أنت متأكد من قبول هذا المزاد؟")) {
       return;
@@ -247,7 +283,6 @@ const AllAuctions = () => {
     setCurrentPage(newPage);
   };
 
-  // الدوال المساعدة
   const formatDate = (dateString) => {
     if (!dateString) return "غير محدد";
     const date = new Date(dateString);
@@ -255,6 +290,18 @@ const AllAuctions = () => {
       year: "numeric",
       month: "long",
       day: "numeric",
+    });
+  };
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "غير محدد";
+    const date = new Date(dateString);
+    return date.toLocaleString("ar-SA", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -325,7 +372,6 @@ const AllAuctions = () => {
     }
   };
 
-  // دوال التصيير
   const renderOwnerDetails = (owner) => {
     if (!owner) return null;
 
@@ -356,7 +402,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ اسم الشركة"
                   >
-                    <Icons.FiCopy size={16} />
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -381,7 +427,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ البريد الإلكتروني"
                   >
-                    <Icons.FiCopy size={16} />
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -406,7 +452,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ رقم الهاتف"
                   >
-                    <Icons.FiCopy size={16} />
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -431,7 +477,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ اسم المسؤول"
                   >
-                    <Icons.FiCopy size={16} />
+                    <FiCopy size={16} />
                   </button>
                 )}
               </div>
@@ -467,7 +513,7 @@ const AllAuctions = () => {
                     }
                     title="نسخ السجل التجاري"
                   >
-                    <Icons.FiCopy size={16} />
+                    <FiCopy size={16} />
                   </button>
                 </div>
               </div>
@@ -491,7 +537,7 @@ const AllAuctions = () => {
                       }
                       title="نسخ رقم الترخيص"
                     >
-                      <Icons.FiCopy size={16} />
+                      <FiCopy size={16} />
                     </button>
                   </div>
                 </div>
@@ -505,342 +551,472 @@ const AllAuctions = () => {
 
   const renderAuctionDetails = (auction) => {
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              العنوان
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {auction.title || "غير محدد"}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Icons.FiUser size={16} />
-              الشركة المنظمة
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {auction.company?.auction_name ||
-                  auction.company?.user?.full_name ||
-                  "غير محدد"}
-              </span>
-              <div className="flex gap-1">
-                <button
-                  className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                  onClick={() => openOwnerModal(auction.company)}
-                  title="عرض تفاصيل الشركة"
-                >
-                  <Icons.FiEye size={16} />
-                </button>
-                <button
-                  className={`p-1 rounded transition-colors ${
-                    copyStatus["company_info"]
-                      ? "text-green-600 bg-green-50"
-                      : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(
-                      auction.company?.auction_name ||
-                        auction.company?.user?.full_name,
-                      "company_info"
-                    )
-                  }
-                  title="نسخ اسم الشركة"
-                >
-                  <Icons.FiCopy size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              البريد الإلكتروني
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {auction.company?.user?.email || "غير محدد"}
-              </span>
-              {auction.company?.user?.email && (
-                <button
-                  className={`p-1 rounded transition-colors ${
-                    copyStatus["auction_email"]
-                      ? "text-green-600 bg-green-50"
-                      : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(auction.company.user.email, "auction_email")
-                  }
-                  title="نسخ البريد الإلكتروني"
-                >
-                  <Icons.FiCopy size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              الهاتف
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {auction.company?.user?.phone || "غير محدد"}
-              </span>
-              {auction.company?.user?.phone && (
-                <button
-                  className={`p-1 rounded transition-colors ${
-                    copyStatus["auction_phone"]
-                      ? "text-green-600 bg-green-50"
-                      : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(auction.company.user.phone, "auction_phone")
-                  }
-                  title="نسخ رقم الهاتف"
-                >
-                  <Icons.FiCopy size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              الحالة
-            </label>
-            <div className="bg-gray-50 p-2 rounded">
-              {getStatusBadge(auction.status)}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Icons.FiCalendar size={16} />
-              تاريخ المزاد
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {formatDate(auction.auction_date)}
-              </span>
-              {auction.auction_date && (
-                <button
-                  className={`p-1 rounded transition-colors ${
-                    copyStatus["auction_date"]
-                      ? "text-green-600 bg-green-50"
-                      : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(
-                      formatDate(auction.auction_date),
-                      "auction_date"
-                    )
-                  }
-                  title="نسخ تاريخ المزاد"
-                >
-                  <Icons.FiCopy size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Icons.FiClock size={16} />
-              وقت البدء
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {formatTime(auction.start_time)}
-              </span>
-              {auction.start_time && (
-                <button
-                  className={`p-1 rounded transition-colors ${
-                    copyStatus["start_time"]
-                      ? "text-green-600 bg-green-50"
-                      : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(auction.start_time, "start_time")
-                  }
-                  title="نسخ وقت البدء"
-                >
-                  <Icons.FiCopy size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Icons.FiMapPin size={16} />
-              العنوان
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {auction.address || "غير محدد"}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              المنطقة
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {auction.region || "غير محدد"}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              المدينة
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {auction.city || "غير محدد"}
-              </span>
-            </div>
-          </div>
-
-          {auction.latitude && auction.longitude && (
-            <div className="md:col-span-2">
+      <div className="space-y-6">
+        {/* معلومات أساسية */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
+            المعلومات الأساسية
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                الإحداثيات
+                رقم المزاد
               </label>
-              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                <span className="text-gray-800">
-                  {auction.latitude}, {auction.longitude}
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800 font-semibold">
+                  #{auction.id}
                 </span>
                 <button
                   className={`p-1 rounded transition-colors ${
-                    copyStatus["coordinates"]
+                    copyStatus["auction_id"]
                       ? "text-green-600 bg-green-50"
                       : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
                   }`}
-                  onClick={() =>
-                    copyToClipboard(
-                      `${auction.latitude}, ${auction.longitude}`,
-                      "coordinates"
-                    )
-                  }
-                  title="نسخ الإحداثيات"
+                  onClick={() => copyToClipboard(auction.id, "auction_id")}
+                  title="نسخ رقم المزاد"
                 >
-                  <Icons.FiCopy size={16} />
+                  <FiCopy size={16} />
                 </button>
               </div>
             </div>
-          )}
 
-          {auction.intro_link && (
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                <Icons.FiExternalLink size={16} />
-                رابط التعريف
-              </label>
-              <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                <a
-                  href={auction.intro_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 truncate"
-                >
-                  {auction.intro_link}
-                </a>
-                <button
-                  className={`p-1 rounded transition-colors ${
-                    copyStatus["intro_link"]
-                      ? "text-green-600 bg-green-50"
-                      : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(auction.intro_link, "intro_link")
-                  }
-                  title="نسخ رابط التعريف"
-                >
-                  <Icons.FiCopy size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {auction.rejection_reason && (
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                سبب الرفض
+                العنوان
               </label>
-              <div className="flex items-center justify-between bg-red-50 p-2 rounded border border-red-200">
-                <span className="text-red-800">{auction.rejection_reason}</span>
-                <button
-                  className={`p-1 rounded transition-colors ${
-                    copyStatus["rejection_reason"]
-                      ? "text-green-600 bg-green-50"
-                      : "text-red-500 hover:text-red-700 hover:bg-red-100"
-                  }`}
-                  onClick={() =>
-                    copyToClipboard(
-                      auction.rejection_reason,
-                      "rejection_reason"
-                    )
-                  }
-                  title="نسخ سبب الرفض"
-                >
-                  <Icons.FiCopy size={16} />
-                </button>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">
+                  {auction.title || "غير محدد"}
+                </span>
+                {auction.title && (
+                  <button
+                    className={`p-1 rounded transition-colors ${
+                      copyStatus["title"]
+                        ? "text-green-600 bg-green-50"
+                        : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+                    }`}
+                    onClick={() => copyToClipboard(auction.title, "title")}
+                    title="نسخ العنوان"
+                  >
+                    <FiCopy size={16} />
+                  </button>
+                )}
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Icons.FiCalendar size={16} />
-              تاريخ الإنشاء
-            </label>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
-              <span className="text-gray-800">
-                {formatDate(auction.created_at)}
-              </span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                الحالة
+              </label>
+              <div className="bg-white p-2 rounded border">
+                {getStatusBadge(auction.status)}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <FiCalendar size={16} />
+                تاريخ المزاد
+              </label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">
+                  {formatDate(auction.auction_date)}
+                </span>
+                {auction.auction_date && (
+                  <button
+                    className={`p-1 rounded transition-colors ${
+                      copyStatus["auction_date"]
+                        ? "text-green-600 bg-green-50"
+                        : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+                    }`}
+                    onClick={() =>
+                      copyToClipboard(
+                        formatDate(auction.auction_date),
+                        "auction_date"
+                      )
+                    }
+                    title="نسخ تاريخ المزاد"
+                  >
+                    <FiCopy size={16} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            الوصف
-          </label>
-          <div className="bg-gray-50 p-3 rounded border">
-            <p className="text-gray-800">
-              {auction.description || "لا يوجد وصف"}
-            </p>
+        {/* معلومات الموقع */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
+            <FiMapPin size={18} />
+            معلومات الموقع
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                العنوان
+              </label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">
+                  {auction.address || "غير محدد"}
+                </span>
+                {auction.address && (
+                  <button
+                    className={`p-1 rounded transition-colors ${
+                      copyStatus["address"]
+                        ? "text-green-600 bg-green-50"
+                        : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+                    }`}
+                    onClick={() => copyToClipboard(auction.address, "address")}
+                    title="نسخ العنوان"
+                  >
+                    <FiCopy size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-        {auction.videos && auction.videos.length > 0 && (
+
+        {/* معلومات الشركة */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2">
+            <FiUser size={18} />
+            معلومات الشركة المنظمة
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                اسم الشركة
+              </label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">
+                  {auction.company?.auction_name || "غير محدد"}
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    onClick={() => openOwnerModal(auction.company)}
+                    title="عرض تفاصيل الشركة"
+                  >
+                    <FiEye size={16} />
+                  </button>
+                  {auction.company?.auction_name && (
+                    <button
+                      className={`p-1 rounded transition-colors ${
+                        copyStatus["company_info"]
+                          ? "text-green-600 bg-green-50"
+                          : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+                      }`}
+                      onClick={() =>
+                        copyToClipboard(
+                          auction.company.auction_name,
+                          "company_info"
+                        )
+                      }
+                      title="نسخ اسم الشركة"
+                    >
+                      <FiCopy size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                اسم المسؤول
+              </label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">
+                  {auction.company?.user?.full_name || "غير محدد"}
+                </span>
+                {auction.company?.user?.full_name && (
+                  <button
+                    className={`p-1 rounded transition-colors ${
+                      copyStatus["user_name"]
+                        ? "text-green-600 bg-green-50"
+                        : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+                    }`}
+                    onClick={() =>
+                      copyToClipboard(
+                        auction.company.user.full_name,
+                        "user_name"
+                      )
+                    }
+                    title="نسخ اسم المسؤول"
+                  >
+                    <FiCopy size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                البريد الإلكتروني
+              </label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800 text-sm">
+                  {auction.company?.user?.email || "غير محدد"}
+                </span>
+                {auction.company?.user?.email && (
+                  <button
+                    className={`p-1 rounded transition-colors ${
+                      copyStatus["auction_email"]
+                        ? "text-green-600 bg-green-50"
+                        : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+                    }`}
+                    onClick={() =>
+                      copyToClipboard(
+                        auction.company.user.email,
+                        "auction_email"
+                      )
+                    }
+                    title="نسخ البريد الإلكتروني"
+                  >
+                    <FiCopy size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                الهاتف
+              </label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800">
+                  {auction.company?.user?.phone || "غير محدد"}
+                </span>
+                {auction.company?.user?.phone && (
+                  <button
+                    className={`p-1 rounded transition-colors ${
+                      copyStatus["auction_phone"]
+                        ? "text-green-600 bg-green-50"
+                        : "text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+                    }`}
+                    onClick={() =>
+                      copyToClipboard(
+                        auction.company.user.phone,
+                        "auction_phone"
+                      )
+                    }
+                    title="نسخ رقم الهاتف"
+                  >
+                    <FiCopy size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* الوصف */}
+        {auction.description && (
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="text-lg font-semibold text-gray-800 mb-3">
-              فيديوهات المزاد ({auction.videos.length})
+            <h4 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">
+              الوصف
+            </h4>
+            <div className="bg-white p-3 rounded border">
+              <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                {auction.description}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* سبب الرفض */}
+        {auction.rejection_reason && (
+          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+            <h4 className="text-lg font-semibold text-red-800 mb-3 border-b border-red-200 pb-2">
+              سبب الرفض
+            </h4>
+            <div className="flex items-start justify-between bg-white p-3 rounded border border-red-200">
+              <p className="text-red-800 leading-relaxed">
+                {auction.rejection_reason}
+              </p>
+              <button
+                className={`p-1 rounded transition-colors flex-shrink-0 mr-2 ${
+                  copyStatus["rejection_reason"]
+                    ? "text-green-600 bg-green-50"
+                    : "text-red-500 hover:text-red-700 hover:bg-red-100"
+                }`}
+                onClick={() =>
+                  copyToClipboard(auction.rejection_reason, "rejection_reason")
+                }
+                title="نسخ سبب الرفض"
+              >
+                <FiCopy size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* الصور */}
+        {auction.images && auction.images.length > 0 && (
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FiImage size={18} />
+                صور المزاد ({auction.images.length})
+              </span>
+              <button
+                onClick={() =>
+                  openMediaModal(
+                    "image",
+                    auction.images.map((img) => ({
+                      url: `https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`,
+                      id: img.id,
+                    })),
+                    0
+                  )
+                }
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <FiMaximize2 size={14} />
+                عرض الكل
+              </button>
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {auction.videos.map((video, index) => (
+              {auction.images.map((img, index) => (
                 <div
-                  key={video.id || index}
-                  className="flex flex-col items-center p-3 bg-white rounded border"
+                  key={img.id}
+                  className="relative group cursor-pointer rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-all duration-300"
+                  onClick={() =>
+                    openMediaModal(
+                      "image",
+                      auction.images.map((img) => ({
+                        url: `https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`,
+                        id: img.id,
+                      })),
+                      index
+                    )
+                  }
                 >
-                  <Icons.FiVideo className="text-gray-500 mb-1" size={24} />
-                  <span className="text-sm text-gray-700">
-                    فيديو {index + 1}
-                  </span>
+                  <img
+                    src={`https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`}
+                    alt={`صورة ${index + 1}`}
+                    className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-300"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src =
+                        "https://via.placeholder.com/200x150?text=صورة+غير+متوفرة";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
+                    <FiMaximize2
+                      className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      size={24}
+                    />
+                  </div>
+                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+                    {index + 1} / {auction.images.length}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        {/* الفيديوهات */}
+        {auction.videos && auction.videos.length > 0 && (
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FiVideo size={18} />
+                فيديوهات المزاد ({auction.videos.length})
+              </span>
+              <button
+                onClick={() =>
+                  openMediaModal(
+                    "video",
+                    auction.videos.map((vid) => ({
+                      url: `https://core-api-x41.shaheenplus.sa/storage/${vid.video_path}`,
+                      id: vid.id,
+                    })),
+                    0
+                  )
+                }
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <FiMaximize2 size={14} />
+                عرض الكل
+              </button>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {auction.videos.map((video, index) => (
+                <div
+                  key={video.id}
+                  className="relative group rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-all duration-300 bg-black"
+                >
+                  <video
+                    src={`https://core-api-x41.shaheenplus.sa/storage/${video.video_path}`}
+                    className="w-full h-48 object-contain"
+                    controls
+                    preload="metadata"
+                    onError={(e) => {
+                      console.error("Video load error:", e);
+                    }}
+                  >
+                    متصفحك لا يدعم تشغيل الفيديو
+                  </video>
+                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                    <FiVideo size={12} />
+                    فيديو {index + 1}
+                  </div>
+                  <button
+                    onClick={() =>
+                      openMediaModal(
+                        "video",
+                        auction.videos.map((vid) => ({
+                          url: `https://core-api-x41.shaheenplus.sa/storage/${vid.video_path}`,
+                          id: vid.id,
+                        })),
+                        index
+                      )
+                    }
+                    className="absolute top-2 right-2 bg-black bg-opacity-75 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    title="تكبير"
+                  >
+                    <FiMaximize2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* معلومات النظام */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
+            معلومات النظام
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                تاريخ الإنشاء
+              </label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800 text-sm">
+                  {formatDateTime(auction.created_at)}
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                آخر تحديث
+              </label>
+              <div className="flex items-center justify-between bg-white p-2 rounded border">
+                <span className="text-gray-800 text-sm">
+                  {formatDateTime(auction.updated_at)}
+                </span>
+              </div>
+            </div>
+            <div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -851,16 +1027,12 @@ const AllAuctions = () => {
       !auctionsData.pagination ||
       auctionsData.pagination.last_page <= 1
     ) {
-      console.log("No pagination data:", auctionsData?.pagination);
       return null;
     }
 
     const pages = [];
     const pagination = auctionsData.pagination;
 
-    console.log("Pagination data:", pagination);
-
-    // زر السابق
     pages.push(
       <button
         key="prev"
@@ -872,17 +1044,15 @@ const AllAuctions = () => {
         onClick={() => currentPage > 1 && updatePagination(currentPage - 1)}
         disabled={currentPage === 1}
       >
-        <Icons.FiChevronRight size={18} />
+        <FiChevronRight size={18} />
       </button>
     );
 
-    // أزرار الصفحات
     const totalPages = pagination.last_page;
     const current = currentPage;
     let startPage = Math.max(1, current - 2);
     let endPage = Math.min(totalPages, current + 2);
 
-    // تأكد من عرض 5 أزرار إن أمكن
     if (endPage - startPage < 4) {
       if (current < 3) {
         endPage = Math.min(totalPages, 5);
@@ -891,7 +1061,6 @@ const AllAuctions = () => {
       }
     }
 
-    // الصفحة الأولى
     if (startPage > 1) {
       pages.push(
         <button
@@ -916,7 +1085,6 @@ const AllAuctions = () => {
       }
     }
 
-    // الصفحات الوسيطة
     for (let i = startPage; i <= endPage; i++) {
       if (i === 1 && startPage > 1) continue;
 
@@ -935,7 +1103,6 @@ const AllAuctions = () => {
       );
     }
 
-    // الصفحة الأخيرة
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) {
         pages.push(
@@ -960,7 +1127,6 @@ const AllAuctions = () => {
       );
     }
 
-    // زر التالي
     pages.push(
       <button
         key="next"
@@ -974,7 +1140,7 @@ const AllAuctions = () => {
         }
         disabled={currentPage === totalPages}
       >
-        <Icons.FiChevronLeft size={18} />
+        <FiChevronLeft size={18} />
       </button>
     );
 
@@ -985,7 +1151,6 @@ const AllAuctions = () => {
     );
   };
 
-  // بيانات المكون
   const auctions = auctionsData?.data || [];
   const pagination = auctionsData?.pagination || {
     current_page: currentPage,
@@ -996,21 +1161,12 @@ const AllAuctions = () => {
     to: 0,
   };
 
-  console.log("=== DEBUG INFO ===");
-  console.log("Auctions data:", auctionsData);
-  console.log("Pagination object:", auctionsData?.pagination);
-  console.log("Last page:", auctionsData?.pagination?.last_page);
-  console.log("Current page:", currentPage);
-  console.log("Auctions count:", auctions.length);
-  console.log("==================");
-
   const loading =
     isLoading ||
     isRefreshing ||
     approveMutation.isLoading ||
     rejectMutation.isLoading;
 
-  // حساب hasActiveFilters محلياً
   const hasActiveFilters =
     filters.search ||
     filters.status !== "all" ||
@@ -1020,7 +1176,6 @@ const AllAuctions = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      {/* Filter Section - استخدام المكون المنفصل */}
       <SearchFilters
         filters={filters}
         handleFilterChange={handleFilterChange}
@@ -1075,7 +1230,7 @@ const AllAuctions = () => {
             </div>
           ) : auctions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Icons.FiCalendar className="text-gray-400 mb-4" size={48} />
+              <FiCalendar className="text-gray-400 mb-4" size={48} />
               <p className="text-gray-600 text-lg mb-4">لا توجد مزادات</p>
               {hasActiveFilters && (
                 <button
@@ -1101,7 +1256,7 @@ const AllAuctions = () => {
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Icons.FiCalendar className="text-blue-600" size={20} />
+                        <FiCalendar className="text-blue-600" size={20} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-lg font-medium text-gray-900 truncate">
@@ -1112,41 +1267,23 @@ const AllAuctions = () => {
                         </p>
                         <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
-                            <Icons.FiCalendar size={14} />
-                            {formatDate(auction.auction_date)} -{" "}
-                            {formatTime(auction.start_time)}
+                            <FiCalendar size={14} />
+                            {formatDate(auction.auction_date)}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Icons.FiMapPin size={14} />
+                            <FiMapPin size={14} />
                             {auction.address || "غير محدد"}
                           </span>
-                          {auction.region && (
-                            <span className="flex items-center gap-1">
-                              <Icons.FiMapPin size={14} />
-                              {auction.region}
-                            </span>
-                          )}
                         </div>
                       </div>
-                      <div
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          auction.status === "مفتوح"
-                            ? "bg-green-100 text-green-800"
-                            : auction.status === "مرفوض"
-                            ? "bg-red-100 text-red-800"
-                            : auction.status === "مغلق"
-                            ? "bg-gray-100 text-gray-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {getStatusText(auction.status)}
+                      <div className="flex-shrink-0">
+                        {getStatusBadge(auction.status)}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Pagination */}
               {pagination.last_page > 1 && (
                 <div className="p-4 border-t border-gray-200">
                   <div className="flex flex-col items-center gap-4">
@@ -1163,6 +1300,7 @@ const AllAuctions = () => {
             </>
           )}
         </div>
+
         {/* Auction Details */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {selectedAuction ? (
@@ -1177,106 +1315,6 @@ const AllAuctions = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4 mb-6">
-                  {selectedAuction.cover_image && (
-                    <div className="relative rounded-lg overflow-hidden">
-                      <img
-                        src={`https://core-api-x41.shaheenplus.sa/storage/${selectedAuction.cover_image}`}
-                        alt={selectedAuction.title}
-                        className="w-full h-56 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() =>
-                          window.open(
-                            `https://core-api-x41.shaheenplus.sa/storage/${selectedAuction.cover_image}`,
-                            "_blank"
-                          )
-                        }
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src =
-                            "https://via.placeholder.com/600x300?text=صورة+رئيسية";
-                        }}
-                      />
-                      <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                        الصورة الرئيسية
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedAuction.images &&
-                    selectedAuction.images.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-gray-700 mb-2">
-                          الصور الإضافية ({selectedAuction.images.length})
-                        </h4>
-
-                        <div className="relative">
-                          {selectedAuction.images.length > 4 && (
-                            <button
-                              className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
-                              onClick={() =>
-                                document
-                                  .getElementById("auction-images-scroll")
-                                  .scrollBy({ left: -150, behavior: "smooth" })
-                              }
-                            >
-                              <Icons.FiChevronRight className="text-gray-700 text-lg" />
-                            </button>
-                          )}
-
-                          <div
-                            id="auction-images-scroll"
-                            className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide"
-                            style={{
-                              scrollbarWidth: "none",
-                              msOverflowStyle: "none",
-                            }}
-                          >
-                            {selectedAuction.images.map((img, index) => (
-                              <div key={img.id} className="flex-shrink-0 w-32">
-                                <div className="relative">
-                                  <img
-                                    src={`https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`}
-                                    alt={`صورة ${index + 1} - ${
-                                      selectedAuction.title
-                                    }`}
-                                    className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                    onClick={() =>
-                                      window.open(
-                                        `https://core-api-x41.shaheenplus.sa/storage/${img.image_path}`,
-                                        "_blank"
-                                      )
-                                    }
-                                    onError={(e) => {
-                                      e.target.onerror = null;
-                                      e.target.src =
-                                        "https://via.placeholder.com/128x96?text=صورة+إضافية";
-                                    }}
-                                  />
-                                  <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
-                                    {index + 1}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          {selectedAuction.images.length > 4 && (
-                            <button
-                              className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/80 hover:bg-white rounded-full p-1 shadow-md"
-                              onClick={() =>
-                                document
-                                  .getElementById("auction-images-scroll")
-                                  .scrollBy({ left: 150, behavior: "smooth" })
-                              }
-                            >
-                              <Icons.FiChevronLeft className="text-gray-700 text-lg" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                </div>
-
                 {renderAuctionDetails(selectedAuction)}
               </div>
 
@@ -1289,7 +1327,7 @@ const AllAuctions = () => {
                         onClick={() => handleApprove(selectedAuction.id)}
                         disabled={loading}
                       >
-                        <Icons.FiCheck size={18} />
+                        <FiCheck size={18} />
                         {loading ? "جاري المعالجة..." : "قبول المزاد"}
                       </button>
 
@@ -1298,7 +1336,7 @@ const AllAuctions = () => {
                         onClick={() => openRejectModal(selectedAuction.id)}
                         disabled={loading}
                       >
-                        <Icons.FiX size={18} />
+                        <FiX size={18} />
                         {loading ? "جاري المعالجة..." : "رفض المزاد"}
                       </button>
                     </>
@@ -1309,7 +1347,7 @@ const AllAuctions = () => {
                       onClick={() => handleApprove(selectedAuction.id)}
                       disabled={loading}
                     >
-                      <Icons.FiCheck size={18} />
+                      <FiCheck size={18} />
                       {loading ? "جاري المعالجة..." : "قبول المزاد"}
                     </button>
                   )}
@@ -1319,7 +1357,7 @@ const AllAuctions = () => {
                       onClick={() => openRejectModal(selectedAuction.id)}
                       disabled={loading}
                     >
-                      <Icons.FiX size={18} />
+                      <FiX size={18} />
                       {loading ? "جاري المعالجة..." : "رفض المزاد"}
                     </button>
                   )}
@@ -1328,20 +1366,137 @@ const AllAuctions = () => {
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center py-12 text-center">
-              <Icons.FiCalendar className="text-gray-400 mb-4" size={48} />
+              <FiCalendar className="text-gray-400 mb-4" size={48} />
               <p className="text-gray-600 text-lg">اختر مزادًا لعرض التفاصيل</p>
             </div>
           )}
         </div>
       </div>
 
+      {/* Media Modal */}
+      {mediaModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50">
+          <div className="relative w-full max-w-5xl h-full max-h-screen flex flex-col">
+            <div className="flex items-center justify-between p-4 bg-black bg-opacity-50">
+              <h3 className="text-white text-lg font-semibold">
+                {mediaModal.type === "image" ? "الصور" : "الفيديوهات"} (
+                {mediaModal.currentIndex + 1} / {mediaModal.items.length})
+              </h3>
+              <button
+                className="text-white hover:text-gray-300 text-3xl"
+                onClick={closeMediaModal}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center relative">
+              {mediaModal.items.length > 1 && (
+                <>
+                  <button
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-3 rounded-full z-10"
+                    onClick={() =>
+                      setMediaModal((prev) => ({
+                        ...prev,
+                        currentIndex:
+                          prev.currentIndex > 0
+                            ? prev.currentIndex - 1
+                            : prev.items.length - 1,
+                      }))
+                    }
+                  >
+                    <FiChevronRight size={24} />
+                  </button>
+                  <button
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-3 rounded-full z-10"
+                    onClick={() =>
+                      setMediaModal((prev) => ({
+                        ...prev,
+                        currentIndex:
+                          prev.currentIndex < prev.items.length - 1
+                            ? prev.currentIndex + 1
+                            : 0,
+                      }))
+                    }
+                  >
+                    <FiChevronLeft size={24} />
+                  </button>
+                </>
+              )}
+
+              <div className="w-full h-full flex items-center justify-center p-8">
+                {mediaModal.type === "image" ? (
+                  <img
+                    src={mediaModal.items[mediaModal.currentIndex]?.url}
+                    alt={`صورة ${mediaModal.currentIndex + 1}`}
+                    className="max-w-full max-h-full object-contain rounded-lg"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src =
+                        "https://via.placeholder.com/800x600?text=صورة+غير+متوفرة";
+                    }}
+                  />
+                ) : (
+                  <video
+                    src={mediaModal.items[mediaModal.currentIndex]?.url}
+                    controls
+                    autoPlay
+                    className="max-w-full max-h-full rounded-lg"
+                    onError={(e) => {
+                      console.error("Video load error:", e);
+                    }}
+                  >
+                    متصفحك لا يدعم تشغيل الفيديو
+                  </video>
+                )}
+              </div>
+            </div>
+
+            {mediaModal.items.length > 1 && (
+              <div className="p-4 bg-black bg-opacity-50 overflow-x-auto">
+                <div className="flex gap-2 justify-center">
+                  {mediaModal.items.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className={`flex-shrink-0 w-20 h-20 cursor-pointer rounded-lg overflow-hidden border-2 ${
+                        index === mediaModal.currentIndex
+                          ? "border-blue-500"
+                          : "border-transparent"
+                      }`}
+                      onClick={() =>
+                        setMediaModal((prev) => ({
+                          ...prev,
+                          currentIndex: index,
+                        }))
+                      }
+                    >
+                      {mediaModal.type === "image" ? (
+                        <img
+                          src={item.url}
+                          alt={`صورة مصغرة ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                          <FiVideo className="text-white" size={24} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Reject Modal */}
       {rejectModal.show && (
-        <div className="Icons.FiXed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <Icons.FiEdit size={20} />
+                <FiEdit size={20} />
                 رفض المزاد
               </h3>
               <button
@@ -1386,7 +1541,7 @@ const AllAuctions = () => {
                 onClick={handleReject}
                 disabled={loading}
               >
-                <Icons.FiX size={18} />
+                <FiX size={18} />
                 {loading ? "جاري الحفظ..." : "تأكيد الرفض"}
               </button>
             </div>
@@ -1396,11 +1551,11 @@ const AllAuctions = () => {
 
       {/* Owner Modal */}
       {ownerModal.show && (
-        <div className="Icons.FiXed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <Icons.FiUser size={20} />
+                <FiUser size={20} />
                 تفاصيل الشركة
               </h3>
               <button
