@@ -79,6 +79,7 @@ const Sidebar = () => {
     { icon: Icons.MessageCircle, text: "تواصل معنا", path: "/contact" },
     { icon: Icons.UserCheck, text: "إدارة حسابات الأدمن", path: "/admin" },
     { icon: Icons.Shield, text: "سياسة الخصوصية", path: "/privacy-policy" },
+    { icon: Icons.Mail, text: "إرسال النشرات البريدية", path: "/newsletter" },
   ];
 
   // دالة لتنسيق دور المستخدم

@@ -23,6 +23,7 @@ import AuthController from "./utils/authController";
 import PrivacyPolicy from "./pages/PrivacyPolicy1";
 import Admin from "./pages/Admin";
 import Contact from "./pages/Contact";
+import NewsletterDashboard from "./pages/NewsletterDashboard";
 
 import "./App.css";
 import { DataProvider } from "./contexts/DataContext";
@@ -181,6 +182,15 @@ if (loading) {
                         element={
                           <ProtectedRoute isAuthenticated={isLoggedIn}>
                             <Admin/>
+                          </ProtectedRoute>
+                        }
+                      />
+                      {/* ✅ أضفت هنا مسار النشرات البريدية فقط */}
+                      <Route
+                        path="/newsletter"
+                        element={
+                          <ProtectedRoute isAuthenticated={isLoggedIn}>
+                            <NewsletterDashboard />
                           </ProtectedRoute>
                         }
                       />

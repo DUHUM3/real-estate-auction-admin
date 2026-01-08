@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
-import Icons from "../../icons/index";
+import { 
+  Target, User, Phone, Navigation, FileText, Calendar, 
+  Image, MessageSquare, RefreshCw, ChevronRight, ChevronLeft,
+  Mail, Home, UserCheck, Clock, Check, X, AlertCircle, Edit
+} from "lucide-react";
 import { useQueryClient, useQuery, useMutation } from "react-query";
 import { useNavigate } from "react-router-dom";
 import MarketingFilters from "./AuctionsMarketingFilters";
 
-// استيراد جميع دوال API من الملف المنفصل
 import {
   filtersManager,
   fetchMarketingRequests,
@@ -14,15 +17,13 @@ import {
   getStatusText,
   getStatusColor,
   getStatusBadge,
+  getPropertyRoleText,
 } from "../../services/marketingRequestsApi";
 
 const MarketingRequests = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // =============================================
-  // 1. المتغيرات والحالات
-  // =============================================
   const [filters, setFilters] = useState(filtersManager.getInitialFilters());
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [statusModal, setStatusModal] = useState({
@@ -34,11 +35,9 @@ const MarketingRequests = () => {
   const [imageModal, setImageModal] = useState({
     show: false,
     images: [],
+    currentIndex: 0,
   });
 
-  // =============================================
-  // 2. معالجة الفلاتر
-  // =============================================
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
   };
@@ -60,19 +59,14 @@ const MarketingRequests = () => {
     refetch();
   };
 
-  // حفظ الفلاتر في localStorage عند تغييرها
   useEffect(() => {
     filtersManager.saveFilters(filters);
   }, [filters]);
 
-  // إعادة جلب البيانات عند تغيير الفلاتر
   useEffect(() => {
     refetch();
   }, [filters]);
 
-  // =============================================
-  // 3. جلب البيانات باستخدام React Query
-  // =============================================
   const {
     data: marketingRequestsData,
     isLoading,
@@ -89,9 +83,6 @@ const MarketingRequests = () => {
     }
   );
 
-  // =============================================
-  // 4. تحديث حالة الطلب
-  // =============================================
   const statusMutation = useMutation(
     ({ requestId, status, message }) =>
       updateRequestStatus(requestId, status, message),
@@ -119,9 +110,6 @@ const MarketingRequests = () => {
     }
   );
 
-  // =============================================
-  // 5. دوال معالجة الحالات والإجراءات
-  // =============================================
   const openStatusModal = (requestId, newStatus) => {
     setStatusModal({
       show: true,
@@ -183,10 +171,11 @@ const MarketingRequests = () => {
     setFilters((prev) => ({ ...prev, page }));
   };
 
-  const openImageModal = (images) => {
+  const openImageModal = (images, index = 0) => {
     setImageModal({
       show: true,
       images: images,
+      currentIndex: index,
     });
   };
 
@@ -194,12 +183,24 @@ const MarketingRequests = () => {
     setImageModal({
       show: false,
       images: [],
+      currentIndex: 0,
     });
   };
 
-  // =============================================
-  // 6. دالة إنشاء الباجينيشن (تبقى في المكون لأنها تستخدم الـ JSX)
-  // =============================================
+  const nextImage = () => {
+    setImageModal(prev => ({
+      ...prev,
+      currentIndex: (prev.currentIndex + 1) % prev.images.length
+    }));
+  };
+
+  const prevImage = () => {
+    setImageModal(prev => ({
+      ...prev,
+      currentIndex: prev.currentIndex === 0 ? prev.images.length - 1 : prev.currentIndex - 1
+    }));
+  };
+
   const renderPagination = () => {
     if (
       !marketingRequestsData ||
@@ -225,7 +226,7 @@ const MarketingRequests = () => {
         }
         disabled={pagination.current_page === 1}
       >
-        <Icons.FiChevronRight className="w-4 h-4" />
+        <ChevronRight className="w-4 h-4" />
       </button>
     );
 
@@ -295,16 +296,13 @@ const MarketingRequests = () => {
         }
         disabled={pagination.current_page === pagination.last_page}
       >
-        <Icons.FiChevronLeft className="w-4 h-4" />
+        <ChevronLeft className="w-4 h-4" />
       </button>
     );
 
     return pages;
   };
 
-  // =============================================
-  // 7. تحضير البيانات للعرض
-  // =============================================
   const requests = marketingRequestsData?.data || [];
   const pagination = marketingRequestsData?.pagination || {
     current_page: filters.page,
@@ -318,21 +316,18 @@ const MarketingRequests = () => {
     regions: [],
     cities: [],
     statuses: [],
+    property_roles: [],
   };
 
   const loading = isLoading || statusMutation.isLoading;
 
-  // =============================================
-  // 8. واجهة المستخدم
-  // =============================================
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      {/* رأس الصفحة */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3 space-x-reverse">
             <div className="p-3 bg-blue-100 rounded-xl">
-              <Icons.FiTarget className="w-6 h-6 text-blue-600" />
+              <Target className="w-6 h-6 text-blue-600" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -346,11 +341,11 @@ const MarketingRequests = () => {
           </div>
 
           <button
-            className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
             onClick={handleRefresh}
             disabled={loading}
           >
-            <Icons.FiRefreshCw
+            <RefreshCw
               className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
             />
             <span>تحديث البيانات</span>
@@ -358,7 +353,6 @@ const MarketingRequests = () => {
         </div>
       </div>
 
-      {/* الفلاتر */}
       <MarketingFilters
         filters={filters}
         onFilterChange={handleFilterChange}
@@ -368,22 +362,19 @@ const MarketingRequests = () => {
         loading={loading}
       />
 
-      {/* محتوى الصفحة الرئيسي */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
-        {/* قائمة الطلبات */}
         <div className="xl:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
                   قائمة طلبات التسويق ({requests.length})
                 </h3>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">
                   {pagination.total > 0 ? (
                     <>
                       عرض {pagination.from} إلى {pagination.to} من{" "}
-                      {pagination.total} - الصفحة {pagination.current_page} من{" "}
-                      {pagination.last_page}
+                      {pagination.total}
                     </>
                   ) : (
                     "لا توجد نتائج"
@@ -413,7 +404,7 @@ const MarketingRequests = () => {
                 </div>
               ) : requests.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Icons.FiTarget className="w-16 h-16 text-gray-300 mb-4" />
+                  <Target className="w-16 h-16 text-gray-300 mb-4" />
                   <p className="text-gray-500 text-lg mb-4">
                     لا توجد طلبات تسويق
                   </p>
@@ -424,29 +415,29 @@ const MarketingRequests = () => {
                     {requests.map((request) => (
                       <div
                         key={request.id}
-                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                        className={`p-5 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
                           selectedRequest?.id === request.id
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                            ? "border-blue-500 bg-blue-50 shadow-md"
+                            : "border-gray-200 hover:border-blue-300 hover:bg-gray-50 hover:shadow-sm"
                         }`}
                         onClick={() => setSelectedRequest(request)}
                       >
                         <div className="flex items-start space-x-4 space-x-reverse">
                           <div className="flex-shrink-0">
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Icons.FiUser className="w-6 h-6 text-blue-600" />
+                            <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                              <User className="w-7 h-7 text-white" />
                             </div>
                           </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-lg font-medium text-gray-900 truncate">
-                                {request.user?.name}
+                              <h4 className="text-lg font-semibold text-gray-900 truncate">
+                                {request.name}
                               </h4>
                               <div
                                 className={
                                   getStatusColor(request.status) +
-                                  " px-3 py-1 rounded-full text-sm font-medium border"
+                                  " px-3 py-1 rounded-full text-sm font-medium border shadow-sm"
                                 }
                               >
                                 {request.status_ar ||
@@ -454,49 +445,60 @@ const MarketingRequests = () => {
                               </div>
                             </div>
 
-                            <div className="space-y-1 text-sm text-gray-600">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
                               <div className="flex items-center space-x-2 space-x-reverse">
-                                <Icons.FiMail className="w-4 h-4" />
-                                <span>{request.user?.email}</span>
+                                <User className="w-4 h-4 text-blue-500" />
+                                <span className="font-medium">{request.user?.name}</span>
                               </div>
 
                               <div className="flex items-center space-x-2 space-x-reverse">
-                                <Icons.FiNavigation className="w-4 h-4" />
+                                <Phone className="w-4 h-4 text-green-500" />
+                                <span>{request.user?.phone}</span>
+                              </div>
+
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Navigation className="w-4 h-4 text-purple-500" />
                                 <span>
                                   {request.region} - {request.city}
                                 </span>
                               </div>
 
                               <div className="flex items-center space-x-2 space-x-reverse">
-                                <Icons.FiCalendar className="w-4 h-4" />
-                                <span>{formatDate(request.created_at)}</span>
+                                <FileText className="w-4 h-4 text-orange-500" />
+                                <span>{getPropertyRoleText(request.property_role)}</span>
                               </div>
 
-                              <div className="flex items-start space-x-2 space-x-reverse">
-                                <Icons.FiMessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                <span className="line-clamp-1">
-                                  {request.description?.substring(0, 100)}...
-                                </span>
+                              <div className="flex items-center space-x-2 space-x-reverse">
+                                <Calendar className="w-4 h-4 text-indigo-500" />
+                                <span>{formatDate(request.created_at)}</span>
                               </div>
 
                               {request.images && request.images.length > 0 && (
                                 <div className="flex items-center space-x-2 space-x-reverse">
-                                  <Icons.FiImage className="w-4 h-4" />
+                                  <Image className="w-4 h-4 text-pink-500" />
                                   <span>
-                                    {request.images.length} صورة مرفوعة
+                                    {request.images.length} صورة
                                   </span>
                                 </div>
                               )}
                             </div>
+
+                            {request.description && (
+                              <div className="mt-3 flex items-start space-x-2 space-x-reverse">
+                                <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400" />
+                                <span className="text-sm text-gray-600 line-clamp-2">
+                                  {request.description}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* الباجينيشن */}
                   {pagination.last_page > 1 && (
-                    <div className="flex items-center justify-center space-x-2 space-x-reverse mt-6">
+                    <div className="flex items-center justify-center space-x-2 space-x-reverse mt-6 pt-6 border-t border-gray-200">
                       {renderPagination()}
                     </div>
                   )}
@@ -506,146 +508,167 @@ const MarketingRequests = () => {
           </div>
         </div>
 
-        {/* تفاصيل الطلب المحدد */}
         <div className="xl:col-span-1">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-6">
             {selectedRequest ? (
               <div>
-                <div className="p-6 border-b border-gray-200">
+                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      تفاصيل طلب التسويق
+                      تفاصيل الطلب
                     </h3>
-                    <span className="text-sm text-gray-500">
-                      ID: {selectedRequest.id}
+                    <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">
+                      #{selectedRequest.id}
                     </span>
                   </div>
                 </div>
 
                 <div className="p-6 space-y-6 max-h-[calc(100vh-300px)] overflow-y-auto">
-                  {/* معلومات المستخدم */}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  <div className="bg-gradient-to-br from-gray-50 to-white p-4 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center">
+                      <User className="w-4 h-4 ml-2 text-blue-500" />
+                      معلومات المالك
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">الاسم الكامل</p>
+                        <p className="font-medium text-gray-900">{selectedRequest.name}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">رقم الهوية</p>
+                        <p className="font-medium text-gray-900">{selectedRequest.id_number}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">صفة العقار</p>
+                        <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                          {getPropertyRoleText(selectedRequest.property_role)}
+                        </span>
+                      </div>
+
+                      {selectedRequest.property_role === "legal_agent" && selectedRequest.agency_number && (
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">رقم الوكالة</p>
+                          <p className="font-medium text-gray-900">{selectedRequest.agency_number}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-gray-50 to-white p-4 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center">
+                      <UserCheck className="w-4 h-4 ml-2 text-green-500" />
                       معلومات مقدم الطلب
                     </h4>
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <Icons.FiUser className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-500">الاسم</p>
-                          <p className="font-medium">
+                        <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">الاسم</p>
+                          <p className="font-medium text-gray-900">
                             {selectedRequest.user?.name}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <Icons.FiMail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            البريد الإلكتروني
-                          </p>
-                          <p className="font-medium">
+                        <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">البريد الإلكتروني</p>
+                          <p className="font-medium text-gray-900 truncate">
                             {selectedRequest.user?.email}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <Icons.FiPhone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-500">رقم الهاتف</p>
-                          <p className="font-medium">
+                        <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">رقم الهاتف</p>
+                          <p className="font-medium text-gray-900">
                             {selectedRequest.user?.phone}
                           </p>
                         </div>
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-500">نوع المستخدم</p>
-                        <p className="font-medium">
+                        <p className="text-xs text-gray-500 mb-1">نوع المستخدم</p>
+                        <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
                           {selectedRequest.user?.user_type}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-500">رقم الهوية</p>
-                        <p className="font-medium">
-                          {selectedRequest.user?.identity_number || "غير محدد"}
-                        </p>
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* معلومات الطلب */}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">
-                      معلومات الطلب
+                  <div className="bg-gradient-to-br from-gray-50 to-white p-4 rounded-lg border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center">
+                      <Home className="w-4 h-4 ml-2 text-orange-500" />
+                      معلومات العقار
                     </h4>
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <Icons.FiNavigation className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-500">المنطقة</p>
-                          <p className="font-medium">
-                            {selectedRequest.region}
+                        <Navigation className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">الموقع</p>
+                          <p className="font-medium text-gray-900">
+                            {selectedRequest.region} - {selectedRequest.city}
                           </p>
                         </div>
                       </div>
 
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">رقم الوثيقة</p>
+                        <p className="font-medium text-gray-900">{selectedRequest.document_number}</p>
+                      </div>
+
                       <div className="flex items-center space-x-3 space-x-reverse">
-                        <Icons.FiHome className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-500">المدينة</p>
-                          <p className="font-medium">{selectedRequest.city}</p>
+                        <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500">تاريخ التقديم</p>
+                          <p className="font-medium text-gray-900">
+                            {formatDate(selectedRequest.created_at)}
+                          </p>
                         </div>
                       </div>
 
                       <div>
-                        <p className="text-sm text-gray-500">رقم الوثيقة</p>
-                        <p className="font-medium">
-                          {selectedRequest.document_number}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-gray-500">الحالة</p>
+                        <p className="text-xs text-gray-500 mb-1">الحالة</p>
                         <div className="mt-1">
                           {getStatusBadge(selectedRequest.status)}
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-3 space-x-reverse">
-                        <Icons.FiCalendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-gray-500">تاريخ الطلب</p>
-                          <p className="font-medium">
-                            {formatDate(selectedRequest.created_at)}
-                          </p>
+                      {selectedRequest.terms_accepted && (
+                        <div className="flex items-center space-x-2 space-x-reverse text-green-600">
+                          <Check className="w-4 h-4" />
+                          <span className="text-sm">تم قبول الشروط والأحكام</span>
                         </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedRequest.description && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                        <MessageSquare className="w-4 h-4 ml-2 text-indigo-500" />
+                        الوصف
+                      </h4>
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p className="text-gray-700 leading-relaxed">
+                          {selectedRequest.description}
+                        </p>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* الوصف */}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">
-                      الوصف
-                    </h4>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-700">
-                        {selectedRequest.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* سبب الرفض */}
                   {selectedRequest.rejection_message && (
                     <div>
-                      <h4 className="text-sm font-medium text-red-700 mb-3">
+                      <h4 className="text-sm font-semibold text-red-700 mb-3 flex items-center">
+                        <AlertCircle className="w-4 h-4 ml-2" />
                         سبب الرفض
                       </h4>
-                      <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                         <p className="text-red-700">
                           {selectedRequest.rejection_message}
                         </p>
@@ -653,25 +676,25 @@ const MarketingRequests = () => {
                     </div>
                   )}
 
-                  {/* الصور المرفوعة */}
                   {selectedRequest.images &&
                     selectedRequest.images.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">
-                          الصور المرفوعة
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                          <Image className="w-4 h-4 ml-2 text-pink-500" />
+                          الصور المرفوعة ({selectedRequest.images.length})
                         </h4>
                         <div className="grid grid-cols-3 gap-2">
                           {selectedRequest.images.map((image, index) => (
                             <div
                               key={index}
-                              className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                              className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border-2 border-gray-200 hover:border-blue-400"
                               onClick={() =>
-                                openImageModal(selectedRequest.images)
+                                openImageModal(selectedRequest.images, index)
                               }
                             >
                               <img
                                 src={getImageUrl(image)}
-                                alt={`صورة الطلب ${index + 1}`}
+                                alt={`صورة ${index + 1}`}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   e.target.style.display = "none";
@@ -679,7 +702,7 @@ const MarketingRequests = () => {
                                 }}
                               />
                               <div className="hidden w-full h-full flex-col items-center justify-center bg-gray-200 text-gray-500">
-                                <Icons.FiImage className="w-6 h-6 mb-1" />
+                                <Image className="w-6 h-6 mb-1" />
                                 <span className="text-xs">
                                   تعذر تحميل الصورة
                                 </span>
@@ -691,11 +714,10 @@ const MarketingRequests = () => {
                     )}
                 </div>
 
-                {/* أزرار الإجراءات */}
-                <div className="p-6 border-t border-gray-200">
+                <div className="p-6 border-t border-gray-200 bg-gray-50">
                   <div className="flex flex-col space-y-3">
                     <button
-                      className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
                         openStatusModal(selectedRequest.id, "under_review")
                       }
@@ -703,12 +725,12 @@ const MarketingRequests = () => {
                         selectedRequest.status === "under_review" || loading
                       }
                     >
-                      <Icons.FiClock className="w-4 h-4" />
+                      <Clock className="w-4 h-4" />
                       <span>قيد المراجعة</span>
                     </button>
 
                     <button
-                      className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
                         openStatusModal(selectedRequest.id, "reviewed")
                       }
@@ -716,12 +738,12 @@ const MarketingRequests = () => {
                         selectedRequest.status === "reviewed" || loading
                       }
                     >
-                      <Icons.FiCheck className="w-4 h-4" />
+                      <Check className="w-4 h-4" />
                       <span>تمت المراجعة</span>
                     </button>
 
                     <button
-                      className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
                         openStatusModal(selectedRequest.id, "auctioned")
                       }
@@ -729,12 +751,12 @@ const MarketingRequests = () => {
                         selectedRequest.status === "auctioned" || loading
                       }
                     >
-                      <Icons.FiTarget className="w-4 h-4" />
+                      <Target className="w-4 h-4" />
                       <span>تم عرض العقار في شركة المزادات</span>
                     </button>
 
                     <button
-                      className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center space-x-2 space-x-reverse w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() =>
                         openStatusModal(selectedRequest.id, "rejected")
                       }
@@ -742,7 +764,7 @@ const MarketingRequests = () => {
                         selectedRequest.status === "rejected" || loading
                       }
                     >
-                      <Icons.FiX className="w-4 h-4" />
+                      <X className="w-4 h-4" />
                       <span>رفض الطلب</span>
                     </button>
                   </div>
@@ -750,7 +772,7 @@ const MarketingRequests = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Icons.FiTarget className="w-16 h-16 text-gray-300 mb-4" />
+                <Target className="w-16 h-16 text-gray-300 mb-4" />
                 <p className="text-gray-500">اختر طلب تسويق لعرض التفاصيل</p>
               </div>
             )}
@@ -758,17 +780,12 @@ const MarketingRequests = () => {
         </div>
       </div>
 
-      {/* ============================================= */}
-      {/* 9. المودالات */}
-      {/* ============================================= */}
-
-      {/* مودال تغيير الحالة */}
       {statusModal.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div className="flex items-center space-x-3 space-x-reverse">
-                <Icons.FiEdit className="w-5 h-5 text-blue-600" />
+                <Edit className="w-5 h-5 text-blue-600" />
                 <h3 className="text-lg font-semibold text-gray-900">
                   تغيير حالة الطلب
                 </h3>
@@ -777,7 +794,7 @@ const MarketingRequests = () => {
                 className="text-gray-400 hover:text-gray-500 transition-colors"
                 onClick={closeStatusModal}
               >
-                <Icons.FiX className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -823,7 +840,7 @@ const MarketingRequests = () => {
                 </div>
               )}
 
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                 <p className="text-blue-700 text-sm">
                   هل أنت متأكد من تغيير حالة هذا الطلب إلى{" "}
                   <strong>{getStatusText(statusModal.newStatus)}</strong>؟
@@ -831,7 +848,7 @@ const MarketingRequests = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end space-x-3 space-x-reverse p-6 border-t border-gray-200">
+            <div className="flex items-center justify-end space-x-3 space-x-reverse p-6 border-t border-gray-200 bg-gray-50">
               <button
                 className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
                 onClick={closeStatusModal}
@@ -840,7 +857,7 @@ const MarketingRequests = () => {
                 إلغاء
               </button>
               <button
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 space-x-reverse"
                 onClick={handleStatusUpdate}
                 disabled={
                   loading ||
@@ -848,57 +865,77 @@ const MarketingRequests = () => {
                     !statusModal.rejectionMessage.trim())
                 }
               >
-                <Icons.FiCheck className="w-4 h-4 inline ml-1" />
-                {loading ? "جاري الحفظ..." : "تأكيد التغيير"}
+                <Check className="w-4 h-4" />
+                <span>{loading ? "جاري الحفظ..." : "تأكيد التغيير"}</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* مودال عرض الصور */}
       {imageModal.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-3 space-x-reverse">
-                <Icons.FiImage className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  معرض الصور
-                </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50">
+          <div className="relative w-full max-w-5xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-white text-lg font-medium">
+                الصورة {imageModal.currentIndex + 1} من {imageModal.images.length}
               </div>
               <button
-                className="text-gray-400 hover:text-gray-500 transition-colors"
+                className="text-white hover:text-gray-300 transition-colors bg-black bg-opacity-50 rounded-full p-2"
                 onClick={closeImageModal}
               >
-                <Icons.FiX className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {imageModal.images.map((image, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-100 rounded-lg overflow-hidden"
+            <div className="relative bg-white rounded-lg overflow-hidden">
+              <img
+                src={getImageUrl(imageModal.images[imageModal.currentIndex])}
+                alt={`صورة ${imageModal.currentIndex + 1}`}
+                className="w-full h-auto max-h-[80vh] object-contain"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                  e.target.nextSibling.style.display = "flex";
+                }}
+              />
+              <div className="hidden w-full h-96 flex-col items-center justify-center bg-gray-200 text-gray-500">
+                <Image className="w-16 h-16 mb-2" />
+                <span>تعذر تحميل الصورة</span>
+              </div>
+
+              {imageModal.images.length > 1 && (
+                <>
+                  <button
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-75 transition-all"
+                    onClick={prevImage}
                   >
-                    <img
-                      src={getImageUrl(image)}
-                      alt={`صورة ${index + 1}`}
-                      className="w-full h-auto object-contain max-h-96"
-                      onError={(e) => {
-                        e.target.style.display = "none";
-                        e.target.nextSibling.style.display = "flex";
-                      }}
-                    />
-                    <div className="hidden w-full h-64 flex-col items-center justify-center bg-gray-200 text-gray-500">
-                      <Icons.FiImage className="w-12 h-12 mb-2" />
-                      <span>تعذر تحميل الصورة</span>
-                    </div>
-                  </div>
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                  <button
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-75 transition-all"
+                    onClick={nextImage}
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {imageModal.images.length > 1 && (
+              <div className="flex justify-center space-x-2 space-x-reverse mt-4">
+                {imageModal.images.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      index === imageModal.currentIndex
+                        ? "bg-white w-8"
+                        : "bg-gray-500 hover:bg-gray-400"
+                    }`}
+                    onClick={() => setImageModal(prev => ({ ...prev, currentIndex: index }))}
+                  />
                 ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}

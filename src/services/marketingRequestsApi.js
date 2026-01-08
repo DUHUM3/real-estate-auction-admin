@@ -34,6 +34,7 @@ export const filtersManager = {
       region: "all",
       city: "all",
       status: "all",
+      property_role: "all",
       start_date: "",
       end_date: "",
       sort_by: "created_at",
@@ -54,6 +55,7 @@ export const filtersManager = {
       region: "all",
       city: "all",
       status: "all",
+      property_role: "all",
       start_date: "",
       end_date: "",
       sort_by: "created_at",
@@ -73,9 +75,12 @@ export const filtersManager = {
       params.append("region", filters.region);
     if (filters.city && filters.city !== "all")
       params.append("city", filters.city);
+    if (filters.property_role && filters.property_role !== "all")
+      params.append("property_role", filters.property_role);
     if (filters.start_date) params.append("start_date", filters.start_date);
     if (filters.end_date) params.append("end_date", filters.end_date);
     if (filters.sort_by) params.append("sort_by", filters.sort_by);
+    if (filters.sort_order) params.append("sort_order", filters.sort_order);
 
     params.append("page", filters.page || 1);
     params.append("per_page", filters.per_page || 10);
@@ -119,34 +124,10 @@ export const fetchMarketingRequests = async (filters, navigate) => {
     throw new Error(result.message || "هيكل البيانات غير متوقع");
   }
 
-  // استخراج المناطق والمدن المتاحة من البيانات
-  const regions = [
-    ...new Set(result.auction_requests.map((req) => req.region).filter(Boolean)),
-  ];
-  const cities = [
-    ...new Set(result.auction_requests.map((req) => req.city).filter(Boolean)),
-  ];
-
   return {
     data: result.auction_requests,
-    pagination: {
-      current_page: filters.page,
-      last_page: Math.ceil(result.auction_requests.length / filters.per_page),
-      per_page: filters.per_page,
-      total: result.auction_requests.length,
-      from: (filters.page - 1) * filters.per_page + 1,
-      to: Math.min(filters.page * filters.per_page, result.auction_requests.length),
-    },
-    filtersData: {
-      regions,
-      cities,
-      statuses: [
-        { value: "under_review", label: "قيد المراجعة" },
-        { value: "reviewed", label: "تمت المراجعة" },
-        { value: "auctioned", label: "تم عرض العفار في شركة المزادات" },
-        { value: "rejected", label: "مرفوض" },
-      ],
-    },
+    pagination: result.pagination,
+    filtersData: result.filters_data,
   };
 };
 
@@ -205,6 +186,17 @@ export const formatDate = (dateString) => {
     hour: "2-digit",
     minute: "2-digit",
   });
+};
+
+export const getPropertyRoleText = (role) => {
+  switch (role) {
+    case "owner":
+      return "مالك";
+    case "legal_agent":
+      return "وكيل شرعي";
+    default:
+      return role;
+  }
 };
 
 export const getStatusText = (status) => {

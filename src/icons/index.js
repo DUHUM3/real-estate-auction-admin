@@ -3,6 +3,7 @@
 // استيراد جميع الأيقونات من lucide-react
 import {
   Home,
+  Mail,
   Users,
   Map,
   ShoppingCart,
@@ -77,6 +78,7 @@ import {
 // تصدير كائن يحتوي على جميع الأيقونات
 const Icons = {
   Home,
+  Mail,
   Users,
   Map,
   ShoppingCart,
@@ -149,6 +151,7 @@ export default Icons;
 // تصدير الأيقونات بشكل منفصل أيضاً
 export {
   Home,
+  Mail,
   Users,
   Map,
   ShoppingCart,
