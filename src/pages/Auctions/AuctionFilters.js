@@ -1,5 +1,6 @@
-import React from "react";
-import { FiFilter, FiSearch, FiRefreshCw, FiSlash } from "react-icons/fi";
+import React, { useMemo } from "react";
+import { FiFilter, FiSearch, FiRefreshCw, FiX, FiChevronDown } from "react-icons/fi";
+import { saudiRegions } from "../../constants/saudiRegions"; // عدّل المسار حسب موقع الملف
 
 const SearchFilters = ({
   filters,
@@ -10,238 +11,359 @@ const SearchFilters = ({
   isRefreshing,
   loading,
 }) => {
-  const hasActiveFilters =
-    filters.search ||
-    filters.status !== "all" ||
-    filters.region !== "all" ||
-    filters.city !== "all" ||
-    filters.date;
+  // التحقق من وجود فلاتر نشطة
+  const hasActiveFilters = useMemo(() => {
+    return (
+      (filters.search && filters.search.trim() !== "") ||
+      filters.status !== "all" ||
+      filters.region !== "all" ||
+      filters.city !== "all" ||
+      (filters.date && filters.date !== "")
+    );
+  }, [filters]);
+
+  // الحصول على المدن بناءً على المنطقة المختارة
+  const availableCities = useMemo(() => {
+    if (filters.region === "all") {
+      // إرجاع جميع المدن من كل المناطق
+      return saudiRegions.flatMap((region) => region.cities);
+    }
+    const selectedRegion = saudiRegions.find(
+      (region) => region.name.trim() === filters.region.trim()
+    );
+    return selectedRegion ? selectedRegion.cities : [];
+  }, [filters.region]);
+
+  // معالجة تغيير المنطقة
+  const handleRegionChange = (value) => {
+    handleFilterChange("region", value);
+    // إعادة تعيين المدينة عند تغيير المنطقة
+    if (filters.city !== "all") {
+      handleFilterChange("city", "all");
+    }
+  };
+
+  // معالجة مسح الفلاتر
+  const handleClearFilters = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // إذا كانت دالة clearFilters موجودة، استخدمها
+    if (typeof clearFilters === "function") {
+          console.log('Calling clearFilters function');
+
+      clearFilters();
+    } else {
+      // خلاف ذلك، امسح كل فلتر يدوياً
+      handleFilterChange("search", "");
+      handleFilterChange("status", "all");
+      handleFilterChange("region", "all");
+      handleFilterChange("city", "all");
+      handleFilterChange("date", "");
+      handleFilterChange("sort_field", "created_at");
+      handleFilterChange("sort_direction", "desc");
+    }
+  };
+
+  // معالجة البحث
+  const onSearchSubmit = (e) => {
+    e.preventDefault();
+    if (typeof handleSearch === "function") {
+      handleSearch(e);
+    }
+  };
+
+  // عدد الفلاتر النشطة
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filters.search && filters.search.trim() !== "") count++;
+    if (filters.status !== "all") count++;
+    if (filters.region !== "all") count++;
+    if (filters.city !== "all") count++;
+    if (filters.date && filters.date !== "") count++;
+    return count;
+  }, [filters]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
-      {/* الخلفية الخاصة بشريط الأدوات فقط */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FiFilter className="text-blue-600" size={22} />
-          <span className="text-lg font-semibold text-gray-800">
-            أدوات البحث والتصفية:
-          </span>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+      {/* شريط العنوان */}
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FiFilter className="text-blue-600" size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                أدوات البحث والتصفية
+              </h3>
+              {activeFiltersCount > 0 && (
+                <span className="text-xs text-gray-500">
+                  {activeFiltersCount} فلتر نشط
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-red-50 text-red-700 rounded-lg border border-red-200 hover:bg-red-100 hover:border-red-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+              onClick={handleClearFilters}
+            >
+              <FiX size={16} />
+              مسح الفلاتر
+            </button>
+          )}
         </div>
-        {hasActiveFilters && (
-          <button
-            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-50 text-red-700 rounded border border-red-200 hover:bg-red-100 transition-colors"
-            onClick={clearFilters}
-          >
-            <FiSlash size={16} />
-            مسح الفلاتر
-          </button>
-        )}
       </div>
-      <form onSubmit={handleSearch} className="p-4 border-b border-gray-200">
-        <div className="flex flex-col md:flex-row gap-3">
+
+      {/* حقل البحث */}
+      <form onSubmit={onSearchSubmit} className="p-4 border-b border-gray-100 bg-gray-50/50">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <FiSearch
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
               size={18}
             />
             <input
               type="text"
               placeholder="ابحث باسم المزاد أو الوصف..."
-              value={filters.search}
+              value={filters.search || ""}
               onChange={(e) => handleFilterChange("search", e.target.value)}
-              className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
             />
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            بحث
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-            onClick={handleRefresh}
-            disabled={isRefreshing || loading}
-          >
-            <FiRefreshCw
-              className={isRefreshing ? "animate-spin" : ""}
-              size={18}
-            />
-            {isRefreshing ? "جاري التحديث..." : "تحديث البيانات"}
-          </button>
+          
+          <div className="flex gap-2 sm:flex-shrink-0">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 sm:flex-none px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <FiSearch size={16} />
+                بحث
+              </span>
+            </button>
+            
+            <button
+              type="button"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1"
+              onClick={handleRefresh}
+              disabled={isRefreshing || loading}
+            >
+              <FiRefreshCw
+                className={isRefreshing ? "animate-spin" : ""}
+                size={16}
+              />
+              <span className="hidden sm:inline">
+                {isRefreshing ? "جاري التحديث..." : "تحديث"}
+              </span>
+            </button>
+          </div>
         </div>
       </form>
 
-      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            الحالة:
-          </label>
-          <select
-            value={filters.status}
-            onChange={(e) => handleFilterChange("status", e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">جميع الحالات</option>
-            <option value="مفتوح">مفتوح</option>
-            <option value="قيد المراجعة">قيد المراجعة</option>
-            <option value="مغلق">مغلق</option>
-            <option value="مرفوض">مرفوض</option>
-          </select>
+      {/* فلاتر التصفية */}
+      <div className="p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {/* الحالة */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              الحالة
+            </label>
+            <div className="relative">
+              <select
+                value={filters.status || "all"}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+                className="w-full p-2.5 pr-3 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white cursor-pointer"
+              >
+                <option value="all">جميع الحالات</option>
+                <option value="مفتوح">مفتوح</option>
+                <option value="قيد المراجعة">قيد المراجعة</option>
+                <option value="مغلق">مغلق</option>
+                <option value="مرفوض">مرفوض</option>
+              </select>
+              <FiChevronDown 
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
+                size={16} 
+              />
+            </div>
+          </div>
+
+          {/* المنطقة */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              المنطقة
+            </label>
+            <div className="relative">
+              <select
+                value={filters.region || "all"}
+                onChange={(e) => handleRegionChange(e.target.value)}
+                className="w-full p-2.5 pr-3 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white cursor-pointer"
+              >
+                <option value="all">جميع المناطق</option>
+                {saudiRegions.map((region) => (
+                  <option key={region.id} value={region.name.trim()}>
+                    {region.name.trim()}
+                  </option>
+                ))}
+              </select>
+              <FiChevronDown 
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
+                size={16} 
+              />
+            </div>
+          </div>
+
+          {/* المدينة */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              المدينة
+            </label>
+            <div className="relative">
+              <select
+                value={filters.city || "all"}
+                onChange={(e) => handleFilterChange("city", e.target.value)}
+                className="w-full p-2.5 pr-3 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+                disabled={filters.region === "all" && availableCities.length === 0}
+              >
+                <option value="all">جميع المدن</option>
+                {availableCities.map((city, index) => (
+                  <option key={`${city}-${index}`} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+              <FiChevronDown 
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
+                size={16} 
+              />
+            </div>
+          </div>
+
+          {/* تاريخ المزاد */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              تاريخ المزاد
+            </label>
+            <input
+              type="date"
+              value={filters.date || ""}
+              onChange={(e) => handleFilterChange("date", e.target.value)}
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white cursor-pointer"
+            />
+          </div>
+
+          {/* ترتيب حسب */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              ترتيب حسب
+            </label>
+            <div className="relative">
+              <select
+                value={filters.sort_field || "created_at"}
+                onChange={(e) => handleFilterChange("sort_field", e.target.value)}
+                className="w-full p-2.5 pr-3 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white cursor-pointer"
+              >
+                <option value="created_at">تاريخ الإنشاء</option>
+                <option value="auction_date">تاريخ المزاد</option>
+                <option value="title">اسم المزاد</option>
+              </select>
+              <FiChevronDown 
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
+                size={16} 
+              />
+            </div>
+          </div>
+
+          {/* الاتجاه */}
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-gray-700">
+              الاتجاه
+            </label>
+            <div className="relative">
+              <select
+                value={filters.sort_direction || "desc"}
+                onChange={(e) => handleFilterChange("sort_direction", e.target.value)}
+                className="w-full p-2.5 pr-3 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white cursor-pointer"
+              >
+                <option value="desc">تنازلي (الأحدث أولاً)</option>
+                <option value="asc">تصاعدي (الأقدم أولاً)</option>
+              </select>
+              <FiChevronDown 
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
+                size={16} 
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            المنطقة:
-          </label>
-          <select
-            value={filters.region}
-            onChange={(e) => handleFilterChange("region", e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">جميع المناطق</option>
-            <option value="الرياض">الرياض</option>
-            <option value="مكة المكرمة">مكة المكرمة</option>
-            <option value="المدينة المنورة">المدينة المنورة</option>
-            <option value="القصيم">القصيم</option>
-            <option value="الشرقية">الشرقية</option>
-            <option value="عسير">عسير</option>
-            <option value="تبوك">تبوك</option>
-            <option value="حائل">حائل</option>
-            <option value="الحدود الشمالية">الحدود الشمالية</option>
-            <option value="جازان">جازان</option>
-            <option value="نجران">نجران</option>
-            <option value="الباحة">الباحة</option>
-            <option value="الجوف">الجوف</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            المدينة:
-          </label>
-          <select
-            value={filters.city}
-            onChange={(e) => handleFilterChange("city", e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">جميع المدن</option>
-            <option value="الرياض">الرياض</option>
-            <option value="جدة">جدة</option>
-            <option value="مكة المكرمة">مكة المكرمة</option>
-            <option value="المدينة المنورة">المدينة المنورة</option>
-            <option value="الدمام">الدمام</option>
-            <option value="الخبر">الخبر</option>
-            <option value="الظهران">الظهران</option>
-            <option value="الجبيل">الجبيل</option>
-            <option value="القطيف">القطيف</option>
-            <option value="تبوك">تبوك</option>
-            <option value="حائل">حائل</option>
-            <option value="بريدة">بريدة</option>
-            <option value="عنيزة">عنيزة</option>
-            <option value="الرس">الرس</option>
-            <option value="خميس مشيط">خميس مشيط</option>
-            <option value="أبها">أبها</option>
-            <option value="نجران">نجران</option>
-            <option value="جازان">جازان</option>
-            <option value="بيشة">بيشة</option>
-            <option value="الباحة">الباحة</option>
-            <option value="سكاكا">سكاكا</option>
-            <option value="عرعر">عرعر</option>
-            <option value="القريات">القريات</option>
-            <option value="ينبع">ينبع</option>
-            <option value="رابغ">رابغ</option>
-            <option value="الطائف">الطائف</option>
-            <option value="محايل عسير">محايل عسير</option>
-            <option value="بلجرشي">بلجرشي</option>
-            <option value="صبيا">صبيا</option>
-            <option value="أحد رفيدة">أحد رفيدة</option>
-            <option value="تثليث">تثليث</option>
-            <option value="المجمعة">المجمعة</option>
-            <option value="الزلفي">الزلفي</option>
-            <option value="حوطة بني تميم">حوطة بني تميم</option>
-            <option value="الأحساء">الأحساء</option>
-            <option value="بقيق">بقيق</option>
-            <option value="رأس تنورة">رأس تنورة</option>
-            <option value="سيهات">سيهات</option>
-            <option value="صفوى">صفوى</option>
-            <option value="تاروت">تاروت</option>
-            <option value="النعيرية">النعيرية</option>
-            <option value="قرية العليا">قرية العليا</option>
-            <option value="الخرج">الخرج</option>
-            <option value="الدوادمي">الدوادمي</option>
-            <option value="القويعية">القويعية</option>
-            <option value="وادي الدواسر">وادي الدواسر</option>
-            <option value="الافلاج">الأفلاج</option>
-            <option value="رنية">رنية</option>
-            <option value="بيش">بيش</option>
-            <option value="الدرب">الدرب</option>
-            <option value="العارضة">العارضة</option>
-            <option value="أملج">أملج</option>
-            <option value="ضباء">ضباء</option>
-            <option value="الوجه">الوجه</option>
-            <option value="العلا">العلا</option>
-            <option value="خيبر">خيبر</option>
-            <option value="البدائع">البدائع</option>
-            <option value="الأسياح">الأسياح</option>
-            <option value="رياض الخبراء">رياض الخبراء</option>
-            <option value="النبهانية">النبهانية</option>
-            <option value="ضرما">ضرما</option>
-            <option value="حوطة سدير">حوطة سدير</option>
-            <option value="تمير">تمير</option>
-            <option value="الحوطة">الحوطة</option>
-            <option value="الحريق">الحريق</option>
-            <option value="شقراء">شقراء</option>
-            <option value="عفيف">عفيف</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            تاريخ المزاد:
-          </label>
-          <input
-            type="date"
-            value={filters.date}
-            onChange={(e) => handleFilterChange("date", e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            ترتيب حسب:
-          </label>
-          <select
-            value={filters.sort_field}
-            onChange={(e) => handleFilterChange("sort_field", e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="created_at">تاريخ الإنشاء</option>
-            <option value="auction_date">تاريخ المزاد</option>
-            <option value="title">اسم المزاد</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            الاتجاه:
-          </label>
-          <select
-            value={filters.sort_direction}
-            onChange={(e) =>
-              handleFilterChange("sort_direction", e.target.value)
-            }
-            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="desc">تنازلي</option>
-            <option value="asc">تصاعدي</option>
-          </select>
-        </div>
+        {/* شريط الفلاتر النشطة */}
+        {hasActiveFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-500">الفلاتر النشطة:</span>
+              
+              {filters.search && filters.search.trim() !== "" && (
+                <FilterBadge
+                  label={`البحث: ${filters.search}`}
+                  onRemove={() => handleFilterChange("search", "")}
+                />
+              )}
+              
+              {filters.status !== "all" && (
+                <FilterBadge
+                  label={`الحالة: ${filters.status}`}
+                  onRemove={() => handleFilterChange("status", "all")}
+                />
+              )}
+              
+              {filters.region !== "all" && (
+                <FilterBadge
+                  label={`المنطقة: ${filters.region}`}
+                  onRemove={() => {
+                    handleFilterChange("region", "all");
+                    handleFilterChange("city", "all");
+                  }}
+                />
+              )}
+              
+              {filters.city !== "all" && (
+                <FilterBadge
+                  label={`المدينة: ${filters.city}`}
+                  onRemove={() => handleFilterChange("city", "all")}
+                />
+              )}
+              
+              {filters.date && filters.date !== "" && (
+                <FilterBadge
+                  label={`التاريخ: ${filters.date}`}
+                  onRemove={() => handleFilterChange("date", "")}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+// مكون شارة الفلتر
+const FilterBadge = ({ label, onRemove }) => (
+  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-sm rounded-full border border-blue-200">
+    {label}
+    <button
+      type="button"
+      onClick={onRemove}
+      className="p-0.5 hover:bg-blue-200 rounded-full transition-colors duration-150 focus:outline-none"
+      aria-label="إزالة الفلتر"
+    >
+      <FiX size={12} />
+    </button>
+  </span>
+);
 
 export default SearchFilters;

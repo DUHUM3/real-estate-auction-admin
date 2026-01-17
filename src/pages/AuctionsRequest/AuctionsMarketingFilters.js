@@ -1,28 +1,70 @@
 import React, { useState, useEffect } from "react";
 import Icons from "../../icons/index";
+import { saudiRegions } from "../../constants/saudiRegions"; // تأكد من المسار الصحيح
 
-const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, filtersData, loading = false }) => {
+const MarketingFilters = ({
+  filters,
+  onFilterChange,
+  onSearch,
+  onClearFilters,
+  filtersData,
+  loading = false,
+}) => {
   const [localFilters, setLocalFilters] = useState(filters);
-  
+  const [availableCities, setAvailableCities] = useState([]);
+  const [search, setSearch] = useState(filters.search || "");
+
   // تحديث الحالات المحلية عند تغيير الفلاتر الخارجية
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
 
+  // تحديث المدن المتاحة عند تغيير المنطقة
+  useEffect(() => {
+    if (localFilters.region && localFilters.region !== "all") {
+      const selectedRegion = saudiRegions.find(
+        (region) => region.name.trim() === localFilters.region.trim()
+      );
+
+      if (selectedRegion) {
+        setAvailableCities(selectedRegion.cities);
+      } else {
+        setAvailableCities([]);
+      }
+    } else {
+      setAvailableCities([]);
+    }
+  }, [localFilters.region]);
+
   const handleLocalFilterChange = (key, value) => {
     const newFilters = { ...localFilters, [key]: value };
+
+    // إذا تم تغيير المنطقة، نعيد تعيين المدينة
+    if (key === "region") {
+      newFilters.city = "all";
+    }
+
     setLocalFilters(newFilters);
-    
+
     // إذا لم يكن تغيير الصفحة، نعيد تعيين الصفحة إلى 1
     if (key !== "page" && localFilters.page !== 1) {
       newFilters.page = 1;
     }
-    
+
     onFilterChange(newFilters);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    const newFilters = {
+      ...localFilters,
+      search,
+      page: 1,
+    };
+
+    setLocalFilters(newFilters);
+    onFilterChange(newFilters);
     onSearch();
   };
 
@@ -39,7 +81,10 @@ const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, f
       page: 1,
       per_page: 10,
     };
+
+    setSearch("");
     setLocalFilters(defaultFilters);
+    setAvailableCities([]);
     onClearFilters();
   };
 
@@ -75,23 +120,23 @@ const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, f
           )}
         </div>
 
-        {/* شريط البحث */}
         <form onSubmit={handleSubmit} className="mb-4">
           <div className="flex space-x-3 space-x-reverse">
             <div className="flex-1 relative">
-              <Icons.FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Icons.FiSearch className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="ابحث باسم المستخدم أو الوصف..."
-                value={localFilters.search}
-                onChange={(e) => handleLocalFilterChange("search", e.target.value)}
-                className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-lg"
                 disabled={loading}
               />
             </div>
+
             <button
               type="submit"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg"
               disabled={loading}
             >
               {loading ? "جاري البحث..." : "بحث"}
@@ -108,24 +153,18 @@ const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, f
             </label>
             <select
               value={localFilters.region}
-              onChange={(e) => handleLocalFilterChange("region", e.target.value)}
+              onChange={(e) =>
+                handleLocalFilterChange("region", e.target.value)
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               disabled={loading}
             >
               <option value="all">جميع المناطق</option>
-              <option value="الرياض">الرياض</option>
-              <option value="مكة المكرمة">مكة المكرمة</option>
-              <option value="المدينة المنورة">المدينة المنورة</option>
-              <option value="القصيم">القصيم</option>
-              <option value="الشرقية">الشرقية</option>
-              <option value="عسير">عسير</option>
-              <option value="تبوك">تبوك</option>
-              <option value="حائل">حائل</option>
-              <option value="الحدود الشمالية">الحدود الشمالية</option>
-              <option value="جازان">جازان</option>
-              <option value="نجران">نجران</option>
-              <option value="الباحة">الباحة</option>
-              <option value="الجوف">الجوف</option>
+              {saudiRegions.map((region) => (
+                <option key={region.id} value={region.name.trim()}>
+                  {region.name.trim()}
+                </option>
+              ))}
               {filtersData?.regions?.map((region) => (
                 <option key={region} value={region}>
                   {region}
@@ -143,17 +182,18 @@ const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, f
               value={localFilters.city}
               onChange={(e) => handleLocalFilterChange("city", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              disabled={loading}
+              disabled={loading || availableCities.length === 0}
             >
-              <option value="all">جميع المدن</option>
-              <option value="الرياض">الرياض</option>
-              <option value="جدة">جدة</option>
-              <option value="مكة المكرمة">مكة المكرمة</option>
-              <option value="المدينة المنورة">المدينة المنورة</option>
-              <option value="الدمام">الدمام</option>
-              <option value="الخبر">الخبر</option>
-              <option value="الظهران">الظهران</option>
-              <option value="القطيف">القطيف</option>
+              <option value="all">
+                {availableCities.length === 0
+                  ? "اختر المنطقة أولاً"
+                  : "جميع المدن"}
+              </option>
+              {availableCities.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
               {filtersData?.cities?.map((city) => (
                 <option key={city} value={city}>
                   {city}
@@ -169,16 +209,16 @@ const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, f
             </label>
             <select
               value={localFilters.status}
-              onChange={(e) => handleLocalFilterChange("status", e.target.value)}
+              onChange={(e) =>
+                handleLocalFilterChange("status", e.target.value)
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               disabled={loading}
             >
               <option value="all">جميع الحالات</option>
               <option value="under_review">قيد المراجعة</option>
               <option value="reviewed">تمت المراجعة</option>
-              <option value="auctioned">
-                تم عرض المزاد في شركة المزادات
-              </option>
+              <option value="auctioned">تم عرض المزاد في شركة المزادات</option>
               <option value="rejected">مرفوض</option>
             </select>
           </div>
@@ -190,7 +230,9 @@ const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, f
             </label>
             <select
               value={localFilters.sort_by}
-              onChange={(e) => handleLocalFilterChange("sort_by", e.target.value)}
+              onChange={(e) =>
+                handleLocalFilterChange("sort_by", e.target.value)
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               disabled={loading}
             >
@@ -209,7 +251,9 @@ const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, f
             <input
               type="date"
               value={localFilters.start_date}
-              onChange={(e) => handleLocalFilterChange("start_date", e.target.value)}
+              onChange={(e) =>
+                handleLocalFilterChange("start_date", e.target.value)
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               disabled={loading}
             />
@@ -221,7 +265,9 @@ const MarketingFilters = ({ filters, onFilterChange, onSearch, onClearFilters, f
             <input
               type="date"
               value={localFilters.end_date}
-              onChange={(e) => handleLocalFilterChange("end_date", e.target.value)}
+              onChange={(e) =>
+                handleLocalFilterChange("end_date", e.target.value)
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               disabled={loading}
             />
