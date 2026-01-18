@@ -1,11 +1,6 @@
 // List of interests with pagination
 import React from "react";
-import {
-  FiUser,
-  FiHeart,
-  FiCalendar,
-  FiMessageSquare,
-} from "react-icons/fi";
+import { FiUser, FiHeart, FiCalendar, FiMessageSquare } from "react-icons/fi";
 import Pagination from "./Pagination";
 import { useInterestsAPI } from "../../../services/interestsAPI";
 
@@ -24,7 +19,7 @@ const InterestsList = ({
 
   return (
     <div className="xl:col-span-2">
-      <div className="bg-blue-50 rounded-xl shadow-sm border border-blue-200">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-blue-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-xl font-semibold text-gray-800 mb-2 sm:mb-0">

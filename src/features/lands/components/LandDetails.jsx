@@ -33,7 +33,7 @@ const LandDetails = ({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-6">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-200">
+      <div className="bg-white px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-lg text-gray-800">تفاصيل الأرض</h3>
           <span className="text-sm text-gray-500">ID: {land.id}</span>

@@ -1,8 +1,8 @@
 // components/UsersFilterBar.jsx
 // مسؤول عن: شريط البحث والفلاتر
 
-import React from 'react';
-import { FiFilter, FiSlash, FiSearch, FiRefreshCw } from 'react-icons/fi';
+import React from "react";
+import { FiFilter, FiSlash, FiSearch, FiRefreshCw } from "react-icons/fi";
 
 const UsersFilterBar = ({
   filters,
@@ -16,7 +16,7 @@ const UsersFilterBar = ({
 }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+      <div className="bg-white px-6 py-4 border-b border-gray-200">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <FiFilter className="text-blue-600" size={20} />
@@ -48,7 +48,7 @@ const UsersFilterBar = ({
                 type="text"
                 placeholder="ابحث بالاسم أو البريد الإلكتروني..."
                 value={filters.search}
-                onChange={(e) => onFilterChange('search', e.target.value)}
+                onChange={(e) => onFilterChange("search", e.target.value)}
                 className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
@@ -66,10 +66,10 @@ const UsersFilterBar = ({
                 disabled={isLoading || isRefreshing}
               >
                 <FiRefreshCw
-                  className={isRefreshing ? 'animate-spin' : ''}
+                  className={isRefreshing ? "animate-spin" : ""}
                   size={18}
                 />
-                {isRefreshing ? 'جاري التحديث...' : 'تحديث البيانات'}
+                {isRefreshing ? "جاري التحديث..." : "تحديث البيانات"}
               </button>
             </div>
           </div>
@@ -82,7 +82,7 @@ const UsersFilterBar = ({
             </label>
             <select
               value={filters.status}
-              onChange={(e) => onFilterChange('status', e.target.value)}
+              onChange={(e) => onFilterChange("status", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="all">جميع الحالات</option>
@@ -98,7 +98,7 @@ const UsersFilterBar = ({
             </label>
             <select
               value={filters.user_type_id}
-              onChange={(e) => onFilterChange('user_type_id', e.target.value)}
+              onChange={(e) => onFilterChange("user_type_id", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="all">جميع الأنواع</option>
@@ -117,7 +117,7 @@ const UsersFilterBar = ({
             </label>
             <select
               value={filters.sort_field}
-              onChange={(e) => onFilterChange('sort_field', e.target.value)}
+              onChange={(e) => onFilterChange("sort_field", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="created_at">تاريخ التسجيل</option>
@@ -132,7 +132,7 @@ const UsersFilterBar = ({
             </label>
             <select
               value={filters.sort_direction}
-              onChange={(e) => onFilterChange('sort_direction', e.target.value)}
+              onChange={(e) => onFilterChange("sort_direction", e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
               <option value="desc">تنازلي</option>

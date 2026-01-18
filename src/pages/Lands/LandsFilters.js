@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  FiFilter,
-  FiSearch,
-  FiSlash,
-  FiRefreshCw,
-} from "react-icons/fi";
+import { FiFilter, FiSearch, FiSlash, FiRefreshCw } from "react-icons/fi";
 import { saudiRegions } from "../../constants/saudiRegions"; // تأكد من المسار الصحيح
 
 const LandsFilters = ({
@@ -24,9 +19,9 @@ const LandsFilters = ({
   useEffect(() => {
     if (filters.region && filters.region !== "all") {
       const selectedRegion = saudiRegions.find(
-        region => region.name.trim() === filters.region.trim()
+        (region) => region.name.trim() === filters.region.trim(),
       );
-      
+
       if (selectedRegion) {
         setAvailableCities(selectedRegion.cities);
       } else {
@@ -57,11 +52,11 @@ const LandsFilters = ({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+      <div className="bg-white px-6 py-4 border-b border-gray-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center">
             <FiFilter className="text-blue-600 ml-2" size={24} />
-            <span className="font-medium text-gray-700">
+            <span className="font-medium text-black-700">
               أدوات البحث والتصفية:
             </span>
           </div>
@@ -156,11 +151,13 @@ const LandsFilters = ({
               value={filters.city}
               onChange={(e) => onFilterChange("city", e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              disabled={availableCities.length === 0 && filters.region !== "all"}
+              disabled={
+                availableCities.length === 0 && filters.region !== "all"
+              }
             >
               <option value="all">
-                {availableCities.length === 0 && filters.region !== "all" 
-                  ? "اختر المنطقة أولاً" 
+                {availableCities.length === 0 && filters.region !== "all"
+                  ? "اختر المنطقة أولاً"
                   : "جميع المدن"}
               </option>
               {availableCities.map((city) => (

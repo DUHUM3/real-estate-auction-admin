@@ -1,6 +1,6 @@
 // components/UserDetailsModal.jsx
 import React from "react";
-import { FiUser, FiInfo } from "react-icons/fi";
+import { FiUser, FiInfo, FiCopy } from "react-icons/fi";
 import {
   USER_STATUS_CONFIG,
   USER_TYPE_CONFIG,
@@ -20,6 +20,28 @@ const formatDate = (dateString) => {
   });
 };
 
+const CopyableField = ({ value }) => {
+  const handleCopy = () => {
+    if (!value) return;
+    navigator.clipboard.writeText(value);
+  };
+
+  return (
+    <div className="flex items-center justify-between bg-gray-50 p-2 rounded text-gray-900 text-sm break-all">
+      <span className="truncate">{value || "غير متوفر"}</span>
+      {value && (
+        <button
+          onClick={handleCopy}
+          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          title="نسخ"
+        >
+          <FiCopy className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 const UserDetailsModal = ({ userModal, onClose }) => {
   if (!userModal.show) return null;
 
@@ -35,29 +57,24 @@ const UserDetailsModal = ({ userModal, onClose }) => {
     return (
       <div className="space-y-6">
         {/* Basic Info */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h4 className="text-lg font-medium text-gray-900 mb-4">المعلومات الأساسية</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الكامل</label>
-              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                {user.full_name || "غير متوفر"}
-              </div>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{user.full_name || "غير متوفر"}</div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                البريد الإلكتروني
-              </label>
-              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                {user.email || "غير متوفر"}
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+              <CopyableField value={user.email} />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
-              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                {user.phone || "غير متوفر"}
-              </div>
+              <CopyableField value={user.phone} />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">حالة المستخدم</label>
               <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
@@ -70,6 +87,7 @@ const UserDetailsModal = ({ userModal, onClose }) => {
                 </span>
               </div>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">نوع المستخدم</label>
               <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
@@ -86,27 +104,23 @@ const UserDetailsModal = ({ userModal, onClose }) => {
         </div>
 
         {/* Registration Info */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h4 className="text-lg font-medium text-gray-900 mb-4">معلومات التسجيل</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">تاريخ التسجيل</label>
-              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                {formatDate(user.created_at)}
-              </div>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{formatDate(user.created_at)}</div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">آخر تحديث</label>
-              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                {formatDate(user.updated_at)}
-              </div>
+              <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{formatDate(user.updated_at)}</div>
             </div>
           </div>
         </div>
 
         {/* Admin Message */}
         {user.admin_message && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h4 className="text-lg font-medium text-gray-900 mb-4">رسالة المسؤول</h4>
             <div className="text-sm text-gray-900 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
               {user.admin_message}
@@ -116,7 +130,7 @@ const UserDetailsModal = ({ userModal, onClose }) => {
 
         {/* User Type Specific Details */}
         {userTypeData && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
               <IconComponent className="w-4 h-4" />
               {userTypeConfig.title}
@@ -129,7 +143,7 @@ const UserDetailsModal = ({ userModal, onClose }) => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {USER_DETAIL_LABELS[key] || key}
                       </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{value}</div>
+                      <div className="text-sm text-gray-900 bg-gray-50 p-2 rounded break-all">{value}</div>
                     </div>
                   )
               )}
@@ -137,9 +151,8 @@ const UserDetailsModal = ({ userModal, onClose }) => {
           </div>
         )}
 
-        {/* No additional details */}
         {!userTypeData && user.user_type && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
               <IconComponent className="w-4 h-4" />
               {userTypeConfig?.title || "معلومات المستخدم"}
@@ -156,7 +169,7 @@ const UserDetailsModal = ({ userModal, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
             <FiUser className="w-5 h-5 text-gray-500" />
@@ -175,14 +188,8 @@ const UserDetailsModal = ({ userModal, onClose }) => {
             <div className="flex flex-col items-center justify-center py-12">
               <div className="flex space-x-2">
                 <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
-                <div
-                  className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.1s" }}
-                ></div>
-                <div
-                  className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.2s" }}
-                ></div>
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
               </div>
               <p className="mt-4 text-sm text-gray-500">جاري تحميل تفاصيل المستخدم...</p>
             </div>

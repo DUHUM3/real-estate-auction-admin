@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import SearchFilters from "../../pages/Auctions/AuctionFilters"; 
+import SearchFilters from "../../pages/Auctions/AuctionFilters";
 import { useAuctionQueries } from "../../services/AuctionApi";
 import AuctionsList from "../../features/auctions/components/AuctionsList";
 import AuctionDetails from "../../features/auctions/components/AuctionDetails";
@@ -14,20 +14,31 @@ import useMediaModal from "../../features/auctions/hooks/useMediaModal";
 
 const AllAuctions = () => {
   const navigate = useNavigate();
-  const { useFetchAuctions, useApproveAuction, useRejectAuction } = useAuctionQueries();
+  const { useFetchAuctions, useApproveAuction, useRejectAuction } =
+    useAuctionQueries();
 
   // Custom hooks for state management
-  const { filters, currentPage, setFilters, setCurrentPage, clearFilters } = useAuctionFilters();
+  const { filters, currentPage, setFilters, setCurrentPage, clearFilters } =
+    useAuctionFilters();
   const { selectedAuction, setSelectedAuction } = useAuctionSelection();
-  const { mediaModal, openMediaModal, closeMediaModal, updateMediaIndex } = useMediaModal();
+  const { mediaModal, openMediaModal, closeMediaModal, updateMediaIndex } =
+    useMediaModal();
 
   // Local state
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [rejectModal, setRejectModal] = useState({ show: false, auctionId: null, reason: "" });
+  const [rejectModal, setRejectModal] = useState({
+    show: false,
+    auctionId: null,
+    reason: "",
+  });
   const [ownerModal, setOwnerModal] = useState({ show: false, owner: null });
 
   // API queries
-  const { data: auctionsData, isLoading, refetch } = useFetchAuctions(filters, currentPage);
+  const {
+    data: auctionsData,
+    isLoading,
+    refetch,
+  } = useFetchAuctions(filters, currentPage);
   const approveMutation = useApproveAuction();
   const rejectMutation = useRejectAuction();
 
@@ -118,7 +129,11 @@ const AllAuctions = () => {
     to: 0,
   };
 
-  const loading = isLoading || isRefreshing || approveMutation.isLoading || rejectMutation.isLoading;
+  const loading =
+    isLoading ||
+    isRefreshing ||
+    approveMutation.isLoading ||
+    rejectMutation.isLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6">
@@ -150,13 +165,15 @@ const AllAuctions = () => {
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
           {selectedAuction ? (
             <div className="h-full flex flex-col">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white">تفاصيل المزاد</h3>
-                <span className="text-sm text-blue-100 font-medium bg-blue-700 px-3 py-1 rounded-full">
+              <div className="bg-white px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  تفاصيل المزاد
+                </h3>
+
+                <span className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
                   ID: {selectedAuction.id}
                 </span>
               </div>
-
               <div className="flex-1 overflow-y-auto p-6">
                 <AuctionDetails
                   auction={selectedAuction}
@@ -177,7 +194,9 @@ const AllAuctions = () => {
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                 <span className="text-blue-600 text-2xl">📅</span>
               </div>
-              <p className="text-gray-600 text-lg font-medium">اختر مزادًا لعرض التفاصيل</p>
+              <p className="text-gray-600 text-lg font-medium">
+                اختر مزادًا لعرض التفاصيل
+              </p>
             </div>
           )}
         </div>
@@ -197,7 +216,9 @@ const AllAuctions = () => {
         isOpen={rejectModal.show}
         reason={rejectModal.reason}
         loading={loading}
-        onReasonChange={(reason) => setRejectModal((prev) => ({ ...prev, reason }))}
+        onReasonChange={(reason) =>
+          setRejectModal((prev) => ({ ...prev, reason }))
+        }
         onConfirm={handleReject}
         onClose={closeRejectModal}
       />

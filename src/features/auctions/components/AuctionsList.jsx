@@ -23,15 +23,17 @@ const AuctionsList = ({
 
   return (
     <div className="xl:col-span-2 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-xl font-bold text-white mb-2 sm:mb-0">
+      <div className="bg-white px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="text-lg font-semibold text-gray-800 mb-2 sm:mb-0">
           قائمة المزادات ({pagination.total || 0})
         </h3>
+
         <div className="flex flex-col sm:items-end">
-          <span className="text-sm text-blue-100">
+          <span className="text-sm text-gray-600">
             {pagination.total > 0 ? (
               <>
-                عرض {pagination.from || 1} إلى {pagination.to || auctions.length} من {pagination.total} نتيجة
+                عرض {pagination.from || 1} إلى{" "}
+                {pagination.to || auctions.length} من {pagination.total} نتيجة
               </>
             ) : (
               "لا توجد نتائج"
@@ -49,15 +51,23 @@ const AuctionsList = ({
         <div className="flex flex-col items-center justify-center py-12">
           <div className="flex space-x-2 mb-4">
             <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"></div>
-            <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-            <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+            <div
+              className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"
+              style={{ animationDelay: "0.1s" }}
+            ></div>
+            <div
+              className="w-3 h-3 bg-blue-600 rounded-full animate-bounce"
+              style={{ animationDelay: "0.2s" }}
+            ></div>
           </div>
           <p className="text-gray-600 font-medium">جاري تحميل البيانات...</p>
         </div>
       ) : auctions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <FiCalendar className="text-gray-400 mb-4" size={48} />
-          <p className="text-gray-600 text-lg mb-4 font-medium">لا توجد مزادات</p>
+          <p className="text-gray-600 text-lg mb-4 font-medium">
+            لا توجد مزادات
+          </p>
           {hasActiveFilters && (
             <button
               className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md hover:shadow-lg"
@@ -85,7 +95,9 @@ const AuctionsList = ({
                     <FiCalendar className="text-blue-600" size={22} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-lg font-bold text-gray-900 truncate mb-1">{auction.title}</h4>
+                    <h4 className="text-lg font-bold text-gray-900 truncate mb-1">
+                      {auction.title}
+                    </h4>
                     <p className="text-sm text-gray-600 font-medium mb-2">
                       {auction.company?.auction_name || "غير محدد"}
                     </p>
@@ -100,7 +112,9 @@ const AuctionsList = ({
                       </span>
                     </div>
                   </div>
-                  <div className="flex-shrink-0">{getStatusBadge(auction.status)}</div>
+                  <div className="flex-shrink-0">
+                    {getStatusBadge(auction.status)}
+                  </div>
                 </div>
               </div>
             ))}

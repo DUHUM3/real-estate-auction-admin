@@ -1,15 +1,15 @@
 // pages/AllUsersPage.jsx
 // المكون الرئيسي الذي يجمع كل الأجزاء معاً
 
-import React, { useState } from 'react';
-import UsersFilterBar from '../../features/users/components/UsersFilterBar';
-import UsersList from '../../features/users/components/UsersList';
-import UserDetailsPanel from '../../features/users/components/UserDetailsPanel';
-import RejectModal from '../../features/users/components/RejectModal';
-import Pagination from '../../features/users/components/Pagination';
-import { useUsersFilters } from '../../features/users/hooks/useUsersFilters';
-import { useUsersData } from '../../features/users/hooks/useUsersData';
-import { useUserActions } from '../../features/users/hooks/useUserActions';
+import React, { useState } from "react";
+import UsersFilterBar from "../../features/users/components/UsersFilterBar";
+import UsersList from "../../features/users/components/UsersList";
+import UserDetailsPanel from "../../features/users/components/UserDetailsPanel";
+import RejectModal from "../../features/users/components/RejectModal";
+import Pagination from "../../features/users/components/Pagination";
+import { useUsersFilters } from "../../features/users/hooks/useUsersFilters";
+import { useUsersData } from "../../features/users/hooks/useUsersData";
+import { useUserActions } from "../../features/users/hooks/useUserActions";
 
 const AllUsersPage = () => {
   const [rejectModalUserId, setRejectModalUserId] = useState(null);
@@ -27,17 +27,14 @@ const AllUsersPage = () => {
     hasActiveFilters,
   } = useUsersFilters();
 
-  const { usersData, isLoading, refetch, isRefreshing, handleRefresh } = useUsersData(
-    filters,
-    currentPage,
-    buildQueryString
-  );
+  const { usersData, isLoading, refetch, isRefreshing, handleRefresh } =
+    useUsersData(filters, currentPage, buildQueryString);
 
-  const { handleApprove, handleReject, isLoading: isActionLoading } = useUserActions(
-    filters,
-    currentPage,
-    setSelectedUser
-  );
+  const {
+    handleApprove,
+    handleReject,
+    isLoading: isActionLoading,
+  } = useUserActions(filters, currentPage, setSelectedUser);
 
   // معالجات الأحداث
   const handleSearch = (e) => {
@@ -89,7 +86,7 @@ const AllUsersPage = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* قائمة المستخدمين */}
         <div className="xl:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-          <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-200">
+          <div className="bg-white px-6 py-4 border-b border-gray-200">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h3 className="text-xl font-semibold text-gray-800">
                 قائمة المستخدمين ({pagination.total || users.length})
@@ -97,11 +94,12 @@ const AllUsersPage = () => {
               <span className="text-sm text-gray-600">
                 {pagination.total > 0 ? (
                   <>
-                    عرض {pagination.from} إلى {pagination.to} من {pagination.total} - الصفحة{' '}
-                    {pagination.current_page} من {pagination.last_page}
+                    عرض {pagination.from} إلى {pagination.to} من{" "}
+                    {pagination.total} - الصفحة {pagination.current_page} من{" "}
+                    {pagination.last_page}
                   </>
                 ) : (
-                  'لا توجد نتائج'
+                  "لا توجد نتائج"
                 )}
               </span>
             </div>
@@ -116,7 +114,11 @@ const AllUsersPage = () => {
             />
           </div>
 
-          <Pagination pagination={pagination} currentPage={currentPage} onPageChange={setCurrentPage} />
+          <Pagination
+            pagination={pagination}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+          />
         </div>
 
         {/* لوحة التفاصيل */}

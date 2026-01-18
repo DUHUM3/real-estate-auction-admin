@@ -1,5 +1,11 @@
 import React, { useMemo } from "react";
-import { FiFilter, FiSearch, FiRefreshCw, FiX, FiChevronDown } from "react-icons/fi";
+import {
+  FiFilter,
+  FiSearch,
+  FiRefreshCw,
+  FiX,
+  FiChevronDown,
+} from "react-icons/fi";
 import { saudiRegions } from "../../constants/saudiRegions"; // عدّل المسار حسب موقع الملف
 
 const SearchFilters = ({
@@ -29,7 +35,7 @@ const SearchFilters = ({
       return saudiRegions.flatMap((region) => region.cities);
     }
     const selectedRegion = saudiRegions.find(
-      (region) => region.name.trim() === filters.region.trim()
+      (region) => region.name.trim() === filters.region.trim(),
     );
     return selectedRegion ? selectedRegion.cities : [];
   }, [filters.region]);
@@ -47,10 +53,10 @@ const SearchFilters = ({
   const handleClearFilters = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // إذا كانت دالة clearFilters موجودة، استخدمها
     if (typeof clearFilters === "function") {
-          console.log('Calling clearFilters function');
+      console.log("Calling clearFilters function");
 
       clearFilters();
     } else {
@@ -87,7 +93,7 @@ const SearchFilters = ({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
       {/* شريط العنوان */}
-      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 px-4 py-3 border-b border-gray-200">
+      <div className="bg-white px-4 py-3 border-b border-gray-200">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -104,7 +110,7 @@ const SearchFilters = ({
               )}
             </div>
           </div>
-          
+
           {hasActiveFilters && (
             <button
               type="button"
@@ -119,7 +125,10 @@ const SearchFilters = ({
       </div>
 
       {/* حقل البحث */}
-      <form onSubmit={onSearchSubmit} className="p-4 border-b border-gray-100 bg-gray-50/50">
+      <form
+        onSubmit={onSearchSubmit}
+        className="p-4 border-b border-gray-100 bg-gray-50/50"
+      >
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <FiSearch
@@ -134,7 +143,7 @@ const SearchFilters = ({
               className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
             />
           </div>
-          
+
           <div className="flex gap-2 sm:flex-shrink-0">
             <button
               type="submit"
@@ -146,7 +155,7 @@ const SearchFilters = ({
                 بحث
               </span>
             </button>
-            
+
             <button
               type="button"
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-700 font-medium rounded-lg border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1"
@@ -185,9 +194,9 @@ const SearchFilters = ({
                 <option value="مغلق">مغلق</option>
                 <option value="مرفوض">مرفوض</option>
               </select>
-              <FiChevronDown 
-                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
-                size={16} 
+              <FiChevronDown
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={16}
               />
             </div>
           </div>
@@ -210,9 +219,9 @@ const SearchFilters = ({
                   </option>
                 ))}
               </select>
-              <FiChevronDown 
-                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
-                size={16} 
+              <FiChevronDown
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={16}
               />
             </div>
           </div>
@@ -227,7 +236,9 @@ const SearchFilters = ({
                 value={filters.city || "all"}
                 onChange={(e) => handleFilterChange("city", e.target.value)}
                 className="w-full p-2.5 pr-3 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
-                disabled={filters.region === "all" && availableCities.length === 0}
+                disabled={
+                  filters.region === "all" && availableCities.length === 0
+                }
               >
                 <option value="all">جميع المدن</option>
                 {availableCities.map((city, index) => (
@@ -236,9 +247,9 @@ const SearchFilters = ({
                   </option>
                 ))}
               </select>
-              <FiChevronDown 
-                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
-                size={16} 
+              <FiChevronDown
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={16}
               />
             </div>
           </div>
@@ -264,16 +275,18 @@ const SearchFilters = ({
             <div className="relative">
               <select
                 value={filters.sort_field || "created_at"}
-                onChange={(e) => handleFilterChange("sort_field", e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange("sort_field", e.target.value)
+                }
                 className="w-full p-2.5 pr-3 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white cursor-pointer"
               >
                 <option value="created_at">تاريخ الإنشاء</option>
                 <option value="auction_date">تاريخ المزاد</option>
                 <option value="title">اسم المزاد</option>
               </select>
-              <FiChevronDown 
-                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
-                size={16} 
+              <FiChevronDown
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={16}
               />
             </div>
           </div>
@@ -286,15 +299,17 @@ const SearchFilters = ({
             <div className="relative">
               <select
                 value={filters.sort_direction || "desc"}
-                onChange={(e) => handleFilterChange("sort_direction", e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange("sort_direction", e.target.value)
+                }
                 className="w-full p-2.5 pr-3 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 appearance-none bg-white cursor-pointer"
               >
                 <option value="desc">تنازلي (الأحدث أولاً)</option>
                 <option value="asc">تصاعدي (الأقدم أولاً)</option>
               </select>
-              <FiChevronDown 
-                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" 
-                size={16} 
+              <FiChevronDown
+                className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={16}
               />
             </div>
           </div>
@@ -305,21 +320,21 @@ const SearchFilters = ({
           <div className="mt-4 pt-4 border-t border-gray-100">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-500">الفلاتر النشطة:</span>
-              
+
               {filters.search && filters.search.trim() !== "" && (
                 <FilterBadge
                   label={`البحث: ${filters.search}`}
                   onRemove={() => handleFilterChange("search", "")}
                 />
               )}
-              
+
               {filters.status !== "all" && (
                 <FilterBadge
                   label={`الحالة: ${filters.status}`}
                   onRemove={() => handleFilterChange("status", "all")}
                 />
               )}
-              
+
               {filters.region !== "all" && (
                 <FilterBadge
                   label={`المنطقة: ${filters.region}`}
@@ -329,14 +344,14 @@ const SearchFilters = ({
                   }}
                 />
               )}
-              
+
               {filters.city !== "all" && (
                 <FilterBadge
                   label={`المدينة: ${filters.city}`}
                   onRemove={() => handleFilterChange("city", "all")}
                 />
               )}
-              
+
               {filters.date && filters.date !== "" && (
                 <FilterBadge
                   label={`التاريخ: ${filters.date}`}

@@ -73,16 +73,6 @@ const ClientsManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      
-      {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex items-center mb-2">
-          <FiUser className="text-2xl text-blue-600 ml-3" />
-          <h1 className="text-2xl font-bold text-gray-800">إدارة العملاء المميزين</h1>
-        </div>
-        <p className="text-gray-600">إدارة قائمة العملاء المميزين - العدد الإجمالي: {count}</p>
-      </div>
-
       {/* Filter Section */}
       <ClientFilters 
         filters={filters}

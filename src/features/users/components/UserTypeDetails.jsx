@@ -11,7 +11,6 @@ const UserTypeDetails = ({ user }) => {
 
   const copyToClipboard = async (text, fieldName) => {
     if (!text) return;
-
     try {
       await navigator.clipboard.writeText(text.toString());
       setCopyStatus((prev) => ({ ...prev, [fieldName]: true }));
@@ -24,15 +23,20 @@ const UserTypeDetails = ({ user }) => {
   };
 
   const renderFileLink = (file) => {
-    if (!file) return <span className="text-gray-800 font-medium">غير محدد</span>;
-    
-    const fileUrl = file.startsWith('http') ? file : `${STORAGE_BASE_URL}/${file}`;
+    if (!file) {
+      return <span className="text-gray-800 font-medium">غير محدد</span>;
+    }
+
+    const fileUrl = file.startsWith('http')
+      ? file
+      : `${STORAGE_BASE_URL}/${file}`;
+
     return (
       <a
         href={fileUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-blue-600 hover:underline inline-flex items-center gap-2"
+        className="inline-flex items-center gap-2 text-blue-600 hover:underline"
       >
         <FiFileText />
         عرض الملف
@@ -40,27 +44,42 @@ const UserTypeDetails = ({ user }) => {
     );
   };
 
-  const renderFieldWithCopy = (label, value, key, icon) => (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2 text-sm text-gray-600">
-        {icon}
-        <span>{label}</span>
+  const InfoCard = ({ label, value, fieldKey, icon }) => (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 flex items-center justify-between">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          {icon}
+          <span>{label}</span>
+        </div>
+        <div className="text-sm font-medium text-gray-800">
+          {value || 'غير محدد'}
+        </div>
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-gray-800 font-medium">{value || 'غير محدد'}</span>
-        {value && (
-          <button
-            className={`p-1 rounded transition-colors ${
-              copyStatus[key]
-                ? 'bg-green-100 text-green-600'
-                : 'hover:bg-gray-100 text-gray-500'
-            }`}
-            onClick={() => copyToClipboard(value, key)}
-            title={`نسخ ${label}`}
-          >
-            <FiCopy size={16} />
-          </button>
-        )}
+
+      {value && (
+        <button
+          onClick={() => copyToClipboard(value, fieldKey)}
+          title={`نسخ ${label}`}
+          className={`p-1.5 rounded-md transition ${
+            copyStatus[fieldKey]
+              ? 'bg-green-100 text-green-600'
+              : 'text-gray-400 hover:bg-gray-100'
+          }`}
+        >
+          <FiCopy size={14} />
+        </button>
+      )}
+    </div>
+  );
+
+  const SectionWrapper = ({ title, icon, children }) => (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-2">
+        {icon}
+        <h4 className="text-base font-semibold text-gray-800">{title}</h4>
+      </div>
+      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {children}
       </div>
     </div>
   );
@@ -69,15 +88,17 @@ const UserTypeDetails = ({ user }) => {
   if (userType === 2 && user.land_owner) {
     const owner = user.land_owner;
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
-          <FiUser className="text-red-500" />
-          <h4 className="text-lg font-semibold text-gray-800">تفاصيل مالك الأرض</h4>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderFieldWithCopy('رقم الهوية', owner.national_id, 'owner_national_id', <FiFileText className="text-gray-400" />)}
-        </div>
-      </div>
+      <SectionWrapper
+        title="تفاصيل مالك الأرض"
+        icon={<FiUser className="text-red-500" />}
+      >
+        <InfoCard
+          label="رقم الهوية"
+          value={owner.national_id}
+          fieldKey="owner_national_id"
+          icon={<FiFileText />}
+        />
+      </SectionWrapper>
     );
   }
 
@@ -85,25 +106,31 @@ const UserTypeDetails = ({ user }) => {
   if (userType === 5 && user.real_estate_broker) {
     const broker = user.real_estate_broker;
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition hover:shadow-md">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
-          <FiUser className="text-purple-500" />
-          <h4 className="text-lg font-semibold text-gray-800">تفاصيل الوسيط العقاري</h4>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderFieldWithCopy('رقم الهوية', broker.national_id, 'broker_national_id', <FiFileText className="text-gray-400" />)}
-          {renderFieldWithCopy('رقم الرخصة', broker.license_number, 'broker_license', <FiHash className="text-gray-400" />)}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FiFileText className="text-gray-400" />
-              <span>ملف الرخصة</span>
-            </div>
-            <div className="flex items-center justify-between">
-              {renderFileLink(broker.license_file)}
-            </div>
+      <SectionWrapper
+        title="تفاصيل الوسيط العقاري"
+        icon={<FiUser className="text-purple-500" />}
+      >
+        <InfoCard
+          label="رقم الهوية"
+          value={broker.national_id}
+          fieldKey="broker_national_id"
+          icon={<FiFileText />}
+        />
+        <InfoCard
+          label="رقم الرخصة"
+          value={broker.license_number}
+          fieldKey="broker_license"
+          icon={<FiHash />}
+        />
+
+        <div className="md:col-span-2 space-y-1">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <FiFileText />
+            <span>ملف الرخصة</span>
           </div>
+          {renderFileLink(broker.license_file)}
         </div>
-      </div>
+      </SectionWrapper>
     );
   }
 
@@ -111,34 +138,51 @@ const UserTypeDetails = ({ user }) => {
   if (userType === 6 && user.auction_company) {
     const auction = user.auction_company;
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <FiUser className="text-indigo-500" />
-            تفاصيل شركة المزادات
-          </h4>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderFieldWithCopy('السجل التجاري', auction.commercial_register, 'auction_commercial', <FiFileText className="text-gray-400" />)}
-          {renderFieldWithCopy('اسم شركة المزاد', auction.auction_name, 'auction_name', <FiFileText className="text-gray-400" />)}
-          {renderFieldWithCopy('رقم الهوية', auction.national_id, 'auction_national_id', <FiFileText className="text-gray-400" />)}
-          {renderFieldWithCopy('رقم الرخصة', auction.license_number, 'auction_license_number', <FiFileText className="text-gray-400" />)}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FiFileText className="text-gray-400" />
-              <span>ملف السجل التجاري</span>
-            </div>
-            {renderFileLink(auction.commercial_file)}
+      <SectionWrapper
+        title="تفاصيل شركة المزادات"
+        icon={<FiUser className="text-indigo-500" />}
+      >
+        <InfoCard
+          label="السجل التجاري"
+          value={auction.commercial_register}
+          fieldKey="auction_commercial"
+          icon={<FiFileText />}
+        />
+        <InfoCard
+          label="اسم شركة المزاد"
+          value={auction.auction_name}
+          fieldKey="auction_name"
+          icon={<FiFileText />}
+        />
+        <InfoCard
+          label="رقم الهوية"
+          value={auction.national_id}
+          fieldKey="auction_national_id"
+          icon={<FiFileText />}
+        />
+        <InfoCard
+          label="رقم الرخصة"
+          value={auction.license_number}
+          fieldKey="auction_license_number"
+          icon={<FiFileText />}
+        />
+
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <FiFileText />
+            <span>ملف السجل التجاري</span>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FiFileText className="text-gray-400" />
-              <span>ملف الرخصة</span>
-            </div>
-            {renderFileLink(auction.license_file)}
-          </div>
+          {renderFileLink(auction.commercial_file)}
         </div>
-      </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <FiFileText />
+            <span>ملف الرخصة</span>
+          </div>
+          {renderFileLink(auction.license_file)}
+        </div>
+      </SectionWrapper>
     );
   }
 
@@ -146,44 +190,61 @@ const UserTypeDetails = ({ user }) => {
   if (userType === 4 && user.business_entity) {
     const entity = user.business_entity;
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <FiUser className="text-amber-500" />
-            تفاصيل الجهة التجارية
-          </h4>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderFieldWithCopy('السجل التجاري', entity.commercial_register, 'business_commercial', <FiHash className="text-gray-400" />)}
-          {renderFieldWithCopy('اسم المنشأة', entity.business_name, 'business_name', <FiFileText className="text-gray-400" />)}
-          {renderFieldWithCopy('رقم الهوية الوطنية', entity.national_id, 'business_national_id', <FiFileText className="text-gray-400" />)}
-          <div className="space-y-2 md:col-span-2">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FiFileText className="text-gray-400" />
-              <span>ملف السجل التجاري</span>
-            </div>
-            {renderFileLink(entity.commercial_file)}
+      <SectionWrapper
+        title="تفاصيل الجهة التجارية"
+        icon={<FiUser className="text-amber-500" />}
+      >
+        <InfoCard
+          label="السجل التجاري"
+          value={entity.commercial_register}
+          fieldKey="business_commercial"
+          icon={<FiHash />}
+        />
+        <InfoCard
+          label="اسم المنشأة"
+          value={entity.business_name}
+          fieldKey="business_name"
+          icon={<FiFileText />}
+        />
+        <InfoCard
+          label="رقم الهوية الوطنية"
+          value={entity.national_id}
+          fieldKey="business_national_id"
+          icon={<FiFileText />}
+        />
+
+        <div className="md:col-span-2 space-y-1">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <FiFileText />
+            <span>ملف السجل التجاري</span>
           </div>
+          {renderFileLink(entity.commercial_file)}
         </div>
-      </div>
+      </SectionWrapper>
     );
   }
 
   // وكيل شرعي
   if (userType === 3 && user.legal_agent) {
+    const agent = user.legal_agent;
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <FiUser className="text-emerald-500" />
-            تفاصيل الوكيل الشرعي
-          </h4>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderFieldWithCopy('رقم الوكالة', user.legal_agent.agency_number, 'agent_agency', <FiHash className="text-gray-400" />)}
-          {renderFieldWithCopy('رقم الهوية', user.legal_agent.national_id, 'agent_national_id', <FiFileText className="text-gray-400" />)}
-        </div>
-      </div>
+      <SectionWrapper
+        title="تفاصيل الوكيل الشرعي"
+        icon={<FiUser className="text-emerald-500" />}
+      >
+        <InfoCard
+          label="رقم الوكالة"
+          value={agent.agency_number}
+          fieldKey="agent_agency"
+          icon={<FiHash />}
+        />
+        <InfoCard
+          label="رقم الهوية"
+          value={agent.national_id}
+          fieldKey="agent_national_id"
+          icon={<FiFileText />}
+        />
+      </SectionWrapper>
     );
   }
 

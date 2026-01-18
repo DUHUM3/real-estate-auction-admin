@@ -116,21 +116,6 @@ const MarketingRequestsPage = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3 space-x-reverse">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Target className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                إدارة طلبات التسويق
-              </h1>
-              <p className="text-gray-600 mt-1">
-                عرض وإدارة جميع طلبات التسويق - العدد الإجمالي:{" "}
-                {pagination.total}
-              </p>
-            </div>
-          </div>
-
           <button
             className="flex items-center space-x-2 space-x-reverse px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
             onClick={handleRefresh}

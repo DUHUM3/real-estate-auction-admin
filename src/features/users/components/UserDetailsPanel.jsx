@@ -1,8 +1,19 @@
 // components/UserDetailsPanel.jsx
 // مسؤول عن: لوحة عرض تفاصيل المستخدم المحدد
+// UI/UX: Enterprise SaaS Admin – RTL-first, Card-based, consistent with Land Details design system
 
 import React, { useState } from 'react';
-import { FiUser, FiMail, FiPhone, FiCalendar, FiFileText, FiInfo, FiCopy, FiCheck, FiX } from 'react-icons/fi';
+import {
+  FiUser,
+  FiMail,
+  FiPhone,
+  FiCalendar,
+  FiFileText,
+  FiInfo,
+  FiCopy,
+  FiCheck,
+  FiX,
+} from 'react-icons/fi';
 import UserTypeDetails from './UserTypeDetails';
 import { USER_TYPE_NAMES } from '../constants/usersConstants';
 
@@ -11,7 +22,6 @@ const UserDetailsPanel = ({ user, onApprove, onReject, isLoading }) => {
 
   const copyToClipboard = async (text, fieldName) => {
     if (!text) return;
-
     try {
       await navigator.clipboard.writeText(text.toString());
       setCopyStatus((prev) => ({ ...prev, [fieldName]: true }));
@@ -35,202 +45,247 @@ const UserDetailsPanel = ({ user, onApprove, onReject, isLoading }) => {
   };
 
   const getStatusBadge = (status) => {
-    const baseClasses = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium';
+    const base =
+      'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium';
     switch (status) {
       case 'pending':
-        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>قيد المراجعة</span>;
+        return (
+          <span className={`${base} bg-yellow-100 text-yellow-800`}>
+            قيد المراجعة
+          </span>
+        );
       case 'approved':
-        return <span className={`${baseClasses} bg-green-100 text-green-800`}>مقبول</span>;
+        return (
+          <span className={`${base} bg-green-100 text-green-800`}>
+            مقبول
+          </span>
+        );
       case 'rejected':
-        return <span className={`${baseClasses} bg-red-100 text-red-800`}>مرفوض</span>;
+        return (
+          <span className={`${base} bg-red-100 text-red-800`}>
+            مرفوض
+          </span>
+        );
       default:
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>غير معروف</span>;
+        return (
+          <span className={`${base} bg-gray-100 text-gray-800`}>
+            غير معروف
+          </span>
+        );
     }
   };
 
   const getUserTypeName = (user) => {
-    return user.user_type?.type_name || USER_TYPE_NAMES[user.user_type_id] || 'مستخدم عام';
+    return (
+      user.user_type?.type_name ||
+      USER_TYPE_NAMES[user.user_type_id] ||
+      'مستخدم عام'
+    );
   };
 
   if (!user) {
     return (
-      <div className="h-full flex flex-col items-center justify-center py-12 text-center">
-        <FiUser className="text-gray-400 mb-4" size={64} />
-        <p className="text-gray-600">اختر مستخدمًا لعرض التفاصيل الكاملة</p>
+      <div className="h-full flex flex-col items-center justify-center py-16 text-center">
+        <FiUser className="text-gray-300 mb-4" size={56} />
+        <p className="text-gray-500 text-sm">
+          اختر مستخدمًا لعرض التفاصيل
+        </p>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-200">
+    <div className="flex flex-col h-full">
+      {/* ===== Overview Header ===== */}
+      <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-800">تفاصيل المستخدم الكاملة</h3>
-          <span className="text-sm text-gray-500 bg-white px-2 py-1 rounded">ID: {user.id}</span>
-        </div>
-      </div>
-
-      <div className="p-6 overflow-y-auto max-h-[80vh] min-h-[100px]">
-        <div className="space-y-6">
-          {/* المعلومات الأساسية */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-              <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <FiInfo className="text-blue-500" />
-                المعلومات الأساسية
-              </h4>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <FiUser className="text-gray-400" />
-                  <span>الاسم الكامل</span>
-                </div>
-                <div className="text-gray-800 font-medium">{user.full_name}</div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <FiMail className="text-gray-400" />
-                  <span>البريد الإلكتروني</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-800 font-medium">{user.email}</span>
-                  <button
-                    className={`p-1 rounded transition-colors ${
-                      copyStatus['email'] ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 text-gray-500'
-                    }`}
-                    onClick={() => copyToClipboard(user.email, 'email')}
-                    title="نسخ البريد الإلكتروني"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <FiPhone className="text-gray-400" />
-                  <span>رقم الهاتف</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-800 font-medium">{user.phone}</span>
-                  <button
-                    className={`p-1 rounded transition-colors ${
-                      copyStatus['phone'] ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 text-gray-500'
-                    }`}
-                    onClick={() => copyToClipboard(user.phone, 'phone')}
-                    title="نسخ رقم الهاتف"
-                  >
-                    <FiCopy size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-sm text-gray-600">نوع المستخدم</div>
-                <div className="text-gray-800 font-medium">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {getUserTypeName(user)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <FiCalendar className="text-gray-400" />
-                  <span>تاريخ التسجيل</span>
-                </div>
-                <div className="text-gray-800 font-medium">{formatDate(user.created_at)}</div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <FiCalendar className="text-gray-400" />
-                  <span>آخر تحديث</span>
-                </div>
-                <div className="text-gray-800 font-medium">{formatDate(user.updated_at)}</div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-sm text-gray-600">الحالة</div>
-                <div className="text-gray-800 font-medium">{getStatusBadge(user.status)}</div>
-              </div>
-
-              {user.admin_message && (
-                <div className="md:col-span-2 space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FiFileText className="text-gray-400" />
-                    <span>رسالة المسؤول</span>
-                  </div>
-                  <div className="flex items-start justify-between bg-gray-50 p-3 rounded-lg">
-                    <span className="text-gray-800">{user.admin_message}</span>
-                    <button
-                      className={`p-1 rounded transition-colors flex-shrink-0 ${
-                        copyStatus['admin_message'] ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 text-gray-500'
-                      }`}
-                      onClick={() => copyToClipboard(user.admin_message, 'admin_message')}
-                      title="نسخ رسالة المسؤول"
-                    >
-                      <FiCopy size={16} />
-                    </button>
-                  </div>
-                </div>
-              )}
+          <div className="flex items-center gap-3">
+            <FiUser className="text-gray-400" size={20} />
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">
+                {user.full_name}
+              </h2>
+              <p className="text-xs text-gray-500">
+                ID: {user.id}
+              </p>
             </div>
           </div>
-
-          {/* التفاصيل الخاصة بنوع المستخدم */}
-          <UserTypeDetails user={user} />
+          {getStatusBadge(user.status)}
         </div>
       </div>
 
-      {/* أزرار القبول/الرفض */}
-      <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-        <div className="flex flex-wrap gap-3">
+      {/* ===== Content ===== */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* ===== Basic Information ===== */}
+        <section className="bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <FiInfo className="text-gray-400" />
+            <h3 className="text-sm font-semibold text-gray-800">
+              المعلومات الأساسية
+            </h3>
+          </div>
+
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Full Name */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1">الاسم الكامل</p>
+              <p className="text-sm font-medium text-gray-800">
+                {user.full_name}
+              </p>
+            </div>
+
+            {/* User Type */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1">نوع المستخدم</p>
+              <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {getUserTypeName(user)}
+              </span>
+            </div>
+
+            {/* Email */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                <FiMail /> البريد الإلكتروني
+              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-gray-800 truncate">
+                  {user.email}
+                </p>
+                <button
+                  onClick={() => copyToClipboard(user.email, 'email')}
+                  className={`p-1.5 rounded-md transition ${
+                    copyStatus.email
+                      ? 'bg-green-100 text-green-600'
+                      : 'text-gray-400 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiCopy size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Phone */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                <FiPhone /> رقم الهاتف
+              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-gray-800">
+                  {user.phone}
+                </p>
+                <button
+                  onClick={() => copyToClipboard(user.phone, 'phone')}
+                  className={`p-1.5 rounded-md transition ${
+                    copyStatus.phone
+                      ? 'bg-green-100 text-green-600'
+                      : 'text-gray-400 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiCopy size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Created At */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                <FiCalendar /> تاريخ التسجيل
+              </p>
+              <p className="text-sm text-gray-800">
+                {formatDate(user.created_at)}
+              </p>
+            </div>
+
+            {/* Updated At */}
+            <div>
+              <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                <FiCalendar /> آخر تحديث
+              </p>
+              <p className="text-sm text-gray-800">
+                {formatDate(user.updated_at)}
+              </p>
+            </div>
+
+            {/* Admin Message */}
+            {user.admin_message && (
+              <div className="md:col-span-2">
+                <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                  <FiFileText /> رسالة المسؤول
+                </p>
+                <div className="flex items-start justify-between gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-800">
+                    {user.admin_message}
+                  </p>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(user.admin_message, 'admin_message')
+                    }
+                    className={`p-1.5 rounded-md transition ${
+                      copyStatus.admin_message
+                        ? 'bg-green-100 text-green-600'
+                        : 'text-gray-400 hover:bg-gray-100'
+                    }`}
+                  >
+                    <FiCopy size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ===== User Type Details ===== */}
+        <UserTypeDetails user={user} />
+      </div>
+
+      {/* ===== Actions ===== */}
+      <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+        <div className="flex gap-3 flex-wrap">
           {user.status === 'pending' && (
             <>
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => onApprove(user.id)}
                 disabled={isLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
               >
-                <FiCheck size={18} />
-                {isLoading ? 'جاري المعالجة...' : 'قبول المستخدم'}
+                <FiCheck size={16} />
+                قبول
               </button>
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => onReject(user.id)}
                 disabled={isLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50"
               >
-                <FiX size={18} />
-                {isLoading ? 'جاري المعالجة...' : 'رفض المستخدم'}
+                <FiX size={16} />
+                رفض
               </button>
             </>
           )}
+
           {user.status === 'approved' && (
             <button
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => onReject(user.id)}
               disabled={isLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50"
             >
-              <FiX size={18} />
-              {isLoading ? 'جاري المعالجة...' : 'رفض المستخدم'}
+              <FiX size={16} />
+              رفض
             </button>
           )}
+
           {user.status === 'rejected' && (
             <button
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => onApprove(user.id)}
               disabled={isLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
             >
-              <FiCheck size={18} />
-              {isLoading ? 'جاري المعالجة...' : 'قبول المستخدم'}
+              <FiCheck size={16} />
+              قبول
             </button>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

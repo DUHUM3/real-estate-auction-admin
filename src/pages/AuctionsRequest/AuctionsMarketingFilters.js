@@ -23,7 +23,7 @@ const MarketingFilters = ({
   useEffect(() => {
     if (localFilters.region && localFilters.region !== "all") {
       const selectedRegion = saudiRegions.find(
-        (region) => region.name.trim() === localFilters.region.trim()
+        (region) => region.name.trim() === localFilters.region.trim(),
       );
 
       if (selectedRegion) {
@@ -74,6 +74,7 @@ const MarketingFilters = ({
       region: "all",
       city: "all",
       status: "all",
+      property_role: "all", // الفلتر الجديد
       start_date: "",
       end_date: "",
       sort_by: "created_at",
@@ -93,6 +94,7 @@ const MarketingFilters = ({
     localFilters.region !== "all" ||
     localFilters.city !== "all" ||
     localFilters.status !== "all" ||
+    localFilters.property_role !== "all" || // الفلتر الجديد
     localFilters.start_date ||
     localFilters.end_date;
 
@@ -145,7 +147,7 @@ const MarketingFilters = ({
         </form>
 
         {/* عناصر التصفية */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* فلتر المنطقة */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -220,6 +222,25 @@ const MarketingFilters = ({
               <option value="reviewed">تمت المراجعة</option>
               <option value="auctioned">تم عرض المزاد في شركة المزادات</option>
               <option value="rejected">مرفوض</option>
+            </select>
+          </div>
+
+          {/* فلتر نوع مقدم الطلب */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              نوع مقدم الطلب
+            </label>
+            <select
+              value={localFilters.property_role || "all"}
+              onChange={(e) =>
+                handleLocalFilterChange("property_role", e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              disabled={loading}
+            >
+              <option value="all">جميع الأنواع</option>
+              <option value="owner">مالك</option>
+              <option value="legal_agent">وكيل شرعي</option>
             </select>
           </div>
 

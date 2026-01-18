@@ -30,13 +30,13 @@ const RequestsList = ({
   onUpdatePagination,
 }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">
-            قائمة طلبات التسويق ({requests.length})
-          </h3>
-          <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">
+   <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+  <div className="p-6 border-b border-gray-200 bg-white">
+    <div className="flex items-center justify-between">
+      <h3 className="text-lg font-semibold text-gray-900">
+        قائمة طلبات التسويق ({requests.length})
+      </h3>
+      <span className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">
             {pagination.total > 0 ? (
               <>
                 عرض {pagination.from} إلى {pagination.to} من {pagination.total}

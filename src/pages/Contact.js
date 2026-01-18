@@ -120,12 +120,6 @@ const ContactsPage = () => {
 
   return (
     <div className="p-6">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">إدارة رسائل التواصل</h1>
-        <p className="text-gray-600">عرض وإدارة استفسارات العملاء والرسائل الواردة</p>
-      </div>
-
       {/* Filters Section */}
       <ContactsFilters
         filters={filters}
