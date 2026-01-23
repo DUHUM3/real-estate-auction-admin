@@ -24,6 +24,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy1";
 import Admin from "./pages/Admin";
 import Contact from "./pages/Contact";
 import NewsletterDashboard from "./pages/NewsletterDashboard";
+import MessageWhatsapp from "./pages/MessageWhatsapp";
 
 import "./App.css";
 import { DataProvider } from "./contexts/DataContext";
@@ -191,6 +192,14 @@ if (loading) {
                         element={
                           <ProtectedRoute isAuthenticated={isLoggedIn}>
                             <NewsletterDashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/message-whatsapp"
+                        element={
+                          <ProtectedRoute isAuthenticated={isLoggedIn}>
+                            <MessageWhatsapp />
                           </ProtectedRoute>
                         }
                       />

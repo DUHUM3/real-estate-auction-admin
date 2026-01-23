@@ -7,9 +7,11 @@ import { FiCheck, FiX, FiClock, FiShoppingCart } from "react-icons/fi";
 
 // User type mapping
 export const userTypeMap = {
-  1: "مستخدم عادي",
-  2: "مسوق عقاري",
-  3: "مستثمر",
+  1: "مستخدم عام",
+  2: "مالك أرض",
+  3: "وكيل شرعي",
+  4: "وسيط عقاري",
+  5: "جهة تجارية",
 };
 
 // Status badge component
