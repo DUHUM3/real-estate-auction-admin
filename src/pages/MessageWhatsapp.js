@@ -9,6 +9,20 @@ function BroadcastMessageAdmin() {
   const [errors, setErrors] = useState({});
   const [generalError, setGeneralError] = useState("");
 
+  const getAuthToken = () => {
+    const token =
+      localStorage.getItem("token") ||
+      localStorage.getItem("access_token") ||
+      sessionStorage.getItem("token");
+
+    if (!token) {
+      console.error("Token not found. Please login first.");
+      return null;
+    }
+
+    return token;
+  };
+
   const API_BASE_URL = "https://core-api-x41.shaheenplus.sa"; // استبدل برابط API الخاص بك
 
   const clearAlerts = () => {
@@ -40,24 +54,29 @@ function BroadcastMessageAdmin() {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = getAuthToken();
+
+      if (!token) {
+        throw new Error("يجب تسجيل الدخول أولاً. التوكن غير موجود.");
+      }
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
 
       const response = await fetch(
         `${API_BASE_URL}/api/admin/whatsapp/send-to-all`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: headers,
           body: JSON.stringify({ message: message.trim() }),
         },
       );
 
       const data = await response.json();
 
-      // ✅ نجاح كامل من الباك اند
       if (response.ok && data.status === "completed") {
         setSuccessMessage(
           `تم الإرسال بنجاح ✅
@@ -65,33 +84,23 @@ function BroadcastMessageAdmin() {
 عدد الفاشلين: ${data.failed}`,
         );
         setMessage("");
-      }
-
-      // ❌ أخطاء تحقق (Validation)
-      else if (response.status === 422) {
+      } else if (response.status === 422) {
         setErrors(data.errors || {});
+      } else if (response.status === 401) {
+        setGeneralError("التوكن غير صالح أو منتهي الصلاحية.");
+      } else if (response.status === 403) {
+        setGeneralError("ليس لديك صلاحية لإرسال رسائل واتساب.");
+      } else {
+        setGeneralError(data.message || "حدث خطأ أثناء الإرسال.");
       }
+    } catch (err) {
+      console.error("WhatsApp API Error:", err);
 
-      // ❌ غير مصرح
-      else if (response.status === 401) {
-        setGeneralError(
-          data.message || "غير مصرح. يرجى تسجيل الدخول مرة أخرى.",
-        );
+      if (err.message) {
+        setGeneralError(err.message);
+      } else {
+        setGeneralError("لا يمكن الوصول إلى الخادم.");
       }
-
-      // ❌ ليس أدمن
-      else if (response.status === 403) {
-        setGeneralError(data.message || "ليس لديك صلاحية لتنفيذ هذا الإجراء.");
-      }
-
-      // ❌ أي خطأ آخر
-      else {
-        setGeneralError(data.message || "حدث خطأ غير متوقع.");
-      }
-    } catch (error) {
-      setGeneralError(
-        "خطأ في الشبكة. يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
-      );
     } finally {
       setIsLoading(false);
     }
