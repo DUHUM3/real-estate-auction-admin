@@ -69,7 +69,7 @@ function BroadcastMessageAdmin() {
       const response = await fetch(
         `${API_BASE_URL}/api/admin/whatsapp/send-to-all`,
         {
-          method: "POST",
+          method: "get",
           headers: headers,
           body: JSON.stringify({ message: message.trim() }),
         },
