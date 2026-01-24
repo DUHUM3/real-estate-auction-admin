@@ -1,5 +1,15 @@
 import React, { useState, useRef } from "react";
-import { Send, CheckCircle, AlertCircle, X, Radio, Paperclip, FileText, Image, Trash2 } from "lucide-react";
+import {
+  Send,
+  CheckCircle,
+  AlertCircle,
+  X,
+  Radio,
+  Paperclip,
+  FileText,
+  Image,
+  Trash2,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function BroadcastMessageAdmin() {
@@ -8,26 +18,28 @@ function BroadcastMessageAdmin() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errors, setErrors] = useState({});
   const [generalError, setGeneralError] = useState("");
-  
+
   // File upload states
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [caption, setCaption] = useState("");
   const [isUploadingFile, setIsUploadingFile] = useState(false);
-  
+
   const fileInputRef = useRef(null);
 
   // Allowed file types with MIME types
   const allowedTypes = {
-    'image/jpeg': ['.jpg', '.jpeg'],
-    'image/png': ['.png'],
-    'image/gif': ['.gif'],
-    'image/webp': ['.webp'],
-    'application/pdf': ['.pdf'],
-    'application/msword': ['.doc'],
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "image/gif": [".gif"],
+    "image/webp": [".webp"],
+    "application/pdf": [".pdf"],
+    "application/msword": [".doc"],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+      ".docx",
+    ],
   };
-  
+
   const maxFileSize = 10 * 1024 * 1024; // 10MB
 
   const getAuthToken = () => {
@@ -54,68 +66,76 @@ function BroadcastMessageAdmin() {
 
   const validateClientSide = () => {
     const newErrors = {};
-    
+
     // Check if at least one of message or file is provided
     if (!message.trim() && !selectedFile) {
       newErrors.general = ["يجب إدخال رسالة أو اختيار ملف."];
       setErrors(newErrors);
       return false;
     }
-    
+
     // Validate message if provided alone (without file)
     if (message.trim() && !selectedFile && message.trim().length < 5) {
       newErrors.message = ["يجب أن تحتوي الرسالة على 5 أحرف على الأقل."];
       setErrors(newErrors);
       return false;
     }
-    
+
     // Validate message if provided with file
     if (selectedFile && message.trim() && message.trim().length < 5) {
-      newErrors.message = ["يجب أن تحتوي الرسالة على 5 أحرف على الأقل إذا تم إدخالها."];
+      newErrors.message = [
+        "يجب أن تحتوي الرسالة على 5 أحرف على الأقل إذا تم إدخالها.",
+      ];
       setErrors(newErrors);
       return false;
     }
-    
+
     // Validate caption if file is selected and caption is provided
     if (selectedFile && caption.trim() && caption.trim().length < 5) {
       newErrors.caption = ["يجب أن يحتوي الوصف على 5 أحرف على الأقل."];
       setErrors(newErrors);
       return false;
     }
-    
+
     // Validate file if selected
     if (selectedFile) {
       if (!Object.keys(allowedTypes).includes(selectedFile.type)) {
-        newErrors.file = ["نوع الملف غير مدعوم. الأنواع المسموحة: صور (JPEG, PNG, GIF, WEBP) و مستندات (PDF, DOC, DOCX)"];
+        newErrors.file = [
+          "نوع الملف غير مدعوم. الأنواع المسموحة: صور (JPEG, PNG, GIF, WEBP) و مستندات (PDF, DOC, DOCX)",
+        ];
         setErrors(newErrors);
         return false;
       }
-      
+
       if (selectedFile.size > maxFileSize) {
         newErrors.file = ["حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت."];
         setErrors(newErrors);
         return false;
       }
     }
-    
+
     return true;
   };
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     clearAlerts();
-    
+
     // Validate file type
     if (!Object.keys(allowedTypes).includes(file.type)) {
-      setErrors({ file: ["نوع الملف غير مدعوم. الأنواع المسموحة: صور (JPEG, PNG, GIF, WEBP) و مستندات (PDF, DOC, DOCX)"] });
+      setErrors({
+        file: [
+          "نوع الملف غير مدعوم. الأنواع المسموحة: صور (JPEG, PNG, GIF, WEBP) و مستندات (PDF, DOC, DOCX)",
+        ],
+      });
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
       return;
     }
-    
+
     // Validate file size
     if (file.size > maxFileSize) {
       setErrors({ file: ["حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت."] });
@@ -124,11 +144,11 @@ function BroadcastMessageAdmin() {
       }
       return;
     }
-    
+
     setSelectedFile(file);
-    
+
     // Create preview for images
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setFilePreview(reader.result);
@@ -179,48 +199,58 @@ function BroadcastMessageAdmin() {
 
       let response;
       let data;
-      
+
       if (selectedFile) {
         // File upload mode - use POST
         setIsUploadingFile(true);
-        
+
         // Convert file to base64
-        const base64File = await convertFileToBase64(selectedFile);
-        
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        if (caption.trim()) {
+          formData.append("caption", caption.trim());
+        }
+
+        if (message.trim()) {
+          formData.append("message", message.trim());
+        }
+
         // Determine caption: use caption if provided, otherwise use message
         const fileCaption = caption.trim() || message.trim() || "";
-        
+
         // Prepare request body
         const requestBody = {
           body: base64File,
           filename: selectedFile.name,
         };
-        
+
         if (fileCaption) {
           requestBody.caption = fileCaption;
         }
-        
+
         // Send POST request for file
-        response = await fetch(`${API_BASE_URL}/api/admin/whatsapp/send-file-to-all`, {
-          method: "POST",
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
+        response = await fetch(
+          `${API_BASE_URL}/api/admin/whatsapp/send-file-to-all`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+            body: formData,
           },
-          body: JSON.stringify(requestBody),
-        });
-        
+        );
       } else {
         // Text message mode - use GET
         const queryMessage = encodeURIComponent(message.trim());
         const url = `${API_BASE_URL}/api/admin/whatsapp/send-to-all?message=${queryMessage}`;
-        
+
         response = await fetch(url, {
           method: "GET",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
           },
         });
       }
@@ -252,7 +282,7 @@ function BroadcastMessageAdmin() {
 
   const characterCount = message.length;
   const captionCount = caption.length;
-  
+
   // Determine if form is valid for submission
   const isFormValid = () => {
     if (selectedFile) {
@@ -270,25 +300,25 @@ function BroadcastMessageAdmin() {
 
   const getFileIcon = () => {
     if (!selectedFile) return null;
-    if (selectedFile.type.startsWith('image/')) {
+    if (selectedFile.type.startsWith("image/")) {
       return <Image className="w-5 h-5 text-blue-500" />;
     }
     return <FileText className="w-5 h-5 text-orange-500" />;
   };
 
   const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const getFileTypeLabel = (type) => {
-    if (type.startsWith('image/')) return 'صورة';
-    if (type === 'application/pdf') return 'PDF';
-    if (type.includes('word')) return 'Word';
-    return 'ملف';
+    if (type.startsWith("image/")) return "صورة";
+    if (type === "application/pdf") return "PDF";
+    if (type.includes("word")) return "Word";
+    return "ملف";
   };
 
   return (
@@ -409,7 +439,12 @@ function BroadcastMessageAdmin() {
                   htmlFor="message"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  محتوى الرسالة {selectedFile && <span className="text-gray-400">(اختياري عند إرفاق ملف)</span>}
+                  محتوى الرسالة{" "}
+                  {selectedFile && (
+                    <span className="text-gray-400">
+                      (اختياري عند إرفاق ملف)
+                    </span>
+                  )}
                 </label>
                 <div className="relative">
                   <textarea
@@ -423,7 +458,11 @@ function BroadcastMessageAdmin() {
                         setErrors(newErrors);
                       }
                     }}
-                    placeholder={selectedFile ? "أدخل رسالة إضافية (اختياري)..." : "أدخل رسالة البث هنا..."}
+                    placeholder={
+                      selectedFile
+                        ? "أدخل رسالة إضافية (اختياري)..."
+                        : "أدخل رسالة البث هنا..."
+                    }
                     rows={4}
                     className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-200 resize-none focus:outline-none focus:ring-0 ${
                       errors.message
@@ -469,7 +508,7 @@ function BroadcastMessageAdmin() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   إرفاق ملف أو صورة
                 </label>
-                
+
                 {/* زر اختيار الملف */}
                 <input
                   type="file"
@@ -479,7 +518,7 @@ function BroadcastMessageAdmin() {
                   className="hidden"
                   disabled={isLoading}
                 />
-                
+
                 {!selectedFile ? (
                   <button
                     type="button"
@@ -491,9 +530,12 @@ function BroadcastMessageAdmin() {
                       disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Paperclip className="w-6 h-6" />
-                    <span className="text-sm font-medium">اضغط لاختيار ملف</span>
+                    <span className="text-sm font-medium">
+                      اضغط لاختيار ملف
+                    </span>
                     <span className="text-xs text-gray-400">
-                      صور (JPEG, PNG, GIF, WEBP) أو مستندات (PDF, DOC, DOCX) - حتى 10MB
+                      صور (JPEG, PNG, GIF, WEBP) أو مستندات (PDF, DOC, DOCX) -
+                      حتى 10MB
                     </span>
                   </button>
                 ) : (
@@ -517,7 +559,7 @@ function BroadcastMessageAdmin() {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* معلومات الملف */}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">
@@ -533,7 +575,7 @@ function BroadcastMessageAdmin() {
                           </span>
                         </div>
                       </div>
-                      
+
                       {/* زر الحذف */}
                       <button
                         type="button"
@@ -545,14 +587,17 @@ function BroadcastMessageAdmin() {
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
-                    
+
                     {/* حقل الوصف للملف */}
                     <div className="mt-4">
                       <label
                         htmlFor="caption"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        وصف الملف <span className="text-gray-400">(اختياري - سيستخدم الرسالة أعلاه إذا تُرك فارغاً)</span>
+                        وصف الملف{" "}
+                        <span className="text-gray-400">
+                          (اختياري - سيستخدم الرسالة أعلاه إذا تُرك فارغاً)
+                        </span>
                       </label>
                       <textarea
                         id="caption"
@@ -586,11 +631,13 @@ function BroadcastMessageAdmin() {
                               {errors.caption[0]}
                             </motion.p>
                           )}
-                          {!errors.caption && caption.length > 0 && caption.length < 5 && (
-                            <p className="text-sm text-amber-600">
-                              تحتاج {5 - caption.length} حرف إضافي
-                            </p>
-                          )}
+                          {!errors.caption &&
+                            caption.length > 0 &&
+                            caption.length < 5 && (
+                              <p className="text-sm text-amber-600">
+                                تحتاج {5 - caption.length} حرف إضافي
+                              </p>
+                            )}
                         </div>
                         <span className="text-xs text-gray-400">
                           {captionCount} حرف
@@ -599,7 +646,7 @@ function BroadcastMessageAdmin() {
                     </div>
                   </motion.div>
                 )}
-                
+
                 {/* خطأ الملف */}
                 {errors.file && (
                   <motion.p
@@ -615,14 +662,15 @@ function BroadcastMessageAdmin() {
 
               {/* Method indicator */}
               <div className="flex items-center gap-2 text-xs text-gray-400 bg-slate-50 px-3 py-2 rounded-lg">
-                <span className={`px-2 py-0.5 rounded font-mono ${selectedFile ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                  {selectedFile ? 'POST' : 'GET'}
+                <span
+                  className={`px-2 py-0.5 rounded font-mono ${selectedFile ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}
+                >
+                  {selectedFile ? "POST" : "GET"}
                 </span>
                 <span>
-                  {selectedFile 
-                    ? 'سيتم رفع الملف كـ Base64 عبر POST'
-                    : 'سيتم إرسال الرسالة النصية عبر GET'
-                  }
+                  {selectedFile
+                    ? "سيتم رفع الملف كـ Base64 عبر POST"
+                    : "سيتم إرسال الرسالة النصية عبر GET"}
                 </span>
               </div>
 
@@ -654,7 +702,11 @@ function BroadcastMessageAdmin() {
                         }}
                         className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                       />
-                      <span>{isUploadingFile ? "جارٍ رفع الملف وإرساله..." : "جارٍ الإرسال..."}</span>
+                      <span>
+                        {isUploadingFile
+                          ? "جارٍ رفع الملف وإرساله..."
+                          : "جارٍ الإرسال..."}
+                      </span>
                     </>
                   ) : (
                     <>
