@@ -44,67 +44,66 @@ function BroadcastMessageAdmin() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    clearAlerts();
+  e.preventDefault();
+  clearAlerts();
 
-    if (!validateClientSide()) {
-      return;
+  if (!validateClientSide()) {
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const token = getAuthToken();
+
+    if (!token) {
+      throw new Error("يجب تسجيل الدخول أولاً. التوكن غير موجود.");
     }
 
-    setIsLoading(true);
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    };
 
-    try {
-      const token = getAuthToken();
+    // نضع الرسالة في query بدل body
+    const queryMessage = encodeURIComponent(message.trim());
+    const url = `${API_BASE_URL}/api/admin/whatsapp/send-to-all?message=${queryMessage}`;
 
-      if (!token) {
-        throw new Error("يجب تسجيل الدخول أولاً. التوكن غير موجود.");
-      }
+    const response = await fetch(url, {
+      method: "GET",
+      headers: headers,
+    });
 
-      const headers = {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      };
+    const data = await response.json();
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/admin/whatsapp/send-to-all`,
-        {
-          method: "get",
-          headers: headers,
-          body: JSON.stringify({ message: message.trim() }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (response.ok && data.status === "completed") {
-        setSuccessMessage(
-          `تم الإرسال بنجاح ✅
+    if (response.ok && data.status === "completed") {
+      setSuccessMessage(
+        `تم الإرسال بنجاح ✅
 عدد الناجحين: ${data.sent_successfully}
 عدد الفاشلين: ${data.failed}`,
-        );
-        setMessage("");
-      } else if (response.status === 422) {
-        setErrors(data.errors || {});
-      } else if (response.status === 401) {
-        setGeneralError("التوكن غير صالح أو منتهي الصلاحية.");
-      } else if (response.status === 403) {
-        setGeneralError("ليس لديك صلاحية لإرسال رسائل واتساب.");
-      } else {
-        setGeneralError(data.message || "حدث خطأ أثناء الإرسال.");
-      }
-    } catch (err) {
-      console.error("WhatsApp API Error:", err);
-
-      if (err.message) {
-        setGeneralError(err.message);
-      } else {
-        setGeneralError("لا يمكن الوصول إلى الخادم.");
-      }
-    } finally {
-      setIsLoading(false);
+      );
+      setMessage("");
+    } else if (response.status === 422) {
+      setErrors(data.errors || {});
+    } else if (response.status === 401) {
+      setGeneralError("التوكن غير صالح أو منتهي الصلاحية.");
+    } else if (response.status === 403) {
+      setGeneralError("ليس لديك صلاحية لإرسال رسائل واتساب.");
+    } else {
+      setGeneralError(data.message || "حدث خطأ أثناء الإرسال.");
     }
-  };
+  } catch (err) {
+    console.error("WhatsApp API Error:", err);
+
+    if (err.message) {
+      setGeneralError(err.message);
+    } else {
+      setGeneralError("لا يمكن الوصول إلى الخادم.");
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const characterCount = message.length;
   const isValid = message.trim().length >= 5;
