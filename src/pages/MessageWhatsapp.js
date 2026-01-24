@@ -201,10 +201,9 @@ function BroadcastMessageAdmin() {
       let data;
 
       if (selectedFile) {
-        // File upload mode - use POST
         setIsUploadingFile(true);
 
-        // Convert file to base64
+        // إنشاء FormData بدلاً من Base64
         const formData = new FormData();
         formData.append("file", selectedFile);
 
@@ -216,20 +215,8 @@ function BroadcastMessageAdmin() {
           formData.append("message", message.trim());
         }
 
-        // Determine caption: use caption if provided, otherwise use message
-        const fileCaption = caption.trim() || message.trim() || "";
-
-        // Prepare request body
-        const requestBody = {
-          body: base64File,
-          filename: selectedFile.name,
-        };
-
-        if (fileCaption) {
-          requestBody.caption = fileCaption;
-        }
-
         // Send POST request for file
+        // إرسال POST
         response = await fetch(
           `${API_BASE_URL}/api/admin/whatsapp/send-file-to-all`,
           {
@@ -237,6 +224,7 @@ function BroadcastMessageAdmin() {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: "application/json",
+              // لا تحدد Content-Type، المتصفح يضيفه تلقائياً
             },
             body: formData,
           },
