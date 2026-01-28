@@ -322,11 +322,11 @@ function BroadcastMessageAdmin() {
               <Radio className="w-6 h-6 text-blue-600" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              رسالة البث
+              رسائل تطبيق الواتس اب
             </h1>
           </div>
           <p className="text-gray-600 mr-12">
-            إرسال رسالة أو ملف لجميع المستخدمين المسجلين فوراً
+            إرسال رسالة أو ملف لجميع المستخدمين المسجلين
           </p>
         </div>
 
